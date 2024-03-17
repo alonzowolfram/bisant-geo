@@ -40,7 +40,7 @@ bisantine-geo is a Snakemake-powered pipeline that takes DCC files from a GeoMx 
 ### Installing software requirements
 To clone and run this pipeline, you'll need to have the following software installed on your machine:
 1) [git](https://git-scm.com)
-2) Some kind of conda package manager—e.g. [Anaconda](https://www.anaconda.com/download), [miniconda](https://docs.anaconda.com/free/miniconda/miniconda-install/), or [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html). I personally use miniconda.
+2) Some kind of conda package manager—e.g. [Anaconda](https://www.anaconda.com/download), [miniconda](https://docs.anaconda.com/free/miniconda/miniconda-install/), or [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html). I personally use mamba, for its speed.
 3) Snakemake. Once you have your conda package manager set up, I (and the Snakemake people) recommend [using that to install Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html).
 
 ### Cloning the repository
@@ -57,7 +57,7 @@ git clone https://github.com/alonzowolfram/bisantine-geo
 > Replace `path/to/directory/` with the path to the target directory on your machine.
 
 ### Configuration
-Now that we have the pipeline downloaded, we will need to configure the settings for your particular experiment. 
+Now that you have the pipeline downloaded, you will need to configure the settings for your particular experiment. 
 
 All the settings you will need to edit are stored in one convenient file, `config.yaml`, located in the `bisantine-geo` folder you just downloaded. Open this file in your favorite text editor and edit the settings accordingly. See the comments above each setting for documentation.
 
