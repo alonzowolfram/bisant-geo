@@ -7,7 +7,7 @@
   <br>
 </h1>
 
-(<b>B</b>ugs <b>i</b>n <b>S</b>pace <b>An</b>alysis <b>T</b>oolkit <b>In</b>tegrated for <b>Efficiency</b>) — a Snakemake pipeline for processing NanoString GeoMx data.
+(<b>B</b>ugs <b>i</b>n <b>S</b>pace <b>An</b>alysis <b>T</b>oolkit <b>In</b>tegrated for <b>E</b>fficiency) — a Snakemake pipeline for processing NanoString GeoMx data.
 
 <!--
 <p align="center">
@@ -51,9 +51,9 @@ On the command line, navigate to the directory in which you want to download the
 cd path/to/directory/
 
 # Clone the repository.
-$ git clone https://github.com/alonzowolfram/bisantine-geo
+git clone https://github.com/alonzowolfram/bisantine-geo
 ```
-> **Note**
+> **Note:**
 > Replace `path/to/directory/` with the path to the target directory on your machine.
 
 ### Configuration
@@ -61,13 +61,27 @@ Now that we have the pipeline downloaded, we will need to configure the settings
 
 All the settings you will need to edit are stored in one convenient file, `config.yaml`, located in the `bisantine-geo` folder you just downloaded. Open this file in your favorite text editor and edit the settings accordingly. See the comments above each setting for documentation.
 
-### Running the pipeline
+### Setting up your conda environment
+Using the `environment.yaml` file in the `bisantine-geo/envs` folder, create a conda environment. See directions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) on how to set up a conda environment from a YAML file. 
 
+> **Note:**
+> If you're on a Mac with an x86_64 ISA, you might have to prefix your conda environment creation command with `CONDA_SUBDIR=osx-64`. <br />
+> For example, `CONDA_SUBDIR=osx-64 mamba env create -n geomx -f environment.yml`
+
+### Running the pipeline
+Now that you've set up your conda environment and the configuration file for your run, you can run the pipeline. To run bisantine-geo, activate the conda environment you created above, then navigate into the `bisantine-geo` folder. From there, running Snakemake is quite simple:
+
+```bash
+NCORES=3
+snakemake --cores $NCORES
+```
+
+Replace `3` with the desired number of cores. If you're familiar with Snakemake, you can run individual modules as well, saving you time if you want to pick up from a previously completed run. A tutorial is forthcoming. Sometime. Maybe. 
 
 ## Credits
 
-bisantine-geo is developed and maintained by the Digital Spatial Profiling team of the PRIME-TR platform at the University of Texas MD Anderson Cancer Center.
+bisantine-geo is developed and maintained by the Digital Spatial Profiling team of the PRIME-TR platform at the University of Texas MD Anderson Cancer Center. Some of the code is adapted from the GeomxTools Bioconductor package vignette, found [here](https://bioconductor.org/packages/devel/workflows/vignettes/GeoMxWorkflows/inst/doc/GeomxTools_RNA-NGS_Analysis.html).
 
 ## License
 
-MIT
+bisantine-geo is released under the GNU General Public License v3.0. For more information, see the `LICENSE` file. 
