@@ -4,20 +4,30 @@ Results folders generated from a `bisantine-geo` pipeline run and stored in the 
 * `./`
     - `config`
         - `config.yaml`
+        - `conda.env`
+    - `logs`
+        - ...
     - `pubs`
-        - `{PowerPoint_file_name}.rds` 
+        - `{PowerPoint_file_name}.pptx` 
     - `Rdata`
-        - `{Rdata_file_name}.rds`
+        - ...
     - `tabular`
-        - `{tabular_data_file_name}.{extension}`
+        - ...
 
 # Details
 `config`: For reproducibility and record-keeping purposes, the pipeline freezes the conda environment it is run in as well as the experimental settings for the run and saves them as YAML files.
-* `environment.yaml`: <br />
-A file with all the environmental information used to build the conda environment in which `bisantine-geo` is run.
 
 * `config.yaml`: <br /> 
 A file with all the settings used for the `bisantine-geo` run.
+<br />
+<br />
+
+* `conda.env`: <br />
+A file containing the conda environment in which the pipeline was run. 
+<br />
+<br />
+
+`logs`: Files containing the stderr and stdout output from the scripts in the pipeline. 
 <br />
 <br />
 
