@@ -77,6 +77,9 @@ snakemake --cores $NCORES
 ```
 
 Replace `3` with the desired number of cores. If you're familiar with Snakemake, you can run individual modules as well, saving you time if you want to pick up from a previously completed run. A tutorial is forthcoming. Sometime. Maybe. 
+<br />
+<br />
+After the pipeline is finished running, the folder containing the output files will be available in the `out` directory. See the `README.md` file in the `out` directory for an explanation of the outputs. 
 
 ## Credits
 
