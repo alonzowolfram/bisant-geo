@@ -16,7 +16,7 @@ project:
     # If you provide a project name and/or a run name and not an output directory (output_dir, below),
     # the pipeline will use the project name in building an output directory:
     # [{project_name}_][{run_name}_]{YEAR}-{MONTH}-{DAY}-{HOUR}-{MINUTE}
-    project_name: DSP-016_Sarcoma-characterization
+    project_name: Project name goes here
 
     # [Optional] A name for this run.
     # You can name it anything you'd like. 
@@ -27,7 +27,7 @@ project:
     # If you provide a project name and/or a run name and not an output directory (output_dir, below),
     # the pipeline will use the project name in building an output directory:
     # [{project_name}_][{run_name}_]{YEAR}-{MONTH}-{DAY}-{HOUR}-{MINUTE}
-    run_name: segment-QC
+    run_name: Run name goes here
 
   # ----------------------------------------------------------------------
   #     Technical
@@ -35,7 +35,7 @@ project:
   technical:
 
     # [Required] Absolute path to the binary for the R package "regexPipes" (v. 0.0.1).
-    path_to_regexPipes: /Users/lwfong/OneDrive - Inside MD Anderson/PRIME-TR_projects/LFI-001_bisantine-geo/ext/regexPipes_0.0.1_r-release-x86_64.tgz
+    path_to_regexPipes: Path/to/regexPipes/binary/goes/here
   
 # =================================================================================================
 #     Inputs
@@ -44,27 +44,28 @@ project:
 data:
 
   # [Required] Absolute path to the directory containing the DCC files.
-  dcc_dir: /Users/lwfong/OneDrive - Inside MD Anderson/PRIME-TR_projects/LFC-013_Sarcoma-characterization/data/processed_data/GeoMx/
+  dcc_dir: Path/to/DCC/dir/goes/here
 
   # [Required] Absolute path to the directory containing the PKC files.
-  pkc_dir: /Users/lwfong/OneDrive - Inside MD Anderson/PRIME-TR_projects/Common/GeoMx/PKC_files/
+  pkc_dir: Path/to/PKC/dir/goes/here
 
   # [Optional] Regular expression (regex) pattern indicating which PKC files to use.
+  # E.g., Hs_R_NGS_WTA_v1.0.pkc$
   # If left blank, will use all files matching \\.pkc$
-  pkc_filename_pattern: Hs_R_NGS_WTA_v1.0.pkc$
+  pkc_filename_pattern: Filename pattern goes here
 
   # [Required] Absolute path to the Microsoft Excel (.xlsx) file containing the phenodata/sample annotation.
-  sample_annotation_file: /Users/lwfong/OneDrive - Inside MD Anderson/PRIME-TR_projects/LFC-013_Sarcoma-characterization/data/processed_data/GeoMx/2024-02-19 Annotations.xlsx
+  sample_annotation_file: Path/to/annotation/file/goes/here
 
   # [Optional] Name of the sheet in the Excel file (given in sample_annotation_file) containing the phenodata. 
   # If not provided, the pipeline will use the first sheet in the Excel file.
-  phenodata_sheet_name: Annotations
+  phenodata_sheet_name: Phenodata sheet name goes here
 
   # [Optional] Absolute path to the PowerPoint file to be used as a template in generating the output PowerPoint.
   # If not provided, the pipeline will use the default PowerPoint template. 
   # If you already have a PowerPoint generated from previous runs, you can enter that
   # and the pipeline will build on it. 
-  ppt_template_file: /Users/lwfong/OneDrive - Inside MD Anderson/Graphics/Presentation_templates/MD-Anderson_templates/MD Anderson_Standard_16x9_Template 2_PPT.pptx
+  ppt_template_file: Path/to/PowerPoint/template/goes/here
 
   # [Optional] Absolute path to an output folder from a previous bisantine-geo run.
   # Allows the pipeline to "pick up" from where you left off. 
@@ -72,7 +73,7 @@ data:
   # NOTE: this parameter overrides the ppt_template_file parameter above.
   # Also, if you have more than one PowerPoint file in the pubs/ subdirectory of this folder,
   # the pipeline will only use the first one. (So don't have more than one.)
-  previous_run_out_dir: 
+  previous_run_out_dir: Path/to/previous/run/directory/goes/here
 
 # =================================================================================================
 #     Outputs
@@ -84,7 +85,7 @@ output:
   # If not provided, the pipeline will create the following directory and save save output files to it: 
   #   ./out/[{project_name}_][{run_name}_]{YEAR}-{MONTH}-{DAY}-{HOUR}-{MINUTE}/
   # For further information about the nomenclature of output files, see the ./docs folder. 
-  output_dir:
+  output_dir: Path/to/output/directory/goes/here
 
 # =================================================================================================
 #     Experiment settings
@@ -99,16 +100,17 @@ experiment:
 
     # [Required] The column name in the sample annotation (given by {sample_annotation_file}) corresponding to
     # the DCC identifier.
-    phenodata_dcc_col_name: Sample_ID
+    phenodata_dcc_col_name: DCC identifier column name goes here
 
     # [Required] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to 
     # the protocol data column names.
     # Multiple values are allowed, separated by a comma (,).
-    protocol_data_col_names: Aoi,Roi
+    # E.g., aoi,roi
+    protocol_data_col_names: Protocol data column names go here
 
     # [Required] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to 
     # the experiment data column names.
-    experiment_data_col_names: Panel
+    experiment_data_col_names: Experiment data column names go here
 
   # ----------------------------------------------------------------------
   #     Segment QC settings
@@ -202,10 +204,10 @@ experiment:
     # where "neg_norm" indicates background normalization for WTA/CTA without custom spike-ins and
     # "q_norm" indicates Q3 (75th percentile) normalization for WTA/CTA with or without custom spike-ins.
     # We recommend using "neg_norm" if there is a good deal of overlap between the signal and noise probe distributions.
-    normalization_method: q_norm
+    normalization_method: Normalization method goes here
 
     # [Required] The annotation of interest (e.g. Segment, Region).
-    ann_of_interest: Compartment
+    ann_of_interest: Annotation of interest goes here
 
   # ----------------------------------------------------------------------
   #     Unsupervised analysis settings
@@ -215,7 +217,7 @@ experiment:
     # [Optional] The column in the annotation to use as a grouping variable.
     # If provided, points on dimension reduction graphs (t-SNE, UMAP)
     # will be colored by group.
-    compartment_var:
+    compartment_var: Compartment variable goes here
 
   # ----------------------------------------------------------------------
   #     Linear mixed models and differential expression
@@ -245,23 +247,23 @@ experiment:
 
     # [Required] Whether or not to use a random slope in the linear mixed model.
     # The following values are allowed: c("yes", "no")
-    random_slope: no
+    random_slope: Use random slope? goes here
 
     # [Required] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to
     # the variables to be used for the test variable in the linear mixed models for differential expression.
     # You can provide multiple variables, separated by commas (,).
-    test_vars: Tumor Location (Primary vs LN)
+    test_vars: Test variables go here
 
     # [Required] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to 
     # the variables to be used for the random intercept in the linear mixed models for differential expression.
     # You can provide multiple variables, separated by commas (,).
-    random_intercept_vars: Patient ID
+    random_intercept_vars: Random intercept variables go here
 
     # [Required] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to 
     # the variables to be used for the random slope in the linear mixed models for differential expression.
     # You can provide multiple variables, separated by commas (,).
     # NOTE: If you are not using a random slope, enter "none".
-    random_slope_vars: none
+    random_slope_vars: Random slope variables go here
 
   # ----------------------------------------------------------------------
   #     Miscellaneous settings
