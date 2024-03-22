@@ -28,6 +28,7 @@
 <p align="center">
   <a href="#about">About</a> •
   <a href="#usage">Usage</a> •
+  <a href="#changelog">Changelog</a> •
   <a href="#credits">Credits</a> •
   <a href="#license">License</a>
 </p>
@@ -59,7 +60,7 @@ git clone https://github.com/alonzowolfram/bisantine-geo
 ### Configuration
 Now that you have the pipeline downloaded, you will need to configure the settings for your particular experiment. 
 
-All the settings you will need to edit are stored in one convenient file, `config.yaml`, located in the `bisantine-geo` folder you just downloaded. Open this file in your favorite text editor and edit the settings accordingly. See the comments above each setting for documentation.
+All the settings you will need to edit are stored in one convenient file, `config.yaml`, located in the `bisantine-geo` folder you just downloaded. Open this file in your favorite text editor and edit the settings accordingly. See the comments above each setting for documentation. You can even store different configuration files in the `profiles` folder (or anywhere, really—it's just there for convenience) and call them with the `--configfiles` flag to the `snakemake` command when running the pipeline (see the section "Running the pipeline," below.)
 
 ### Setting up your conda environment
 Using the `environment.yaml` file in the `bisantine-geo/envs` folder, create a conda environment. See directions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) on how to set up a conda environment from a YAML file. 
@@ -73,13 +74,37 @@ Now that you've set up your conda environment and the configuration file for you
 
 ```bash
 NCORES=3
-snakemake --cores $NCORES
+snakemake --configfiles path/to/config.yaml --cores $NCORES
 ```
 
-Replace `3` with the desired number of cores. If you're familiar with Snakemake, you can run individual modules as well, saving you time if you want to pick up from a previously completed run. A tutorial is forthcoming. Sometime. Maybe. 
+Replace `3` with the desired number of cores. If you're familiar with Snakemake, you can run individual modules as well, saving you time if you want to pick up from a previously completed run. For example:
+
+```bash
+snakemake --configfiles path/to/config.yaml --cores $NCORES -R --until unsupervised_analysis
+```
+will run the pipeline up to the "unsupervised_analysis" module.
+<br />
+<br />
+A tutorial with more details is forthcoming. Sometime. Maybe. 
 <br />
 <br />
 After the pipeline is finished running, the folder containing the output files will be available in the `out` directory. See the `README.md` file in the `out` directory for an explanation of the outputs. 
+
+## Changelog
+<b>2024/03/22</b> - v0.2.0-alpha:
+* Lots and lots of bug fixes.
+* Added output: list of PKC modules.
+* Added output: NTC summary.
+* Changed default values of config.YAML to be more indicative of what should go there.
+* Added ability to specify YAML config file via command line; added `profiles` folder for storage of YAML config files.
+* Added Shiny app to see how different parameter changes affect number of viable segments.
+* Cutoffs on segment QC graphs are now based on user-input values.
+* Added functionality to correct names in annotation sheet to match functions' expected input.
+* Added ability to have multiple compartment variables, including variables that are combinations of two or more existing variables.
+* Added ability to start pipeline from a previous run. 
+* Added ability for user to manually enter the PKC files to be used.
+
+<b>2024/03/17</b> - v0.1.0-alpha released on GitHub.
 
 ## Credits
 

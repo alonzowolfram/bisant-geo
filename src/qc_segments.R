@@ -3,56 +3,10 @@ source("src/setup.R")
 
 # Read in the NanoStringGeoMxSet object. 
 data_object <- readRDS(cl_args[4])
-# Read in the PowerPoint.
-pptx <- read_pptx(cl_args[5])
-
-## ---------------------------
-
-# QC: study design
-# Access the PKC files, to ensure that expected PKCs have been loaded for this study.
 pkcs <- annotation(data_object)
 modules <- base::gsub(".pkc", "", pkcs)
-pkc_summary <- data.frame(PKCs = pkcs, modules = modules)
-
-# # Visually summarize the experimental design for the dataset to look at the different types of samples and ROI/AOI segments; present in Sankey diagram.
-# # Select the annotations we want to show, use `` to surround column names with
-# # spaces or special symbols.
-# count_mat <- count(pData(data_object), `Slide Name`, Segment)
-# # Gather the data and plot in order: class, slide name, region, segment.
-# test_gr <- gather_set_data(count_mat, 1:4)
-# test_gr$x <- factor(test_gr$x,
-#                     levels = c("class", "slide name", "region", "segment"))
-# # Plot Sankey.
-# ggplot(test_gr, aes(x, id = id, split = y, value = n)) +
-#     geom_parallel_sets(aes(fill = region), alpha = 0.5, axis.width = 0.1) +
-#     geom_parallel_sets_axes(axis.width = 0.2) +
-#     geom_parallel_sets_labels(color = "white", size = 5) +
-#     theme_classic(base_size = 17) + 
-#     theme(legend.position = "bottom",
-#           axis.ticks.y = element_blank(),
-#           axis.line = element_blank(),
-#           axis.text.y = element_blank()) +
-#     scale_y_continuous(expand = expansion(0)) + 
-#     scale_x_discrete(expand = expansion(0)) +
-#     labs(x = "", y = "") +
-#     annotate(geom = "segment", x = 4.25, xend = 4.25,
-#              y = 20, yend = 120, lwd = 2) +
-#     annotate(geom = "text", x = 4.19, y = 70, angle = 90, size = 5,
-#              hjust = 0.5, label = "100 segments")
-
-# Add everything to the PowerPoint. 
-# Add a section header.
-pptx <- pptx %>% 
-  officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("Study design"), 
-                   location = ph_location_label(ph_label = "Title 1"))
-# Add the study design table.
-pptx <- pptx %>% 
-  officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("PKCs"),
-                   location = ph_location_label(ph_label = "Title 1")) %>% 
-  officer::ph_with(value = pkc_summary,
-                   location = ph_location_label(ph_label = "Content Placeholder 2"))
+# Read in the PowerPoint.
+pptx <- read_pptx(cl_args[5])
 
 ## ---------------------------
 
@@ -85,25 +39,25 @@ qc_summary["TOTAL FLAGS", ] <-
     sum(qc_results[, "QCStatus"] == "WARNING"))
 
 # Visualize segment QC.
-col_by <- "Segment"
+col_by <- "segment"
 
 # Graphical summaries of QC statistics plot function
 # Generate the QC histograms.
 plot_list_segment_qc <- list()
 # Trimmed %
-plot_list_segment_qc[["trimmed"]] <- QCHistogram(sData(data_object), "Trimmed (%)", col_by, 80)
+plot_list_segment_qc[["trimmed"]] <- QCHistogram(sData(data_object), "Trimmed (%)", col_by, percent_trimmed)
 # Stitched %
-plot_list_segment_qc[["stitched"]] <- QCHistogram(sData(data_object), "Stitched (%)", col_by, 80)
+plot_list_segment_qc[["stitched"]] <- QCHistogram(sData(data_object), "Stitched (%)", col_by, percent_stitched)
 # Aligned %
-plot_list_segment_qc[["aligned"]] <- QCHistogram(sData(data_object), "Aligned (%)", col_by, 75)
+plot_list_segment_qc[["aligned"]] <- QCHistogram(sData(data_object), "Aligned (%)", col_by, percent_aligned)
 # Sequencing saturation %
-plot_list_segment_qc[["seq_sat"]] <- QCHistogram(sData(data_object), "Saturated (%)", col_by, 50) +
+plot_list_segment_qc[["seq_sat"]] <- QCHistogram(sData(data_object), "Saturated (%)", col_by, percent_saturation) +
   labs(title = "Sequencing Saturation (%)",
        x = "Sequencing Saturation (%)")
 # Area.
-plot_list_segment_qc[["area"]] <- QCHistogram(sData(data_object), "Area", col_by, 1000, scale_trans = "log10")
+plot_list_segment_qc[["area"]] <- QCHistogram(sData(data_object), "area", col_by, min_area, scale_trans = "log10")
 # Nuclei.
-plot_list_segment_qc[["nuclei"]] <- QCHistogram(sData(data_object), "Nuclei", col_by, 20)
+plot_list_segment_qc[["nuclei"]] <- QCHistogram(sData(data_object), "nuclei", col_by, min_nuclei)
 # Negative geometric means.
 plot_list_segment_qc[["neg_geo_means"]] <- list()
 # Calculate the negative geometric means for each module.
@@ -118,19 +72,20 @@ protocolData(data_object)[["NegGeoMean"]] <- negativeGeoMeans
 negCols <- paste0("NegGeoMean_", modules)
 pData(data_object)[, negCols] <- sData(data_object)[["NegGeoMean"]]
 for(ann in negCols) {
-  plt <- QCHistogram(pData(data_object), ann, col_by, 2, scale_trans = "log10")
+  plt <- QCHistogram(pData(data_object), ann, col_by, min_negative_count, scale_trans = "log10")
   plot_list_segment_qc[["neg_geo_means"]][[ann]] <- plt 
   # print(plt)
 }
 # I guess there are no NTCs in this experiment (sData(data_object)$NTC returns NULL), so we'll skip the next part?
 # # No template control (NTC)
 # # Detatch neg_geomean columns ahead of aggregateCounts call.
-# pData(data_object) <- pData(data_object)[, !colnames(pData(data_object)) %in% negCols]
-# 
-# # Show all NTC values, Freq = # of Segments with a given NTC count:
-# kable(table(NTC_Count = sData(data_object)$NTC),
-#       col.names = c("NTC Count", "# of Segments"))
+if(!is.null(sData(data_object)$NTC)) {
+  pData(data_object) <- pData(data_object)[, !colnames(pData(data_object)) %in% negCols]
 
+  # Show all NTC values, Freq = # of Segments with a given NTC count:
+  ntc_table <- as.data.frame(table(NTC_Count = sData(data_object)$NTC),
+      col.names = c("NTC Count", "# of Segments"))
+}
 # Summarize all QC information in a table.
 qc_summary_kable <- kable(qc_summary, caption = "QC Summary Table for each Segment")
 
@@ -171,6 +126,13 @@ for(item in names(plot_list_segment_qc)) {
     }
   }
 }
+# Add the NTC table.
+pptx <- pptx %>% 
+  officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
+  officer::ph_with(value = paste0("NTC summary"),
+                   location = ph_location_label(ph_label = "Title 1")) %>% 
+  officer::ph_with(value = ntc_table,
+                   location = ph_location_label(ph_label = "Content Placeholder 2"))
 # Add the summary table. 
 qc_summary <- qc_summary %>% 
   dplyr::mutate(Metric = rownames(.)) %>% 

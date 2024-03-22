@@ -4,8 +4,12 @@ source("src/setup.R")
 # Automatically list files in each directory for use.
 dcc_files <- dir(dcc_dir, pattern = ".dcc$",
                  full.names = TRUE, recursive = TRUE)
-pkc_files <- dir(pkc_dir, pattern = pkc_filename_pattern,
+if(!is.null(pkc_filenames) && sum(pkc_filenames!="") < 0) {
+  pkc_files <- paste0(pkc_dir, "/", pkc_filenames %>% .[.!=""])
+} else {
+  pkc_files <- dir(pkc_dir, pattern = pkc_filename_pattern,
                  full.names = TRUE, recursive = TRUE)
+}
 
 # Get the sheet name if it's not set.
 if(is.null(phenodata_sheet_name) || phenodata_sheet_name=="") {
@@ -25,6 +29,18 @@ data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
 # Shift any expression counts with a value of 0 to 1 to enable in downstream transformations.
 data_object <- shiftCountsOne(data_object, useDALogic = TRUE)
 
+# Change the column names in the pData to lowercase
+# to match the expected inputs in the NanoString Bioconductor package tools (https://rdrr.io/github/Nanostring-Biostats/GeomxTools/src/R/NanoStringGeoMxSet-qc.R).
+# https://stackoverflow.com/a/51793188/23532435
+# https://stackoverflow.com/questions/69661679/change-multiple-columns-to-lowercase-with-dplyr-difficulty-with-mutate-across-e
+to_lowercase <- c("Area", "Nuclei")
+for(element in to_lowercase) {
+  if(element %in% colnames(pData(data_object))) {
+    pData(data_object) <- pData(data_object) %>% 
+      mutate_at(vars(element), funs(tolower(.)))
+  }
+}
+  
 # Export the NanoStringGeoMxSet object.
 saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw.rds"))
 
@@ -47,9 +63,8 @@ pptx <- pptx %>%
                    location = ph_location_label(ph_label = "Title 1")) %>% # For future reference, see also https://stackoverflow.com/questions/58508859/r-officer-package-how-to-specify-a-certain-placeholder-when-there-are-multiple
   officer::ph_with(value = the_date,
                    location = ph_location_label(ph_label = "Subtitle 2"))
-print(pptx, file.path(output_dir_pubs, ppt_output_file))
+print(pptx, cl_args[4])
 
 # # Get the layout summary and properties of the template.
 # layout_summary(pptx)
 # layout_properties(pptx)
-

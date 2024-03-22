@@ -73,6 +73,7 @@ data <- config$data
 dcc_dir <- data$dcc_dir
 pkc_dir <- data$pkc_dir
 pkc_filename_pattern <- data$pkc_filename_pattern
+pkc_filenames <- data$pkc_filenames
 sample_annotation_file <- data$sample_annotation_file
 phenodata_sheet_name <- data$phenodata_sheet_name
 ppt_template_file <- data$ppt_template_file
@@ -109,7 +110,7 @@ percent_of_segments <- probe_qc$percent_of_segments
 normalization_method <- experiment$normalization$normalization_method
 ann_of_interest <- experiment$normalization$ann_of_interest
 ### Unsupervised analysis
-compartment_var <- experiment$unsupervised$compartment_var
+compartment_vars <- experiment$unsupervised$compartment_vars
 ### Linear mixed models/differential expression
 lmm <- experiment$lmm
 random_slope <- lmm$random_slope
@@ -145,6 +146,12 @@ if(!is.null(previous_run_out_dir) && previous_run_out_dir != "") {
     ppt_template_file <- pptx_files[1]
   }
 }
+if(is.null(pkc_filename_pattern) || pkc_filename_pattern=="") {
+  pkc_filename_pattern==".pkc$"
+}
+if(!is.null(pkc_filenames) && pkc_filenames != "") {
+  pkc_filenames <- pkc_filenames %>% strsplit(",") %>% unlist
+}
 ## Output
 ### Create the directory if it doesn't already exist. 
 if(!dir.exists(output_dir)) dir.create(output_dir)
@@ -163,7 +170,11 @@ output_dir_pubs <- paste0(output_dir, "pubs/")
 ## Normalization
 normalization_method <- ifelse((is.null(normalization_method) || normalization_method == ""), "q_norm", normalization_method)
 ## Unsupervised analysis
-compartment_var <- ifelse((is.null(compartment_var) || compartment_var == ""), ann_of_interest, compartment_var)
+if(is.null(compartment_vars) || compartment_vars == "") {
+  compartment_vars <- ann_of_interest
+} else {
+  compartment_vars <- compartment_vars %>% strsplit(",") %>% unlist
+}
 ## Miscellaneous
 random_seed <- ifelse((is.null(random_seed) || random_seed==""), 1026, random_seed) # E.g. 1026. 
 
@@ -208,8 +219,3 @@ library(Rtsne) # For t-SNE plots.
 library(ggrepel) # For graphing. 
 install.packages(path_to_regexPipes, repos = NULL, type = "source")
 library(regexPipes) # For pipe-friendly version of base R's regex functions.
-
-## ---------------------------
-
-# Test thing.
-print(paste0("Compartment var = ", compartment_var))

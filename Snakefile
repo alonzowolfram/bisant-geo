@@ -3,14 +3,19 @@
 ## @alonzowolfram
 ##
 
-# --- Importing configuration files --- #
-configfile: "config.yaml"
-
 # --- Necessary Python packages --- #
 from datetime import datetime
+import sys 
+
+# --- Importing configuration files --- #
+# https://stackoverflow.com/questions/67108673/accessing-the-path-of-the-configfile-within-snakefile
+args = sys.argv
+CONFIG_PATH = args[args.index("--configfiles") + 1]
+configfile: CONFIG_PATH
 
 # --- Setting variables --- #
-def generateOutputPath(output_path, project_name, run_name, now):
+# Output path
+def generateOutputPath(previous_run_out_dir, output_path, project_name, run_name, now):
     # Set up the project_name and run_name strings.
     if project_name is None or project_name=="":
         project_name_string = ""
@@ -21,15 +26,18 @@ def generateOutputPath(output_path, project_name, run_name, now):
     else:
         run_name_string = run_name + "_"
 
-    if output_path is None or output_path == "":
-        output_path = "out/" + project_name_string + run_name_string + str(now.year) + "-" + str(now.month) + "-" + str(now.day) + "-" + str(now.hour) + "-" + str(now.minute) + "-" + str(now.second) + "/"
+    if previous_run_out_dir is None or previous_run_out_dir == "":
+        if output_path is None or output_path == "":
+            output_path = "out/" + project_name_string + run_name_string + str(now.year) + "-" + str(now.month) + "-" + str(now.day) + "-" + str(now.hour) + "-" + str(now.minute) + "-" + str(now.second) + "/"
+        else:
+            output_path = output_path
     else:
-        output_path = output_path
+        output_path = previous_run_out_dir + "/"
 
     return output_path
 
 now = datetime.now()
-OUTPUT_PATH = generateOutputPath(config["output"]["output_dir"], config["project"]["meta"]["project_name"], config["project"]["meta"]["run_name"], now)
+OUTPUT_PATH = generateOutputPath(config["data"]["previous_run_out_dir"], config["output"]["output_dir"], config["project"]["meta"]["project_name"], config["project"]["meta"]["run_name"], now)
 
 # --- Rules --- # 
 rule differential_expression_analysis:
@@ -42,12 +50,13 @@ rule differential_expression_analysis:
     params:
         output_path = OUTPUT_PATH,
         current_module = "differential_expression_analysis",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
     log:
-        out = OUTPUT_PATH + "logs/differential_expression_analysis.out",
-        err = OUTPUT_PATH + "logs/differential_expression_analysis.err" 
+        out = OUTPUT_PATH + "logs/differential-expression-analysis.out",
+        err = OUTPUT_PATH + "logs/differential-expression-analysis.err" 
     shell:
-        "Rscript {input.script} config.yaml {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule unsupervised_analysis:
     input:
@@ -58,12 +67,13 @@ rule unsupervised_analysis:
     params:
         output_path = OUTPUT_PATH,
         current_module = "unsupervised_analysis",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
     log:
-        out = OUTPUT_PATH + "logs/unsupervised_analysis.out",
-        err = OUTPUT_PATH + "logs/unsupervised_analysis.err" 
+        out = OUTPUT_PATH + "logs/unsupervised-analysis.out",
+        err = OUTPUT_PATH + "logs/unsupervised-analysis.err" 
     shell:
-        "Rscript {input.script} config.yaml {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule normalization:
     input:
@@ -74,12 +84,13 @@ rule normalization:
     params:
         output_path = OUTPUT_PATH,
         current_module = "normalization",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/normalization.out",
         err = OUTPUT_PATH + "logs/normalization.err" 
     shell:
-        "Rscript {input.script} config.yaml {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule qc_probes:
     input:
@@ -90,37 +101,51 @@ rule qc_probes:
     params:
         output_path = OUTPUT_PATH,
         current_module = "qc_probes",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
     log:
-        out = OUTPUT_PATH + "logs/qc_probes.out",
-        err = OUTPUT_PATH + "logs/qc_probes.err" 
+        out = OUTPUT_PATH + "logs/qc-probes.out",
+        err = OUTPUT_PATH + "logs/qc-probes.err" 
     shell:
-        "Rscript {input.script} config.yaml {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule qc_segments:
     input:
         script = "src/qc_segments.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-study-design.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments.rds"
     params:
         output_path = OUTPUT_PATH,
         current_module = "qc_segments",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
     log:
-        out = OUTPUT_PATH + "logs/qc_segments.out",
-        err = OUTPUT_PATH + "logs/qc_segments.err" 
+        out = OUTPUT_PATH + "logs/qc-segments.out",
+        err = OUTPUT_PATH + "logs/qc-segments.err" 
     shell:
-        "Rscript {input.script} config.yaml {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
-# rule qc_study_design:
-#     input:
-#         script = src/qc_study_design.R
-#     output:
-#         R_file = ,
-#         ppt = 
-#     shell:
-#         "Rscript {input.script} config.yaml"
+rule qc_study_design:
+    input:
+        script = "src/qc_study-design.R",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds"
+    output:
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-study-design.rds",
+        Shiny_app = OUTPUT_PATH + "qc_segments_shiny_app.R"
+    params:
+        output_path = OUTPUT_PATH,
+        current_module = "qc_study_design",
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
+    log:
+        out = OUTPUT_PATH + "logs/qc-study-design.out",
+        err = OUTPUT_PATH + "logs/qc-study-design.err" 
+    shell:
+        """
+        Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}
+        cp src/qc_segments_shiny_app.R {params.output_path}
+        """
 
 rule data_import_cleaning:
     input:
@@ -128,35 +153,27 @@ rule data_import_cleaning:
         env_file = OUTPUT_PATH + "config/conda.env",
         config_file = OUTPUT_PATH + "config/config.yaml"
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds",
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
     params:
         output_path = OUTPUT_PATH,
-        current_module = "data_import_cleaning"
+        current_module = "data_import_cleaning",
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
     log:
-        out = OUTPUT_PATH + "logs/data_import_cleaning_stdout.out",
-        err = OUTPUT_PATH + "logs/data_import_cleaning_stderr.err" 
+        out = OUTPUT_PATH + "logs/data-import-cleaning.out",
+        err = OUTPUT_PATH + "logs/data-import-cleaning.err" 
     shell:
-        "Rscript {input.script} config.yaml {params.output_path} {params.current_module} 1> {log.out} 2> {log.err}"
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule export_env:
     input: 
-        config_file = "config.yaml"
+        config_file = CONFIG_PATH
     output:
         env_file = OUTPUT_PATH + "config/conda.env",
         config_file = OUTPUT_PATH + "config/config.yaml"
     params:
+        config_path = CONFIG_PATH,
         output_path = OUTPUT_PATH
     shell:
-        "conda list --export > {params.output_path}config/conda.env; cp config.yaml {params.output_path}config/"
-
-# rule test:
-#     input:
-#         script = "src/setup.R"
-#     params:
-#         output_path = OUTPUT_PATH,
-#         current_module = "test"
-#     log:
-#         out = OUTPUT_PATH + "logs/test_stdout.out",
-#         err = OUTPUT_PATH + "logs/test_stderr.err" 
-#     shell:
-#         "Rscript {input.script} config.yaml {params.output_path} {params.current_module} 1> {log.out} 2> {log.err}"
+        "conda list --export > {params.output_path}config/conda.env; cp {params.config_path} {params.output_path}config/"

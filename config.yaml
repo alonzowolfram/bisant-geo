@@ -273,3 +273,20 @@ experiment:
     # [Optional] Random seed to be used in algorithms that use stochastic processes (e.g. UMAP).
     # If not provided, it will default to 1026. 
     random_seed: 1026
+
+## !-- Settings below this line are unused for now --##
+# # =================================================================================================
+# #     Publication settings
+# # =================================================================================================
+# # Settings for graphics and documents intended for publication.
+# pubs:
+
+# # ----------------------------------------------------------------------
+# #     Figures
+# # ----------------------------------------------------------------------
+
+#   # [Optional] Graph width, in inches.
+#   fig_width: 5
+
+#   # [Optional] Graph height, in inches.
+#   fig_height: 3

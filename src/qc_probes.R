@@ -104,7 +104,7 @@ pData(target_data_object)$DetectionThreshold <-
 # Stacked bar plot of different cut points (1%, 5%, 10%, 15%).
 plot_list_probe_qc[["gene_detection_rate_by_segment"]] <- ggplot(pData(target_data_object),
                                                                  aes(x = DetectionThreshold)) +
-  geom_bar(aes(fill = Segment)) +
+  geom_bar(aes(fill = segment)) +
   geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
   theme_bw() +
   scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
@@ -120,7 +120,7 @@ plot_list_probe_qc[["gene_detection_rate_by_segment"]] <- ggplot(pData(target_da
 # Create a table to review what tissue type (tumor vs normal) is going to be impacted by each threshold:
 # Cut percent genes detected at 1, 5, 10, 15.
 kable(table(pData(target_data_object)$DetectionThreshold,
-            pData(target_data_object)$Segment))
+            pData(target_data_object)$segment))
 
 # Remove segments with <5% of genes detected.
 target_data_object <-
