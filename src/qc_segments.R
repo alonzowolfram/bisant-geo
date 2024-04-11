@@ -88,7 +88,7 @@ for(ann in negCols) {
   plot_list_segment_qc[["neg_geo_means"]][[ann]] <- plt 
   # print(plt)
 }
-# I guess there are no NTCs in this experiment (sData(data_object)$NTC returns NULL), so we'll skip the next part?
+# If there are NTCs in the experiment (sData(data_object)$NTC does not return NULL), add NTC stats.
 # # No template control (NTC)
 # # Detatch neg_geomean columns ahead of aggregateCounts call.
 if(!is.null(sData(data_object)$NTC)) {
@@ -159,13 +159,15 @@ for(item in names(plot_list_segment_qc)) {
     }
   }
 }
-# Add the NTC table.
-pptx <- pptx %>% 
-  officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("NTC summary"),
-                   location = ph_location_label(ph_label = "Title 1")) %>% 
-  officer::ph_with(value = ntc_table,
-                   location = ph_location_label(ph_label = "Content Placeholder 2"))
+# Add the NTC table if it exists.
+if(exists("ntc_table")) {
+  pptx <- pptx %>% 
+    officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
+    officer::ph_with(value = paste0("NTC summary"),
+                     location = ph_location_label(ph_label = "Title 1")) %>% 
+    officer::ph_with(value = ntc_table,
+                     location = ph_location_label(ph_label = "Content Placeholder 2"))
+}
 # Add the summary table. 
 qc_summary <- qc_summary %>% 
   dplyr::mutate(Metric = rownames(.)) %>% 
