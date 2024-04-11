@@ -9,18 +9,6 @@ modules <- base::gsub(".pkc", "", pkcs)
 pptx <- read_pptx(cl_args[5])
 
 ## ---------------------------
-# Test values
-# min_segment_reads = 1000 # Minimum number of reads (1000)
-# percent_trimmed = 80   # Minimum % of reads trimmed (80%)
-# percent_stitched = 80   # Minimum % of reads stitched (80%)
-# percent_aligned = 80   # Minimum % of reads aligned (80%)
-# percent_saturation = 50 # Minimum sequencing saturation (50%)
-# min_negative_count = 1   # Minimum negative control counts (10)
-# max_ntc_count = 1000    # Maximum counts observed in NTC well (1000)
-# min_nuclei = 100         # Minimum # of nuclei estimated (100)
-# min_area = 5000        # Minimum segment area (5000)
-
-## ---------------------------
 
 # QC: segments
 # Select the QC parameter cutoffs, against which ROI/AOI segments will be tested and flagged appropriately.

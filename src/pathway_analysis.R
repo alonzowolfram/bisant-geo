@@ -2,20 +2,6 @@
 source("src/setup.R")
 
 ## ---------------------------
-## Test values
-# pathway_table_file <- NULL
-# species <- "Homo sapiens"
-# individual_pathways <- c("HALLMARK_ADIPOGENESIS", "REACTOME_SHC1_EVENTS_IN_ERBB2_SIGNALING", "REACTOME_SEROTONIN_RECEPTORS", "BIOCARTA_PEPI_PATHWAY")
-# subset_var <- unique(results2$`Subset variable`)[1]
-# subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
-# subset_var_level <- subset_var_levels[1]
-# model_numbers <- results2$`Model number` %>% unique
-# model_number <- model_numbers[1]
-# contrasts <- results2 %>% dplyr::filter(`Subset variable`==subset_var & `Subset level`==subset_var_level & `Model number`==model_number) %>% .$Contrast %>% unique
-# contrast <- contrasts[1]
-# results2 <- read.csv("/Users/lwfong/Library/CloudStorage/OneDrive-InsideMDAnderson/PRIME-TR/LFI-001_bisantine-geo/out/DSP-018-SBNET_differential-expression_2024-4-10-20-49-19/tabular/LMM-differential-expression_results.csv", row.names = 1, check.names = FALSE)
-
-## ---------------------------
 # Setup
 
 # Read in the NanoStringGeoMxSet object. 

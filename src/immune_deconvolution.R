@@ -2,18 +2,6 @@
 source("src/setup.R")
 
 ## ---------------------------
-## Test values
-# path_to_lm22 <- "/Users/lwfong/Library/CloudStorage/OneDrive-InsideMDAnderson/PRIME-TR/LFI-001_bisantine-geo/ext/LM22.txt"
-# path_to_cibersort <- "/Users/lwfong/Library/CloudStorage/OneDrive-InsideMDAnderson/PRIME-TR/LFI-001_bisantine-geo/ext/CIBERSORT.R"
-# path_to_hg_fasta <- "/Users/lwfong/Library/CloudStorage/OneDrive-InsideMDAnderson/PRIME-TR/LFI-001_bisantine-geo/ext/hg38.fa"
-# path_to_hg_gtf <- "/Users/lwfong/Library/CloudStorage/OneDrive-InsideMDAnderson/PRIME-TR/LFI-001_bisantine-geo/ext/hg38.ncbiRefSeq.gtf"
-# normalization_method <- "neg_norm"
-# imm_decon_methods <- c("quantiseq", "mcp_counter", "xcell", "epic", "abis", "estimate")
-# individual_identifier <- "Patient"
-# compartment_identifier <- "Compartment"
-# segment_identifier <- "segment"
-
-## ---------------------------
 # Setup
 
 # Read in the NanoStringGeoMxSet object.

@@ -2,15 +2,6 @@
 source("src/setup.R")
 
 ## ---------------------------
-# Test values
-# random_slope <- c("no", "no")
-# test_vars <- c("Compartment", "segment")
-# random_intercept_vars <- c("Patient")
-# random_slope_vars <- c("none")
-# subset_vars <- c("NA")
-# normalization_method <- "neg_norm"
-
-## ---------------------------
 # Setup
 
 # Read in the NanoStringGeoMxSet object. 
