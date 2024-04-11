@@ -40,9 +40,6 @@ pkc_summary <- data.frame(PKCs = pkcs, modules = modules)
 #     annotate(geom = "text", x = 4.19, y = 70, angle = 90, size = 5,
 #              hjust = 0.5, label = "100 segments")
 
-# Save the QC-ed NanoStringGeoMxSet object.
-saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-study-design.rds"))
-
 # Add everything to the PowerPoint. 
 # Add a section header.
 pptx <- pptx %>% 
@@ -56,4 +53,12 @@ pptx <- pptx %>%
                    location = ph_location_label(ph_label = "Title 1")) %>% 
   officer::ph_with(value = pkc_summary,
                    location = ph_location_label(ph_label = "Content Placeholder 2"))
+
+
+## ---------------------------
+# Export to disk.
+
+# Save the QC-ed NanoStringGeoMxSet object.
+saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-study-design.rds"))
+# Output everything to the PowerPoint.
 print(pptx, cl_args[5])

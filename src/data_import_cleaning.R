@@ -40,9 +40,6 @@ for(element in to_lowercase) {
       mutate_at(vars(element), funs(tolower(.)))
   }
 }
-  
-# Export the NanoStringGeoMxSet object.
-saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw.rds"))
 
 ## Initialize PowerPoint file.
 if(!is.null(ppt_template_file) && ppt_template_file != "") {
@@ -63,8 +60,15 @@ pptx <- pptx %>%
                    location = ph_location_label(ph_label = "Title 1")) %>% # For future reference, see also https://stackoverflow.com/questions/58508859/r-officer-package-how-to-specify-a-certain-placeholder-when-there-are-multiple
   officer::ph_with(value = the_date,
                    location = ph_location_label(ph_label = "Subtitle 2"))
-print(pptx, cl_args[4])
 
 # # Get the layout summary and properties of the template.
 # layout_summary(pptx)
 # layout_properties(pptx)
+
+## ---------------------------
+# Export to disk.
+
+# Export the NanoStringGeoMxSet object.
+saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw.rds"))
+# Output everything to the PowerPoint.
+print(pptx, cl_args[4])

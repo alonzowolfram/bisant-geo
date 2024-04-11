@@ -9,6 +9,18 @@ modules <- base::gsub(".pkc", "", pkcs)
 pptx <- read_pptx(cl_args[5])
 
 ## ---------------------------
+# Test values
+# min_segment_reads = 1000 # Minimum number of reads (1000)
+# percent_trimmed = 80   # Minimum % of reads trimmed (80%)
+# percent_stitched = 80   # Minimum % of reads stitched (80%)
+# percent_aligned = 80   # Minimum % of reads aligned (80%)
+# percent_saturation = 50 # Minimum sequencing saturation (50%)
+# min_negative_count = 1   # Minimum negative control counts (10)
+# max_ntc_count = 1000    # Maximum counts observed in NTC well (1000)
+# min_nuclei = 100         # Minimum # of nuclei estimated (100)
+# min_area = 5000        # Minimum segment area (5000)
+
+## ---------------------------
 
 # QC: segments
 # Select the QC parameter cutoffs, against which ROI/AOI segments will be tested and flagged appropriately.
@@ -95,34 +107,55 @@ data_object <- data_object[, qc_results$QCStatus == "PASS"]
 # Subsetting our dataset has removed samples which did not pass QC
 dim(data_object)
 
-# Save the QC-ed NanoStringGeoMxSet object.
-saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-segments.rds"))
-
 # Add everything to the PowerPoint. 
 # Add a section header.
 pptx <- pptx %>% 
   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
   officer::ph_with(value = paste0("Segment QC"), 
                    location = ph_location_label(ph_label = "Title 1"))
+
+# Graphing parameters.
+plot_width <- 7
+plot_height <- 7 
+units <- "in"
+res <- 300
 # Add the graphs.
 for(item in names(plot_list_segment_qc)) {
   if(item != "neg_geo_means") {
+    plot <- plot_list_segment_qc[[item]]
+    
+    # Save to EPS and PNG and then ...
+    eps_path <- paste0(output_dir_pubs, "qc-segments_", item, ".eps")
+    png_path <- paste0(output_dir_pubs, "qc-segments_", item, ".png")
+    saveEPS(plot, eps_path, width = plot_width, height = plot_height)
+    savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
+    
     # Add to the PowerPoint. 
     pptx <- pptx %>%
       officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
       officer::ph_with(value = paste0("Segment QC"),
                        location = ph_location_label(ph_label = "Title 1")) %>% 
-      officer::ph_with(value = plot_list_segment_qc[[item]],
-                       location = ph_location_label(ph_label = "Content Placeholder 2"))
+      officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
+                       location = ph_location_label(ph_label = "Content Placeholder 2"),
+                       use_loc_size = FALSE) # use_loc_size = FALSE forces the size to be the size of the saved PNG, not the PPT slide. 
   } else {
     for(ann in names(plot_list_segment_qc[["neg_geo_means"]])) {
+      plot <- plot_list_segment_qc[[item]][[ann]]
+      
+      # Save to EPS and PNG and then ...
+      eps_path <- paste0(output_dir_pubs, "qc-segments_", item, "-", ann, ".eps")
+      png_path <- paste0(output_dir_pubs, "qc-segments_", item, "-", ann, ".png")
+      saveEPS(plot, eps_path, width = plot_width, height = plot_height)
+      savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
+      
       # Add to the PowerPoint. 
       pptx <- pptx %>%
         officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
         officer::ph_with(value = paste0("Segment QC"),
                          location = ph_location_label(ph_label = "Title 1")) %>% 
-        officer::ph_with(value = plot_list_segment_qc[[item]][[ann]],
-                         location = ph_location_label(ph_label = "Content Placeholder 2"))
+        officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
+                         location = ph_location_label(ph_label = "Content Placeholder 2"),
+                         use_loc_size = FALSE) # use_loc_size = FALSE forces the size to be the size of the saved PNG, not the PPT slide. 
     }
   }
 }
@@ -143,4 +176,11 @@ pptx <- pptx %>%
                    location = ph_location_label(ph_label = "Title 1")) %>% 
   officer::ph_with(value = qc_summary,
                    location = ph_location_label(ph_label = "Content Placeholder 2"))
+
+## ---------------------------
+# Export to disk.
+
+# Save the QC-ed NanoStringGeoMxSet object.
+saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-segments.rds"))
+# Output everything to the PowerPoint. 
 print(pptx, cl_args[5])

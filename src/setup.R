@@ -116,24 +116,44 @@ lmm <- experiment$lmm
 random_slope <- lmm$random_slope
 test_vars <- lmm$test_vars
 random_intercept_vars <- lmm$random_intercept_vars
-random_slope_vars <- lmm$random_slope_vars
+# random_slope_vars <- lmm$random_slope_vars
+subset_vars <- lmm$subset_vars
+### Pathway analysis
+pathway_analysis <- experiment$pathway_analysis
+species <- pathway_analysis$species
+pathway_table_file <- pathway_analysis$pathway_table_file
+individual_pathways <- pathway_analysis$individual_pathways
+n_max_pathways <- pathway_analysis$n_max_pathways
+### Immune deconvolution
+immune_deconvolution <- experiment$immune_deconvolution
+path_to_lm22 <- immune_deconvolution$path_to_lm22
+path_to_cibersort <- immune_deconvolution$path_to_cibersort
+imm_decon_methods <- immune_deconvolution$imm_decon_methods
+individual_identifier <- immune_deconvolution$individual_identifier
+compartment_identifier <- immune_deconvolution$compartment_identifier
+segment_identifier <- immune_deconvolution$segment_identifier
+
 ### Miscellaneous
 random_seed <- experiment$misc$random_seed
+
+## ---------------------------
 
 # Check the required parameters passed from the configuration YAML file based on which module we're running.
 current_module <- cl_args[3]
 ## Data
 if(current_module=="data_import_cleaning") {
-  if(is.null(config$project$technical$path_to_regexPipes)) stop("Please provide a path to the regexPipes package in the config.yaml file (path_to_regexPipes).")
-  if(is.null(config$data$dcc_dir)) stop("Please provide the absolute path to the directory containing your DCC files.")
-  if(is.null(config$data$pkc_dir)) stop("Please provide the absolute path to the directory containing your PKC files.")
-  if(is.null(config$data$sample_annotation_file)) stop("Please provide the absolute path to your sample annotation Excel file.")
-  if(list(NULL) %in% config$experiment$annotation) stop("Please provide values for all experimental annotation column name settings.")
-} 
+  if(is.null(config$project$technical$path_to_regexPipes)) stop("Please provide a path to the regexPipes package in the configuration YAML file (path_to_regexPipes).")
+  if(is.null(config$data$dcc_dir)) stop("In the configuration YAML file, please provide the absolute path to the directory containing your DCC files.")
+  if(is.null(config$data$pkc_dir)) stop("In the configuration YAML file, please provide the absolute path to the directory containing your PKC files.")
+  if(is.null(config$data$sample_annotation_file)) stop("In the configuration YAML file, please provide the absolute path to your sample annotation Excel file.")
+  if(list(NULL) %in% config$experiment$annotation) stop("In the configuration YAML file, please provide values for all experimental annotation column name settings.")
+}
 ## Experiment
-if(current_module=="qc_segments") if(list(NULL) %in% config$experiment$segment_qc) stop("Please provide values for all segment QC settings to run the segment QC module.")
-if(current_module=="qc_probes") if(list(NULL) %in% config$experiment$probe_qc) stop("Please provide values for all probe QC settings to run the probe QC module.")
-if(current_module=="differential_expression_analysis") if(list(NULL) %in% config$experiment$lmm) stop("Please provide values for all linear mixed model settings to run the differential expression module.")
+if(current_module=="qc_segments") if(list(NULL) %in% config$experiment$segment_qc) stop("In the configuration YAML file, please provide values for all segment QC settings to run the segment QC module.")
+if(current_module=="qc_probes") if(list(NULL) %in% config$experiment$probe_qc) stop("In the configuration YAML file, please provide values for all probe QC settings to run the probe QC module.")
+if(current_module=="differential_expression_analysis") if(list(NULL) %in% list(config$experiment$lmm$random_slope, config$experiment$lmm$test_vars, config$experiment$lmm$random_intercept_vars)) stop("In the configuration YAML file, please provide values for all linear mixed model settings (random_slope, test_vars, random_intercept_vars) to run the differential expression module.")
+if(current_module=="pathway_analysis") if(is.null(species) | species=="") stop("In the configuration YAML file, please provide a value for the 'species' variable to run the pathway analysis module.")
+if(current_module=="immune_deconvolution") if(list(NULL) %in% list(path_to_lm22, path_to_cibersort)) stop("In the configuration YAML file, please provide values for the LM22 path and the CIBERSORT.R path.")
 if(is.null(ann_of_interest) | ann_of_interest=="") stop("Please provide values for ann_of_interest.")
 
 # Set values for optional/program-set parameters from the configuration YAML file.
@@ -175,6 +195,18 @@ if(is.null(compartment_vars) || compartment_vars == "") {
 } else {
   compartment_vars <- compartment_vars %>% strsplit(",") %>% unlist
 }
+## Differential expression analysis.
+if(is.null(subset_vars) || subset_vars == "") {
+  subset_vars <- NA
+} else {
+  subset_vars <- subset_vars %>% strsplit(",") %>% unlist
+}
+## Immune deconvolution.
+if(is.null(imm_decon_methods) || imm_decon_methods == "") {
+  imm_decon_methods <- c("cibersort", "cibersort_abs", "mcp_counter")
+} else {
+  imm_decon_methods <- imm_decon_methods %>% strsplit(",") %>% unlist
+}
 ## Miscellaneous
 random_seed <- ifelse((is.null(random_seed) || random_seed==""), 1026, random_seed) # E.g. 1026. 
 
@@ -198,7 +230,9 @@ for(stage in c("raw", "segment_qc", "probe_qc", "normalized", "unsupervised_clus
 random_slope <- random_slope %>% as.character %>% strsplit(",") %>% unlist
 test_vars <- test_vars %>% as.character %>% strsplit(",") %>% unlist
 random_intercept_vars <- random_intercept_vars %>% as.character %>% strsplit(",") %>% unlist
-random_slope_vars <- random_slope_vars %>% as.character %>% strsplit(",") %>% unlist
+# random_slope_vars <- random_slope_vars %>% as.character %>% strsplit(",") %>% unlist
+if(!is.null(pathway_table_file)) pathway_table_file <- pathway_table_file %>% appendSlashToPath()
+individual_pathways <- individual_pathways %>% as.character %>% strsplit(",") %>% unlist
 
 ## ---------------------------
 
@@ -214,8 +248,23 @@ library(ggforce) # I have no idea.
 library(scales) # For percents.
 library(reshape2) # For melt.
 library(cowplot) # For plot_grid.
+library(ggpubr) # For annotate_figure(), as_ggplot().
+library(grid) # For textGrob().
+library(gridExtra) # Not sure, but I'm using so many plot-related packages, why not just throw in another one.
 library(umap) # For UMAPs.
 library(Rtsne) # For t-SNE plots.
 library(ggrepel) # For graphing. 
+library(fgsea) # For GSEA.
+library(msigdbr) # Connecting to MSigDB.
+library(immunedeconv) # One-stop shop for immune deconvolution.
+library(e1071) # Required by CIBERSORT.
+library(parallel) # Required by CIBERSORT.
+library(preprocessCore) # Required by CIBERSORT.
+library(GenomicRanges) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
+library(rtracklayer) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
+library(Rsamtools) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
 install.packages(path_to_regexPipes, repos = NULL, type = "source")
 library(regexPipes) # For pipe-friendly version of base R's regex functions.
+
+## Load helper functions.
+source("src/helper_functions.R")

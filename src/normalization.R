@@ -79,9 +79,6 @@ target_data_object <- NanoStringNCTools::normalize(target_data_object ,
                                                    fromElt = "exprs",
                                                    toElt = "neg_norm")
 
-# Save the normalized NanoStringGeoMxSet object.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_normalized.rds"))
-
 # Visualize the first 10 segments with each normalization method, before and after normalization.
 # Raw.
 plot_list_normalization[["before_norm"]] <- exprs(target_data_object)[,1:10] %>% 
@@ -89,7 +86,7 @@ plot_list_normalization[["before_norm"]] <- exprs(target_data_object)[,1:10] %>%
   dplyr::rename(Gene = 1, Segment = 2, Count = 3) %>%
   ggplot(aes(x = Segment, y = Count)) +
   geom_boxplot(fill = "#9EDAE5") +
-  scale_y_continuous(trans='log10') + 
+  scale_y_continuous(trans='log10') +
   scale_x_discrete(label = 1:10) +
   theme_bw() +
   labs(y = "Counts, Raw", x = "Segment")
@@ -121,28 +118,60 @@ pptx <- pptx %>%
   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
   officer::ph_with(value = paste0("Normalization"), 
                    location = ph_location_label(ph_label = "Title 1"))
+
+# Graphing parameters.
+plot_width_q3 <- 12
+plot_height_q3 <- 12
+plot_width <- 6
+plot_height <- 6
+units <- "in"
+res <- 300
 # Add the graphs.
 for(item in names(plot_list_normalization)) {
   if(item=="Q3_norm") {
     for(item2 in names(plot_list_normalization[[item]])) {
+      plot <- plot_list_normalization[[item]][[item2]]
+      
+      # Save to EPS and PNG and then ...
+      eps_path <- paste0(output_dir_pubs, "normalization_", item, "-", item2, ".eps")
+      png_path <- paste0(output_dir_pubs, "normalization_", item, "-", item2, ".png")
+      saveEPS(plot, eps_path, width = plot_width_q3, height = plot_height_q3)
+      savePNG(plot, png_path, width = plot_width_q3, height = plot_height_q3, units = units, res = res)
+      
       # Add to the PowerPoint. 
       pptx <- pptx %>%
         officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
         officer::ph_with(value = paste0("Normalization"),
                          location = ph_location_label(ph_label = "Title 1")) %>% 
-        officer::ph_with(value = plot_list_normalization[[item]][[item2]],
-                         location = ph_location_label(ph_label = "Content Placeholder 2"))
+        officer::ph_with(value = external_img(png_path, width = plot_width_q3, height = plot_height_q3, unit = units),
+                         location = ph_location_label(ph_label = "Content Placeholder 2"),
+                         use_loc_size = FALSE)
       
     } 
   } else {
+    plot <- plot_list_normalization[[item]]
+    
+    # Save to EPS and PNG and then ...
+    eps_path <- paste0(output_dir_pubs, "normalization_", item, ".eps")
+    png_path <- paste0(output_dir_pubs, "normalization_", item, ".png")
+    saveEPS(plot, eps_path, width = plot_width, height = plot_height)
+    savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
+    
     # Add to the PowerPoint. 
     pptx <- pptx %>%
       officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
       officer::ph_with(value = paste0("Normalization"),
                        location = ph_location_label(ph_label = "Title 1")) %>% 
-      officer::ph_with(value = plot_list_normalization[[item]],
-                       location = ph_location_label(ph_label = "Content Placeholder 2"))
+      officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
+                       location = ph_location_label(ph_label = "Content Placeholder 2"),
+                       use_loc_size = FALSE)
   }
 }
 
+## ---------------------------
+# Export to disk.
+
+# Save the normalized NanoStringGeoMxSet to RDS.
+saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_normalized.rds"))
+# Output everything to the PowerPoint. 
 print(pptx, cl_args[5])

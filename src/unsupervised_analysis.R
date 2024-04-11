@@ -85,25 +85,44 @@ for(compartment_var in compartment_vars) {
   colnames(pData(target_data_object)) <- c(orig_var_names, paste0("UMAP", 1:2), paste0("tSNE", 1:2))
 }
 
-# Save to RDS.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_unsupervised-analysis.rds"))
-
 # Add a section header.
 pptx <- pptx %>% 
   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
   officer::ph_with(value = paste0("Unsupervised clustering"), 
                    location = ph_location_label(ph_label = "Title 1"))
+
+# Graphing parameters.
+plot_width <- 8
+plot_height <- 6
+units <- "in"
+res <- 300
 # Add the graphs.
 for(item in names(plot_list_unsupervised_clustering)) {
   for(item2 in names(plot_list_unsupervised_clustering[[item]])) {
+    plot <- plot_list_unsupervised_clustering[[item]][[item2]]
+    
+    # Save to EPS and PNG and then ...
+    eps_path <- paste0(output_dir_pubs, "unsupervised-analysis_", item, "-", item2, ".eps")
+    png_path <- paste0(output_dir_pubs, "unsupervised-analysis_", item, "-", item2, ".png")
+    saveEPS(plot, eps_path, width = plot_width, height = plot_height)
+    savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
+    
     # Add to the PowerPoint. 
     pptx <- pptx %>%
       officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
       officer::ph_with(value = paste0("Unsupervised clustering"),
                        location = ph_location_label(ph_label = "Title 1")) %>% 
-      officer::ph_with(value = plot_list_unsupervised_clustering[[item]][[item2]],
-                       location = ph_location_label(ph_label = "Content Placeholder 2"))
+      officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
+                       location = ph_location_label(ph_label = "Content Placeholder 2"),
+                       use_loc_size = FALSE)
     
   }
 }
+
+## ---------------------------
+# Export to disk.
+
+# Save the NanoStringGeoMxSet to RDS.
+saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_unsupervised-analysis.rds"))
+# Output everything to the PowerPoint. 
 print(pptx, cl_args[5])

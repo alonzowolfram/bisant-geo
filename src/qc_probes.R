@@ -211,36 +211,36 @@ dim(target_data_object)
 # # Retain only detected genes of interest.
 # goi <- goi[goi %in% rownames(target_data_object)]
 
-# Save the QC-ed NanoStringGeoMxSet object.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-probes.rds"))
-
 # Add everything to the PowerPoint. 
 # Add a section header.
 pptx <- pptx %>% 
   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
   officer::ph_with(value = paste0("Probe QC"), 
                    location = ph_location_label(ph_label = "Title 1"))
+
+# Graphing parameters.
+plot_width <- 6
+plot_height <- 6 
+units <- "in"
+res <- 300
 # Add the graphs.
 for(item in names(plot_list_probe_qc)) {
-  if(item != "neg_geo_means") {
-    # Add to the PowerPoint. 
-    pptx <- pptx %>%
-      officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-      officer::ph_with(value = paste0("Probe QC"),
-                       location = ph_location_label(ph_label = "Title 1")) %>% 
-      officer::ph_with(value = plot_list_probe_qc[[item]],
-                       location = ph_location_label(ph_label = "Content Placeholder 2"))
-  } else {
-    for(ann in names(plot_list_probe_qc[["neg_geo_means"]])) {
-      # Add to the PowerPoint. 
-      pptx <- pptx %>%
-        officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-        officer::ph_with(value = paste0("Probe QC"),
-                         location = ph_location_label(ph_label = "Title 1")) %>% 
-        officer::ph_with(value = plot_list_probe_qc[[item]][[ann]],
-                         location = ph_location_label(ph_label = "Content Placeholder 2"))
-    }
-  }
+  plot <- plot_list_probe_qc[[item]]
+  
+  # Save to EPS and PNG and then ...
+  eps_path <- paste0(output_dir_pubs, "qc-probes_", item, ".eps")
+  png_path <- paste0(output_dir_pubs, "qc-probes_", item, ".png")
+  saveEPS(plot, eps_path, width = plot_width, height = plot_height)
+  savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
+  
+  # Add to the PowerPoint. 
+  pptx <- pptx %>%
+    officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
+    officer::ph_with(value = paste0("Probe QC"),
+                     location = ph_location_label(ph_label = "Title 1")) %>% 
+    officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
+                     location = ph_location_label(ph_label = "Content Placeholder 2"),
+                     use_loc_size = FALSE)
 }
 # # Add the summary table. 
 # qc_summary <- qc_summary %>% 
@@ -253,4 +253,11 @@ for(item in names(plot_list_probe_qc)) {
 #   officer::ph_with(value = qc_summary,
 #                    location = ph_location_label(ph_label = "Content Placeholder 2"))
 # print(pptx, ppt_output_path)
+
+## ---------------------------
+# Export to disk.
+
+# Save the QC-ed NanoStringGeoMxSet object.
+saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-probes.rds"))
+# Output everything to the PowerPoint. 
 print(pptx, cl_args[5])

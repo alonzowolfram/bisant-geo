@@ -40,10 +40,54 @@ now = datetime.now()
 OUTPUT_PATH = generateOutputPath(config["data"]["previous_run_out_dir"], config["output"]["output_dir"], config["project"]["meta"]["project_name"], config["project"]["meta"]["run_name"], now)
 
 # --- Rules --- # 
+rule target:
+    input:
+        R_file_imm_decon = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_immune-deconvolution.rds",
+        R_file_path_anal = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_pathway-analysis.rds",
+        R_file_unsup_anal = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
+
+rule immune_deconvolution: 
+    input:
+        script = "src/immune_deconvolution.R",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
+    output:
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_immune-deconvolution.rds",
+        immune_deconv_results = OUTPUT_PATH + "Rdata/immune-deconvolution_results.rds",
+        raw_plots = OUTPUT_PATH + "Rdata/immune-deconvolution_plots-list.rds"
+    params:
+        output_path = OUTPUT_PATH,
+        current_module = "immune_deconvolution",
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
+    log:
+        out = OUTPUT_PATH + "logs/immune-deconvolution.out",
+        err = OUTPUT_PATH + "logs/immune-deconvolution.err" 
+    shell:
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+
+rule pathway_analysis:
+    input:
+        script = "src/pathway_analysis.R",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds",
+        DE_genes_table = OUTPUT_PATH + "tabular/LMM-differential-expression_results.csv"
+    output:
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_pathway-analysis.rds",
+        pathways_table = OUTPUT_PATH + "tabular/pathway-analysis_results.csv"
+    params:
+        output_path = OUTPUT_PATH,
+        current_module = "pathway_analysis",
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
+    log:
+        out = OUTPUT_PATH + "logs/pathway-analysis.out",
+        err = OUTPUT_PATH + "logs/pathway-analysis.err" 
+    shell:
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} {input.DE_genes_table} 1> {log.out} 2> {log.err}"
+
 rule differential_expression_analysis:
     input:
         script = "src/differential_expression_analysis.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds",
         DE_genes_table = OUTPUT_PATH + "tabular/LMM-differential-expression_results.csv"
