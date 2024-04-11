@@ -91,6 +91,11 @@ A tutorial with more details is forthcoming. Sometime. Maybe.
 After the pipeline is finished running, the folder containing the output files will be available in the `out` directory. See the `README.md` file in the `out` directory for an explanation of the outputs. 
 
 ## Changelog
+<b>2024/04/11</b> - v0.2.0-beta:
+* Added differential-expression, pathway-analysis, and immune-deconvolution modules.
+* Added ability to output PNG and EPS files.
+* Plots added to PowerPoint now use PNG files rather than R ggplot objects.
+ 
 <b>2024/03/22</b> - v0.2.0-alpha:
 * Lots and lots of bug fixes.
 * Added output: list of PKC modules.
