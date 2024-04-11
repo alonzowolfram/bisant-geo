@@ -124,7 +124,7 @@ kable(table(pData(target_data_object)$DetectionThreshold,
 
 # Remove segments with <5% of genes detected.
 target_data_object <-
-  target_data_object[, pData(target_data_object)$GeneDetectionRate >= .05]
+  target_data_object[, pData(target_data_object)$GeneDetectionRate >= (gene_detection_rate/100)] # gene_detection_rate is given as a percentage, not a decimal, so we need to divide by 100 first.
 
 dim(target_data_object)
 
@@ -204,7 +204,7 @@ plot_list_probe_qc[["percent_segments_by_gene_detection_cutoff"]] <-ggplot(plot_
 negativeProbefData <- subset(fData(target_data_object), CodeClass == "Negative")
 neg_probes <- unique(negativeProbefData$TargetName)
 target_data_object <- 
-  target_data_object[fData(target_data_object)$DetectionRate >= 0.1 |
+  target_data_object[fData(target_data_object)$DetectionRate >= (percent_of_segments/100) | # percent_of_segments is given as a percentage, not a decimal, so we need to divide by 100 first.
                        fData(target_data_object)$TargetName %in% neg_probes, ]
 dim(target_data_object)
 
