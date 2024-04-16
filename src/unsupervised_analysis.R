@@ -45,7 +45,7 @@ for(compartment_var in compartment_vars) {
         merged_col <- paste(merged_col, pData(target_data_object)[[comp]], sep = " | ")
       }
     }
-    pData(target_data_object)[["CompartmentVar"]] <- merged_col
+    pData(target_data_object)[["CompartmentVar"]] <- merged_col %>% as.character %>% as.factor
     # But remember that we'll have to rename the columns to the original, 
     # so we'll have to remove this new column at the end before we rename.
 
@@ -53,6 +53,7 @@ for(compartment_var in compartment_vars) {
     # No - so rename the (single) compartment variable as "CompartmentVar".
     pData(target_data_object) <- pData(target_data_object) %>% 
       dplyr::rename(CompartmentVar = !!as.name(compartment_var))
+    pData$CompartmentVar <- pData$CompartmentVar %>% as.character %>% as.factor
   }
 
   umap_out <-
@@ -122,7 +123,7 @@ for(item in names(plot_list_unsupervised_clustering)) {
 ## ---------------------------
 # Export to disk.
 
-# Save the NanoStringGeoMxSet to RDS.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_unsupervised-analysis.rds"))
 # Output everything to the PowerPoint. 
 print(pptx, cl_args[5])
+# Save the NanoStringGeoMxSet to RDS.
+saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_unsupervised-analysis.rds"))
