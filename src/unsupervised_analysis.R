@@ -53,7 +53,7 @@ for(compartment_var in compartment_vars) {
     # No - so rename the (single) compartment variable as "CompartmentVar".
     pData(target_data_object) <- pData(target_data_object) %>% 
       dplyr::rename(CompartmentVar = !!as.name(compartment_var))
-    pData$CompartmentVar <- pData$CompartmentVar %>% as.character %>% as.factor
+    pData(target_data_object)$CompartmentVar <- pData(target_data_object)$CompartmentVar %>% as.character %>% as.factor
   }
 
   umap_out <-
