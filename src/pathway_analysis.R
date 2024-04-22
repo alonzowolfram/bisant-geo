@@ -16,8 +16,8 @@ print(paste0("results2 dimensions: ", dim(results2)))
 # If not, default to hallmark, BioCarta, and Reactome pathways.
 # In future iterations, we'll probably include a default pathway_table_file instead of hard-coding the pathways here.
 set.default.pathways <- function() {
-  cats <- c("H", rep("C2", 2))
-  subcats <- c(NA, "CP:BIOCARTA", "CP:REACTOME")
+  cats <- c("H") # , rep("C2", 2)
+  subcats <- c(NA) # , "CP:BIOCARTA", "CP:REACTOME"
   return(list(cats = cats, subcats = subcats))
 }
 
@@ -41,6 +41,9 @@ if(exists("pathway_table")) if(!is.null(pathway_table)) msigdb_list <- as.list(p
   
 # Check that species is valid.
 if(!(species %in% c("Homo sapiens", "Mus musculus"))) stop("Please provide a valid species: either 'Homo sapiens' or 'Mus musculus.'")
+
+# Set graphical parameters.
+nes_palette <- colorRampPalette(c("blue", "white", "red"))(100)
 
 ## ---------------------------
 # Add section header to PPT.
@@ -111,6 +114,14 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
                           minSize  = 1, # 15
                           maxSize  = Inf) # 500
         df_sub <- fgseaRes %>% dplyr::filter(is.finite(NES))
+        # Make the pathway names more readable.
+        df_sub$PathwayCleaned <- df_sub$pathway %>% 
+          stringr::str_split("_") %>% 
+          lapply(FUN = function(x) c(paste0(x[1], ":"), x[2:length(x)]) %>% paste(collapse=" ")) %>%  
+          unlist() %>% 
+          stringr::str_split(": ") %>% 
+          lapply(FUN = function(x) stringr::str_to_sentence(x) %>% paste(collapse=": ")) %>% 
+          unlist()
         
         # Add pathway ranking score (-log10(padj) * |NES|)
         df_sub$PathwayScore <- -log10(df_sub$padj) * abs(df_sub$NES)
@@ -129,32 +140,56 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
         lower_limit <- ifelse(min(df_sub$NES) < 0, min(df_sub$NES) %>% floor(), min(df_sub$NES) %>% -. %>% floor())
         upper_limit_axis <- ifelse(max(df_sub$NES) < 0, 0, upper_limit)
         lower_limit_axis <- ifelse(min(df_sub$NES) > 0, 0, lower_limit)
-        nes_palette <- colorRampPalette(c("blue", "white", "red"))(100)
         dodgewidth <- position_dodge(width=0.9)
         
         # Get the contrast elements for the plot label.
         contrast_element_1 <- contrast %>% strsplit(" - ") %>% unlist %>% .[1]
         contrast_element_2 <- contrast %>% strsplit(" - ") %>% unlist %>% .[2]
+        
+        # Graphing parameters.
+        # Bar width needs to _increase_ with the # of rows in df_sub. 0.75 is a good width for 15 rows, and 0.25 is a good width for <= 3 rows, so ... 
+        # sqrt function? Or sigmoidal?
+        # We'll go with a piecewise function.
+        # Code base stolen from https://stackoverflow.com/a/8788595/23532435
+        # Second piece of the function will be linear (y = mx + b).
+        # Slope for second piece of the function: rise / run = (0.75 - 0.25) / (5 - 1) = 0.042
+        # y-intercept: b = y - mx
+        slope <- (0.75 - 0.25) / (5 - 1)
+        y_int <- 0.75 - slope * 5
+        ratio <- nrow(df_sub) / 3
+        bar_width <- (ratio <= 1) * 0.25 + 
+                     (ratio > 1 & ratio <= 5) * (slope * ratio + y_int) + 
+                     (ratio > 5) * ((sqrt(ratio) - sqrt(5)) + 0.75)
+        
+        # Get the data frame into the proper format for graphing using geom_rect.
+        df_sub_graphing <- df_sub
+        df_sub_graphing$PathwayCleaned <- df_sub_graphing$PathwayCleaned %>% as.factor %>% factor(levels = df_sub %>% dplyr::arrange(NES) %>% .$PathwayCleaned) # Arrange factor levels of pathway by NES.
+        df_sub_graphing$ymin <- ifelse(df_sub$NES >= 0, 0, df_sub$NES)
+        df_sub_graphing$ymax <- ifelse(df_sub$NES >= 0, df_sub$NES, 0)
+        df_sub_graphing$xmin <- (df_sub_graphing$PathwayCleaned %>% as.numeric) - (bar_width/2)
+        df_sub_graphing$xmax <- (df_sub_graphing$PathwayCleaned %>% as.numeric) + (bar_width/2)
+        
         # Graph.
-        plot <- ggplot(df_sub, aes(x = NES, y = reorder(pathway, NES), fill = NES)) +
-          # Bar graph.
-          geom_bar(stat = "identity", color = "black") +
-          # Set the colors.
-          scale_fill_gradientn(colors = nes_palette, limits = c(lower_limit, upper_limit)) +
-          # Change the axis limits.
-          xlim(lower_limit_axis, upper_limit_axis) + 
-          # # Add annotation (percentiles).
-          # geom_text(aes(label = percentile), hjust = -0.25) + 
-          # Add labels.
-          labs(
-              x = paste0(contrast_element_2, " <-> ", contrast_element_1), 
-               # x = "Normalized enrichment score", 
-               y = ""
-               ) +
-          # Use B+W theme.
-          theme_bw() +
-          # Position the legend on the right.
-          theme(legend.position = "right")
+        plot <- ggplot(df_sub_graphing, aes(y = NES, x = reorder(PathwayCleaned, NES), fill = NES)) +
+          # Bar graph manually, using geom_rect(angle).
+          geom_rect(xmin = df_sub_graphing$xmin, xmax = df_sub_graphing$xmax, ymin = df_sub_graphing$ymin, ymax = df_sub_graphing$ymax) +
+          # Set the color scale for the bars.
+          scale_fill_gradientn(colors = nes_palette, limits = c(lower_limit, upper_limit)) + 
+          # Flip horizontal.
+          coord_flip() + 
+          # B&W theme.
+          theme_bw() + 
+          # Remove grid lines and set aspect ratio.
+          theme(aspect.ratio = 1/1, # Aspect ratio needs to _decrease_ (limit 0) with the # of rows in df_sub_graphing.
+                legend.position = "right",
+                panel.grid.minor = element_blank(),
+                panel.grid.major = element_blank(),
+                # axis.text.x=element_blank(), 
+                # axis.ticks.x=element_blank(), 
+                # axis.text.y=element_blank(), 
+                axis.ticks.y=element_blank()) + 
+          # Set the labels.
+          labs(x = "", y = paste0(contrast_element_2, " <-> ", contrast_element_1))
         
         # Add to the list.
         plot_list_pathway_analysis[[subset_var]][[subset_var_level]][[paste0("model_", model_number)]][[contrast]] <- plot
@@ -178,10 +213,11 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
 # Arrange plots into grid
 # and add to PowerPoint.
 # Graphing parameters.
-plot_width <- 12
-plot_height <- 12 
+plot_width <- 20
+plot_height <- 15
 units <- "in"
 res <- 300
+
 plot_list_pathway_analysis_grid <- list()
 for(sv in names(plot_list_pathway_analysis)) {
   for(svl in names(plot_list_pathway_analysis[[sv]])) {
@@ -193,13 +229,14 @@ for(sv in names(plot_list_pathway_analysis)) {
       p_list <- plot_list_pathway_analysis[[sv]][[svl]][[model_num]]
 
       n <- length(p_list)
-      nCol <- ifelse(n <= 3, 2, floor(sqrt(n)))
+      nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
+      
+      # Set the scaling factors for label and legend size.
+      sqrt_n_col <- sqrt(nCol)
+      scaling_factor <- ifelse(nCol > 1, (sqrt_n_col * nCol / 3), 1) # Number of rows in current grid / 3 (base number)
 
-      # Extract the legend from the plots.
-      legend <- cowplot::get_plot_component(p_list[[1]], 'guide-box-right', return_all = TRUE)
-
-      # Strip legends from p_list.
-      for(item in names(p_list)) {p_list[[item]] <- p_list[[item]] + theme(legend.position = "none")}
+      # Each plot will have a different scale, so we will not include a common legend.
+      # for(item in names(p_list)) {p_list[[item]] <- p_list[[item]] + theme(legend.position = "none")}
 
       # Get the model information (test/contrast variable, random slope status, etc.)
       i <- model_number %>% regexPipes::gsub("model_", "")
@@ -221,15 +258,12 @@ for(sv in names(plot_list_pathway_analysis)) {
                                                          bottom = grid::textGrob("Normalized Enrichment Score", gp = grid::gpar(cex = 1.3)),
                                                          top = grid::textGrob(paste0("Pathway analysis ", subset_by, " \nTest (contrast) variable: ", test_var)))
 
-      # Add back in the legend we extracted earlier.
-      plot_grid2 <- grid.arrange(plot_grid, legend, ncol = 2, widths=c(10, 1))
-
       # Save to EPS and PNG and then ...
       eps_path <- paste0(output_dir_pubs, "FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".eps") #paste0(output_dir_pubs, "")
       png_path <- paste0(output_dir_pubs, "FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".png") #paste0(output_dir_pubs, "")
-      plot <- plot_grid2 %>% ggpubr::as_ggplot()
-      saveEPS(plot, eps_path, width = plot_width, height = plot_height)
-      savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
+      plot <- plot_grid# %>% ggpubr::as_ggplot()
+      saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
+      savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * scaling_factor))
      
       # ... add to the PowerPoint.
       pptx <- pptx %>%
@@ -241,7 +275,7 @@ for(sv in names(plot_list_pathway_analysis)) {
                          use_loc_size = FALSE)
 
       # Save to list.
-      plot_list_pathway_analysis_grid[[sv]][[svl]][[model_num]] <- plot_grid2 %>% ggpubr::as_ggplot()
+      plot_list_pathway_analysis_grid[[sv]][[svl]][[model_num]] <- plot_grid#2 %>% ggpubr::as_ggplot()
 
     }
   }

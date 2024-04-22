@@ -231,7 +231,6 @@ random_slope <- random_slope %>% as.character %>% strsplit(",") %>% unlist
 test_vars <- test_vars %>% as.character %>% strsplit(",") %>% unlist
 random_intercept_vars <- random_intercept_vars %>% as.character %>% strsplit(",") %>% unlist
 # random_slope_vars <- random_slope_vars %>% as.character %>% strsplit(",") %>% unlist
-if(!is.null(pathway_table_file)) pathway_table_file <- pathway_table_file %>% appendSlashToPath()
 individual_pathways <- individual_pathways %>% as.character %>% strsplit(",") %>% unlist
 
 ## ---------------------------

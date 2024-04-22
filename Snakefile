@@ -49,7 +49,8 @@ rule target:
 rule immune_deconvolution: 
     input:
         script = "src/immune_deconvolution.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds",
+        previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_pathway-analysis.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_immune-deconvolution.rds",
         immune_deconv_results = OUTPUT_PATH + "Rdata/immune-deconvolution_results.rds",
@@ -87,7 +88,8 @@ rule pathway_analysis:
 rule differential_expression_analysis:
     input:
         script = "src/differential_expression_analysis.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds",
+        previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds",
         DE_genes_table = OUTPUT_PATH + "tabular/LMM-differential-expression_results.csv"

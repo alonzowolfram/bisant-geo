@@ -14,26 +14,19 @@ set_cibersort_binary(path_to_cibersort)
 set_cibersort_mat(path_to_lm22)
 
 ## ---------------------------
-# Add section header to PPT.
-pptx <- pptx %>% 
-  officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("Immune deconvolution"), 
-                   location = ph_location_label(ph_label = "Title 1"))
-
-## ---------------------------
 # Calculate TPM - this is necessary for CIBERSORT among others, not so much for xCell or MCP-counter.
 # https://bioinformatics.stackexchange.com/questions/2567/how-can-i-calculate-gene-length-for-rpkm-calculation-from-counts-data
 # But can we even calculate TPM for GeoMx data? Bc it's probe-based, so it wouldn't have the same assumptions that RNA-seq does ... 
 
 ## ---------------------------
 # Add a section header.
-pptx <- pptx %>% 
+pptx <- pptx %>%
   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("Immune deconvolution"), 
+  officer::ph_with(value = paste0("Immune deconvolution"),
                    location = ph_location_label(ph_label = "Title 1"))
 
 # Perform immune deconvolution.
-# Extract the expression matrix. 
+# Extract the expression matrix.
 exprs_mat <- target_data_object@assayData[[normalization_method]]
 # Loop through imm_decon_methods.
 imm_decon_res_list <- list()
@@ -42,7 +35,17 @@ for(method in imm_decon_methods) {
     warning(paste0(method, " is currently not supported by this pipeline. Please note that TIMER and ConsensusTME, while included in the immunedeconv package, are currently not available in this pipeline due to extra arguments that must be passed to the function; and CIBERSORT will not be available until we figure out how to make the source code play nicely with the immunedeconv package."))
     next
   } else {
-    imm_decon_res_list[[method]] <- immunedeconv::deconvolute(exprs_mat, method)
+    # Error catching: https://stackoverflow.com/a/55937737/23532435
+    skip_to_next <- FALSE
+    
+    imm_decon_res <- tryCatch(immunedeconv::deconvolute(exprs_mat, method),
+                                             error = function(e) {skip_to_next <<- TRUE})
+    
+    if(skip_to_next) {
+      warning(paste0("An error occurred when trying to run immune deconvolution method ", method, ". Skipping to the next method."))
+      next
+    }
+    imm_decon_res_list[[method]] <- imm_decon_res
   }
 }
 
@@ -90,6 +93,8 @@ for(method in names(imm_decon_res_list)) {
   # For quantiseq, CIBERSORT absolute (when installed), and EPIC, create a stacked bar plot to show between-cell-type (within-sample) comparisons.
   if(method %in% c("quantiseq", "epic", "cibersort_abs")) {
     # Stacked bar chart.
+    # https://stackoverflow.com/questions/40361800/r-ggplot-stacked-geom-rect
+    # ^ for stacked bar charts using geom_rect().
     for(group in unique(df2$Group)) {
       plot <- df2 %>% 
         dplyr::filter(Group==group) %>% 
@@ -99,6 +104,8 @@ for(method in names(imm_decon_res_list)) {
         scale_fill_manual(values = mycolors) + # , guide = FALSE
         scale_color_manual(values = mycolors) + # , guide = FALSE
         theme_bw() + 
+        theme(panel.grid.minor = element_blank(),
+              panel.grid.major = element_blank()) + 
         scale_x_discrete(limits = rev(levels(imm_decon_res_list[[method]]))) + 
         labs(title = paste0(method, " deconvolution | group ", group))
       plot_list[[method]][[group]] <- plot
@@ -137,7 +144,9 @@ for(method in names(imm_decon_res_list)) {
         scale_color_manual(values = mycolors) + # , guide = FALSE
         coord_flip() +
         theme_bw() +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+              panel.grid.minor = element_blank(),
+              panel.grid.major = element_blank()) +
         labs(title = paste0(method, " deconvolution | group ", group))
           
       plot_list[[method]][[group]] <- plot
