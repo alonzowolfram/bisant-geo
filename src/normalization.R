@@ -79,6 +79,13 @@ target_data_object <- NanoStringNCTools::normalize(target_data_object ,
                                                    fromElt = "exprs",
                                                    toElt = "neg_norm")
 
+# Q3 normalization of background-normalized data.
+target_data_object <- NanoStringNCTools::normalize(target_data_object,
+                                                   norm_method = "quant",
+                                                   desiredQuantile = .75,
+                                                   fromElt = "neg_norm",
+                                                   toElt = "both")
+
 # Visualize the first 10 segments with each normalization method, before and after normalization.
 # Raw.
 plot_list_normalization[["before_norm"]] <- exprs(target_data_object)[,1:10] %>% 
@@ -110,7 +117,17 @@ plot_list_normalization[["after_neg_norm"]] <- assayDataElement(target_data_obje
   scale_y_continuous(trans='log10') + 
   scale_x_discrete(label = 1:10) +
   theme_bw() +
-  labs(y = "Counts, negative normalized", x = "Segment")
+  labs(y = "Counts, background normalized", x = "Segment")
+# Both norm counts.
+plot_list_normalization[["after_both_norm"]] <- assayDataElement(target_data_object[,1:10], elt = "both") %>% 
+  melt %>% 
+  dplyr::rename(Gene = 1, Segment = 2, Count = 3) %>%
+  ggplot(aes(x = Segment, y = Count)) +
+  geom_boxplot(fill = "#9966FF") +
+  scale_y_continuous(trans='log10') + 
+  scale_x_discrete(label = 1:10) +
+  theme_bw() +
+  labs(y = "Counts, background + Q3 normalized", x = "Segment")
 
 # Add everything to the PowerPoint. 
 # Add a section header.
