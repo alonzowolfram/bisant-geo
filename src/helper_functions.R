@@ -1,3 +1,10 @@
+#' Calculate coefficient of variation.
+#' 
+#' @param x A vector.
+#' @examples
+#' calc_CV(vector)
+calc_CV <- function(x) {sd(x) / mean(x)}
+
 #' Save a plot to EPS.
 #' 
 #' @param plot A plot object (ggplot, etc.)

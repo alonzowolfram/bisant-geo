@@ -198,13 +198,18 @@ experiment:
   # ----------------------------------------------------------------------
   normalization:
 
-    # [Optional] The normalization method to use.
-    # If not provided, the pipeline will default to Q3 normalization.
-    # Can be one of the following values: c("neg_norm", "q_norm")
+    # [Optional] The normalization method to use for
+    # unsupervised clustering, differential expression, pathway analysis, and immune deconvolution.
+    # You can provide multiple values, separated by commas.
+    # Each value will be used individually. 
+    # If not provided, all normalization methods will be used.
+     # Can be one of the following values: c("neg_norm", "q3_norm", "bg_sub_q3", "bg_sub_neg", "quant")
     # where "neg_norm" indicates background normalization for WTA/CTA without custom spike-ins and
-    # "q_norm" indicates Q3 (75th percentile) normalization for WTA/CTA with or without custom spike-ins.
-    # We recommend using "neg_norm" if there is a good deal of overlap between the signal and noise probe distributions.
-    normalization_method: Normalization method goes here
+    # "q3_norm" indicates Q3 (75th percentile) normalization for WTA/CTA with or without custom spike-ins.
+    # "bg_sub_q3" will perform background subtraction followed by Q3 normalization.
+    # "bg_sub_neg" will perform background subtraction followed by background normalization.
+    # "quant" will perform quantile normalization.
+    normalization_methods: bg_sub_q3,quant
 
     # [Required] The annotation of interest (e.g. Segment, Region).
     ann_of_interest: Annotation of interest goes here
@@ -214,11 +219,20 @@ experiment:
   # ----------------------------------------------------------------------
   unsupervised:
 
-     # [Optional] The column in the annotation to use as a grouping variable.
+    # [Optional] The column in the annotation to use as a primary grouping variable.
     # If provided, points on dimension reduction graphs (t-SNE, UMAP)
     # will be colored by group.
-    # You can provide multiple values, separated by commas.
-    compartment_vars: Compartment variable goes here
+    # You can provide multiple values, separated by commas, e.g. "variable1,variable2"
+    # You can also use a plus sign ("+") to indicate a secondary grouping variable.
+    # If provided, points on dimension reduction graphs will be assigned different shapes by 
+    # secondary grouping variable. E.g.: "variable1+variable3,variable2" will
+    # create two graphs; the first one will have its points colored by variable1 and have shapes assigned by
+    # variable3, and the second graph will have its points colored by variable2.
+    compartment_vars: Compartment variables go here
+
+    # [Optional] The columns in the annotation to use for annotation in the heatmap.
+    # Separate multiple values with commas.
+    heatmap_ann_vars: Heatmap annotation variables go here
 
   # ----------------------------------------------------------------------
   #     Linear mixed models and differential expression
@@ -279,6 +293,28 @@ experiment:
     # If you have a subsetting variable but also want to conduct a differential expression experiment
     # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one. 
     subset_vars: Subsetting variables go here
+
+    # [Optional] Cutoff, in number of standard deviations (SDs) away from the mean of the coefficient of variance,
+    # to filter genes before running differential expression via linear mixed models.
+    # For example, if you enter "2", only genes with a coefficient of variance 2SD _higher_ than 
+    # the mean coefficient of variance will be kept for differential expression analysis.
+    # This speeds up the time it takes to fit the linear mixed models.
+    # If left blank, all available genes will be used. 
+    cv_cutoff: 
+
+    # [Optional] Number of top differentially expressed genes to label on the volcano plots.
+    # This number will be applied to either side of the plot, so if you enter 10,
+    # [up to] 20 genes will be labeled on the plot. 
+    n_top_genes: 15
+
+    # [Optional] Cutoff for differentially expressed genes for heatmap, 
+    # expressed as [maximum false discovery rate (FDR)],[minimum absolute log2 fold change (LFC)].
+    # For example, if you want as your DE genes only those genes with an FDR < 0.05 
+    # and an LFC > 1, you'd enter 0.05,1
+    # If only one value is provided, it will be treated as the FDR.
+    # If left blank, the FDR cutoff will be set to 0.25, 
+    # and the minimum absolute LFC will be set to 0.58.
+    de_genes_cutoffs:
 
     # # [Optional] [Currently not in use] User-supplied formula(e) for running linear mixed models.
     # # You can provide multiple formulae, separated by commas (,).

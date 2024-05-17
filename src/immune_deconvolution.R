@@ -1,33 +1,45 @@
+###################################################################
+##                                                                
+## Setup 
+##
+###################################################################
 ## Source the setup.R file.
 source("src/setup.R")
-
-## ---------------------------
-# Setup
 
 # Read in the NanoStringGeoMxSet object.
 target_data_object <- readRDS(cl_args[4])
 # Read in the PowerPoint.
 pptx <- read_pptx(cl_args[5])
 
-# Set path to CIBERSORT required files.
-set_cibersort_binary(path_to_cibersort)
-set_cibersort_mat(path_to_lm22)
+# Set the normalization method.
+normalization_method <- normalization_names[names(normalization_names)==normalization_methods[1]]
 
-## ---------------------------
-# Calculate TPM - this is necessary for CIBERSORT among others, not so much for xCell or MCP-counter.
-# https://bioinformatics.stackexchange.com/questions/2567/how-can-i-calculate-gene-length-for-rpkm-calculation-from-counts-data
-# But can we even calculate TPM for GeoMx data? Bc it's probe-based, so it wouldn't have the same assumptions that RNA-seq does ... 
+# # Set path to CIBERSORT required files.
+# set_cibersort_binary(path_to_cibersort)
+# set_cibersort_mat(path_to_lm22)
+# 
+# # Calculate TPM - this is necessary for CIBERSORT among others, not so much for xCell or MCP-counter.
+# # https://bioinformatics.stackexchange.com/questions/2567/how-can-i-calculate-gene-length-for-rpkm-calculation-from-counts-data
+# # But can we even calculate TPM for GeoMx data? Bc it's probe-based, so it wouldn't have the same assumptions that RNA-seq does ... 
 
-## ---------------------------
 # Add a section header.
 pptx <- pptx %>%
   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
   officer::ph_with(value = paste0("Immune deconvolution"),
                    location = ph_location_label(ph_label = "Title 1"))
 
-# Perform immune deconvolution.
+###################################################################
+##
+## Immune deconvolution
+##
+###################################################################
+## ----------------------------------------------------------------
+##
+## Calculation
+##
+## ----------------------------------------------------------------
 # Extract the expression matrix.
-exprs_mat <- target_data_object@assayData[[normalization_method]]
+exprs_mat <- target_data_object@assayData[[normalization_methods[1]]]
 # Loop through imm_decon_methods.
 imm_decon_res_list <- list()
 for(method in imm_decon_methods) {
@@ -49,7 +61,11 @@ for(method in imm_decon_methods) {
   }
 }
 
-# Visualize.
+## ----------------------------------------------------------------
+##
+## Visualization
+##
+## ----------------------------------------------------------------
 # https://omnideconv.org/immunedeconv/articles/detailed_example.html
 # Parameters.
 plot_width <- 12
@@ -95,6 +111,7 @@ for(method in names(imm_decon_res_list)) {
     # Stacked bar chart.
     # https://stackoverflow.com/questions/40361800/r-ggplot-stacked-geom-rect
     # ^ for stacked bar charts using geom_rect().
+    # See also https://stackoverflow.com/questions/28956442/automatically-resize-bars-in-ggplot-for-uniformity-across-several-graphs-r
     for(group in unique(df2$Group)) {
       plot <- df2 %>% 
         dplyr::filter(Group==group) %>% 
@@ -178,8 +195,11 @@ for(method in names(imm_decon_res_list)) {
 rm(pData_tmp)
 gc()
 
-## ---------------------------
-# Export to disk.
+###################################################################
+##
+## Export to disk
+##
+###################################################################
 
 # Export PowerPoint file.
 print(pptx, cl_args[5])
@@ -187,5 +207,7 @@ print(pptx, cl_args[5])
 saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_immune-deconvolution.rds"))
 # Export deconvolution results as RDS file. 
 saveRDS(imm_decon_res_list, paste0(output_dir_rdata, "immune-deconvolution_results.rds"))
+# Export deconvolution results as Microsoft Excel file. 
+openxlsx::write.xlsx(imm_decon_res_list, file = paste0(output_dir_tabular, "immune-deconvolution_results_by-method.xlsx"))
 # Export the raw plots as RDS file.
 plot_list %>% saveRDS(paste0(output_dir_rdata, "immune-deconvolution_plots-list.rds"))

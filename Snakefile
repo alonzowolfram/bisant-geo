@@ -69,7 +69,7 @@ rule immune_deconvolution:
 rule pathway_analysis:
     input:
         script = "src/pathway_analysis.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_marker-identification.rds",
         DE_genes_table = OUTPUT_PATH + "tabular/LMM-differential-expression_results.csv"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_pathway-analysis.rds",
@@ -84,6 +84,25 @@ rule pathway_analysis:
         err = OUTPUT_PATH + "logs/pathway-analysis.err" 
     shell:
         "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} {input.DE_genes_table} 1> {log.out} 2> {log.err}"
+
+rule marker_identification:
+    input:
+        script = "src/marker_identification.R",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds",
+        previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds"
+    output:
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_marker-identification.rds",
+        marker_table = OUTPUT_PATH + "tabular/LMM-marker_results.csv"
+    params:
+        output_path = OUTPUT_PATH,
+        current_module = "marker_identification",
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
+    log:
+        out = OUTPUT_PATH + "logs/marker-identification.out",
+        err = OUTPUT_PATH + "logs/marker-identification.err" 
+    shell:
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule differential_expression_analysis:
     input:
@@ -195,9 +214,7 @@ rule qc_study_design:
 
 rule data_import_cleaning:
     input:
-        script = "src/data_import_cleaning.R",
-        env_file = OUTPUT_PATH + "config/conda.env",
-        config_file = OUTPUT_PATH + "config/config.yaml"
+        script = "src/data_import_cleaning.R"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
@@ -213,13 +230,11 @@ rule data_import_cleaning:
         "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule export_env:
-    input: 
-        config_file = CONFIG_PATH
     output:
-        env_file = OUTPUT_PATH + "config/conda.env",
-        config_file = OUTPUT_PATH + "config/config.yaml"
+        env_file = OUTPUT_PATH + "config/conda.env"
     params:
         config_path = CONFIG_PATH,
-        output_path = OUTPUT_PATH
+        output_path = OUTPUT_PATH,
+        config_file = CONFIG_PATH + "config.yaml"
     shell:
         "conda list --export > {params.output_path}config/conda.env; cp {params.config_path} {params.output_path}config/"

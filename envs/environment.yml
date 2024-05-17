@@ -33,3 +33,4 @@ dependencies:
   - bioconda::bioconductor-genomicranges=1.54.1
   - bioconda::bioconductor-rtracklayer=1.62.0
   - bioconda::bioconductor-rsamtools=2.18.0
+  - conda-forge::r-devtools=2.4.5

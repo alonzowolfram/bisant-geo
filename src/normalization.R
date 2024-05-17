@@ -40,7 +40,9 @@ for(probeset in colnames(stat_data) %>% regexPipes::grep("NegProbe", value=T)) {
     scale_x_continuous(trans = "log2") +
     facet_wrap(~Annotation, nrow = 1) + 
     scale_fill_brewer(palette = 3, type = "qual") +
-    labs(x = "Counts", y = "Segments, #")
+    labs(x = "Counts", y = "Segments, #") +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank())
   
   # Negative probe geometric mean (x-axis) vs Q3 value of counts of non-negative probes (y-axis). The dashed line indicates where the points (each point = 1 segment) would fall if there were no separation - i.e., if, for a given point, the Q3 values were the same as the negative probe geometric mean. Therefore, we want the points to be _above_ the dashed line.
   plt2 <- ggplot(stat_data,
@@ -49,8 +51,10 @@ for(probeset in colnames(stat_data) %>% regexPipes::grep("NegProbe", value=T)) {
     geom_point() + guides(color = "none") + theme_bw() +
     scale_x_continuous(trans = "log2") + 
     scale_y_continuous(trans = "log2") +
-    theme(aspect.ratio = 1) +
-    labs(x = "Negative Probe GeoMean, Counts", y = "Q3 Value, Counts")
+    theme(aspect.ratio = 1,
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank()) +
+    labs(x = "Negative probe geomean, counts", y = "Q3 value, counts")
   
   plt3 <- ggplot(stat_data,
                  aes(x = !!as.name(probeset), y = Q3 / !!as.name(probeset), color = Annotation)) +
@@ -58,20 +62,25 @@ for(probeset in colnames(stat_data) %>% regexPipes::grep("NegProbe", value=T)) {
     geom_point() + theme_bw() +
     scale_x_continuous(trans = "log2") + 
     scale_y_continuous(trans = "log2") +
-    theme(aspect.ratio = 1) +
-    labs(x = "Negative Probe GeoMean, Counts", y = "Q3/NegProbe Value, Counts")
+    theme(aspect.ratio = 1,
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank()) +
+    labs(x = "Negative probe geomean, counts", y = "Q3/negprobe value, counts")
   
   btm_row <- plot_grid(plt2, plt3, nrow = 1, labels = c("B", ""),
                        rel_widths = c(0.43,0.57))
   plot_list_normalization[["Q3_norm"]][[probeset]] <- plot_grid(plt1, btm_row, ncol = 1, labels = c("A", ""))
 }
 
+# Other normalization practices: https://bioconductor.org/packages/release/bioc/vignettes/GeoDiff/inst/doc/Workflow_WTA_kidney.html
+
 # Normalize.
+# https://rdrr.io/github/Nanostring-Biostats/GeomxTools/man/normalize-NanoStringGeoMxSet-method.html
 # Q3 norm (75th percentile) for WTA/CTA with or without custom spike-ins.
 target_data_object <- NanoStringNCTools::normalize(target_data_object ,
                                                    norm_method = "quant", 
                                                    desiredQuantile = .75,
-                                                   toElt = "q_norm")
+                                                   toElt = "q3_norm")
 
 # Background normalization for WTA/CTA without custom spike-in.
 target_data_object <- NanoStringNCTools::normalize(target_data_object ,
@@ -79,55 +88,57 @@ target_data_object <- NanoStringNCTools::normalize(target_data_object ,
                                                    fromElt = "exprs",
                                                    toElt = "neg_norm")
 
-# Q3 normalization of background-normalized data.
+# Background-subtraction correction (not used as a complete normalization method).
+target_data_object <- NanoStringNCTools::normalize(target_data_object ,
+                                                   norm_method = "subtractBackground",
+                                                   fromElt = "exprs",
+                                                   toElt = "bg_sub")
+
+# Q3 normalization of background-subtracted data.
 target_data_object <- NanoStringNCTools::normalize(target_data_object,
                                                    norm_method = "quant",
                                                    desiredQuantile = .75,
-                                                   fromElt = "neg_norm",
-                                                   toElt = "both")
+                                                   fromElt = "bg_sub",
+                                                   toElt = "bg_sub_q3")
+
+# Background normalization of background-subtracted data.
+target_data_object <- NanoStringNCTools::normalize(target_data_object,
+                                                   norm_method = "neg",
+                                                   fromElt = "bg_sub",
+                                                   toElt = "bg_sub_neg")
+
+# Quantile normalization.
+# https://www.statology.org/quantile-normalization-in-r/
+# Quantile normalization (in which distributions are forced to be the same* across samples) is NOT the same thing as 
+# quantile-specific normalization, in which only a particular quantile (usually a quartile) is forced
+# to be the same across samples. See https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6171491/. 
+# *tied values notwithstanding.
+quant_normalized <- normalize.quantiles(target_data_object@assayData$exprs)
+rownames(quant_normalized) <- rownames(target_data_object@assayData$exprs)
+colnames(quant_normalized) <- colnames(target_data_object@assayData$exprs)
+assayDataElement(object = target_data_object, elt = "quant", validate = FALSE) <- quant_normalized
 
 # Visualize the first 10 segments with each normalization method, before and after normalization.
-# Raw.
-plot_list_normalization[["before_norm"]] <- exprs(target_data_object)[,1:10] %>% 
-  melt %>% 
-  dplyr::rename(Gene = 1, Segment = 2, Count = 3) %>%
-  ggplot(aes(x = Segment, y = Count)) +
-  geom_boxplot(fill = "#9EDAE5") +
-  scale_y_continuous(trans='log10') +
-  scale_x_discrete(label = 1:10) +
-  theme_bw() +
-  labs(y = "Counts, Raw", x = "Segment")
+# Set the colors.
+n_colors <- length(target_data_object@assayData)
+colors <- RColorBrewer::brewer.pal(n_colors, "Set2")
+names(colors) <- names(target_data_object@assayData)
+normalization_names <- c("raw", "Q3-normalized", "background-normalized", "background-subtracted", "background-subtracted + Q3-normalized", "background-subtracted + background-normalized", "quantile-normalized")
+names(normalization_names) <- c("exprs", "q3_norm", "neg_norm", "bg_sub", "bg_sub_q3", "bg_sub_neg", "quant")
 
-# Q3 norm counts.
-plot_list_normalization[["after_Q3_norm"]] <- assayDataElement(target_data_object[,1:10], elt = "q_norm") %>% 
-  melt %>% 
-  dplyr::rename(Gene = 1, Segment = 2, Count = 3) %>%
-  ggplot(aes(x = Segment, y = Count)) +
-  geom_boxplot(fill = "#2CA02C") +
-  scale_y_continuous(trans='log10') + 
-  scale_x_discrete(label = 1:10) +
-  theme_bw() +
-  labs(y = "Counts, Q3 normalized", x = "Segment")
-# Negative norm counts.
-plot_list_normalization[["after_neg_norm"]] <- assayDataElement(target_data_object[,1:10], elt = "neg_norm") %>% 
-  melt %>% 
-  dplyr::rename(Gene = 1, Segment = 2, Count = 3) %>%
-  ggplot(aes(x = Segment, y = Count)) +
-  geom_boxplot(fill = "#FF7F0E") +
-  scale_y_continuous(trans='log10') + 
-  scale_x_discrete(label = 1:10) +
-  theme_bw() +
-  labs(y = "Counts, background normalized", x = "Segment")
-# Both norm counts.
-plot_list_normalization[["after_both_norm"]] <- assayDataElement(target_data_object[,1:10], elt = "both") %>% 
-  melt %>% 
-  dplyr::rename(Gene = 1, Segment = 2, Count = 3) %>%
-  ggplot(aes(x = Segment, y = Count)) +
-  geom_boxplot(fill = "#9966FF") +
-  scale_y_continuous(trans='log10') + 
-  scale_x_discrete(label = 1:10) +
-  theme_bw() +
-  labs(y = "Counts, background + Q3 normalized", x = "Segment")
+for(norm_method in names(target_data_object@assayData)) {
+  plot_list_normalization[[norm_method]] <- assayDataElement(target_data_object[,1:10], elt = norm_method) %>% 
+    melt %>% 
+    dplyr::rename(Gene = 1, Segment = 2, Count = 3) %>%
+    ggplot(aes(x = Segment, y = Count)) +
+    geom_boxplot(fill = colors[names(colors)==norm_method]) +
+    scale_y_continuous(trans='log10') + 
+    scale_x_discrete(label = 1:10) +
+    theme_bw() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank()) +
+    labs(y = paste0("Counts, ", normalization_names[names(normalization_names)==norm_method]), x = "Segment")
+}
 
 # Add everything to the PowerPoint. 
 # Add a section header.

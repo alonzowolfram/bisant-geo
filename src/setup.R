@@ -107,10 +107,11 @@ min_loq <- probe_qc$min_loq
 gene_detection_rate <- probe_qc$gene_detection_rate
 percent_of_segments <- probe_qc$percent_of_segments
 ### Normalization
-normalization_method <- experiment$normalization$normalization_method
+normalization_methods <- experiment$normalization$normalization_methods
 ann_of_interest <- experiment$normalization$ann_of_interest
 ### Unsupervised analysis
 compartment_vars <- experiment$unsupervised$compartment_vars
+heatmap_ann_vars <- experiment$unsupervised$heatmap_ann_vars
 ### Linear mixed models/differential expression
 lmm <- experiment$lmm
 random_slope <- lmm$random_slope
@@ -118,6 +119,9 @@ test_vars <- lmm$test_vars
 random_intercept_vars <- lmm$random_intercept_vars
 # random_slope_vars <- lmm$random_slope_vars
 subset_vars <- lmm$subset_vars
+cv_cutoff <- lmm$cv_cutoff
+n_top_genes <- lmm$n_top_genes
+de_genes_cutoffs <- lmm$de_genes_cutoffs
 ### Pathway analysis
 pathway_analysis <- experiment$pathway_analysis
 species <- pathway_analysis$species
@@ -188,18 +192,48 @@ output_dir_pubs <- paste0(output_dir, "pubs/")
 
 # Experiment
 ## Normalization
-normalization_method <- ifelse((is.null(normalization_method) || normalization_method == ""), "q_norm", normalization_method)
+if(is.null(normalization_methods) || normalization_methods == "") {
+  normalization_methods <- c("quantile")
+} else {
+  normalization_methods <- normalization_methods %>% strsplit(",") %>% unlist
+}
 ## Unsupervised analysis
 if(is.null(compartment_vars) || compartment_vars == "") {
   compartment_vars <- ann_of_interest
 } else {
   compartment_vars <- compartment_vars %>% strsplit(",") %>% unlist
 }
+if(!is.null(heatmap_ann_vars) & heatmap_ann_vars != "") {
+  heatmap_ann_vars <- heatmap_ann_vars %>% strsplit(",") %>% unlist
+}
 ## Differential expression analysis.
 if(is.null(subset_vars) || subset_vars == "") {
   subset_vars <- NA
 } else {
   subset_vars <- subset_vars %>% strsplit(",") %>% unlist
+}
+if(is.null(n_top_genes) || n_top_genes == "" || !is.integer(n_top_genes)) {
+  n_top_genes <- 15
+}
+if(is.null(de_genes_cutoffs) || de_genes_cutoffs == "") {
+  de_genes_cutoffs <- c(0.25, 0.58)
+} else {
+  # Check if there is a comma.
+  if(base::grepl(",", de_genes_cutoffs)) {
+    # There is a comma.
+    # Split and check.
+    de_genes_cutoffs <- de_genes_cutoffs %>% strsplit(",") %>% unlist %>% as.numeric() %>% .[1:2] # Keep only the first two elements, in case the user entered more than 1 comma. 
+    for(i in length(de_genes_cutoffs)) {
+      if(i == 1) {
+        if(is.na(de_genes_cutoffs[i])) de_genes_cutoffs[i] <- 0.25 # User did not provide FDR, did provide LFC.
+      } else {
+        if(is.na(de_genes_cutoffs[i])) de_genes_cutoffs[i] <- 0.58 # User did not provide LFC, did provide FDR. 
+      }
+    }
+  } else {
+    # No comma <= user provided only the FDR cutoff.
+    de_genes_cutoffs <- c(de_genes_cutoffs, 0.58)
+  }
 }
 ## Immune deconvolution.
 if(is.null(imm_decon_methods) || imm_decon_methods == "") {
@@ -233,6 +267,10 @@ random_intercept_vars <- random_intercept_vars %>% as.character %>% strsplit(","
 # random_slope_vars <- random_slope_vars %>% as.character %>% strsplit(",") %>% unlist
 individual_pathways <- individual_pathways %>% as.character %>% strsplit(",") %>% unlist
 
+# Create full names for the normalization methods.
+normalization_names <- c("raw", "Q3-normalized", "background-normalized", "background-subtracted", "background-subtracted + Q3-normalized", "background-subtracted + background-normalized", "quantile-normalized")
+names(normalization_names) <- c("exprs", "q3_norm", "neg_norm", "bg_sub", "bg_sub_q3", "bg_sub_neg", "quant")
+
 ## ---------------------------
 
 ## Load required libraries.
@@ -262,8 +300,15 @@ library(preprocessCore) # Required by CIBERSORT.
 library(GenomicRanges) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
 library(rtracklayer) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
 library(Rsamtools) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
+library(pheatmap) # For heatmaps.
+library(openxlsx) # For reading and writing Microsoft Excel files.
+# library(caret) # For nearZeroVar().
 install.packages(path_to_regexPipes, repos = NULL, type = "source")
 library(regexPipes) # For pipe-friendly version of base R's regex functions.
+# library(devtools)
+# devtools::install_github("jdstorey/qvalue") # Dependency for glmmSeq. https://github.com/StoreyLab/qvalue
+# devtools::install_github("myles-lewis/glmmSeq") 
+# library(glmmSeq) # General linear mixed models. 
 
 ## Load helper functions.
 source("src/helper_functions.R")

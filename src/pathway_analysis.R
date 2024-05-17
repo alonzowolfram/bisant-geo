@@ -1,8 +1,11 @@
 ## Source the setup.R file.
 source("src/setup.R")
 
-## ---------------------------
-# Setup
+###################################################################
+##
+## Setup 
+##
+###################################################################
 
 # Read in the NanoStringGeoMxSet object. 
 target_data_object <- readRDS(cl_args[4])
@@ -45,15 +48,23 @@ if(!(species %in% c("Homo sapiens", "Mus musculus"))) stop("Please provide a val
 # Set graphical parameters.
 nes_palette <- colorRampPalette(c("blue", "white", "red"))(100)
 
-## ---------------------------
+# Set the normalization method.
+normalization_method <- normalization_names[names(normalization_names)==normalization_methods[1]]
+
 # Add section header to PPT.
 pptx <- pptx %>% 
   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
   officer::ph_with(value = paste0("Pathway analysis (FGSEA)"), 
                    location = ph_location_label(ph_label = "Title 1"))
 
-## ---------------------------
-# Run pathway analysis (FGSEA).
+###################################################################
+##
+## Run pathway analysis (FGSEA).
+##
+###################################################################
+
+# Subset results2 table (data frame of differentially expressed genes).
+results2_sub <- results2 %>% dplyr::filter(`Normalization method`==normalization_method)
 
 # Load the gene sets (from MSigDB).
 # https://rpubs.com/LiYumei/806213
@@ -84,19 +95,19 @@ msigdbr_pathway_list <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
 # https://bioconductor.org/packages/devel/bioc/vignettes/fgsea/inst/doc/fgsea-tutorial.html
 plot_list_pathway_analysis <- list()
 pathway_df <- data.frame()
-model_numbers <- results2$`Model number` %>% unique
-for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
+model_numbers <- results2_sub$`Model number` %>% unique
+for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
   
-  subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
+  subset_var_levels <- results2_sub %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
   for(subset_var_level in subset_var_levels) {
     
     for(model_number in model_numbers) {
       i <- model_number %>% regexPipes::gsub("model_", "")
       
-      contrasts <- results2 %>% dplyr::filter(`Subset variable`==subset_var & `Subset level`==subset_var_level & `Model number`==model_number) %>% .$Contrast %>% unique
+      contrasts <- results2_sub %>% dplyr::filter(`Subset variable`==subset_var & `Subset level`==subset_var_level & `Model number`==model_number) %>% .$Contrast %>% unique
       for(contrast in contrasts) {
         # Subset. 
-        results2_sub <- results2 %>% dplyr::filter(
+        results2_sub_sub <- results2_sub %>% dplyr::filter(
           `Subset variable`==subset_var &
             `Subset level`==subset_var_level &
             `Model number`==i &
@@ -104,8 +115,8 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
         )
         
         # Extract the DEG data--these will be the ranks we use as input to FGSEA. 
-        ranks <- results2_sub$Estimate
-        names(ranks) <- results2_sub$Gene
+        ranks <- results2_sub_sub$Estimate
+        names(ranks) <- results2_sub_sub$Gene
         ranks <- ranks %>% .[order(.)]
         
         # Run FGSEA.
@@ -233,37 +244,40 @@ for(sv in names(plot_list_pathway_analysis)) {
       
       # Set the scaling factors for label and legend size.
       sqrt_n_col <- sqrt(nCol)
-      scaling_factor <- ifelse(nCol > 1, (sqrt_n_col * nCol / 3), 1) # Number of rows in current grid / 3 (base number)
+      scaling_factor <- ifelse(nCol > 1, (sqrt_n_col * nCol / 3), 0.35) # Number of rows in current grid / 3 (base number)
+      res_scaling_factor <- max(scaling_factor, 1)
 
       # Each plot will have a different scale, so we will not include a common legend.
       # for(item in names(p_list)) {p_list[[item]] <- p_list[[item]] + theme(legend.position = "none")}
 
       # Get the model information (test/contrast variable, random slope status, etc.)
-      i <- model_number %>% regexPipes::gsub("model_", "")
+      i <- model_num %>% regexPipes::gsub("model_", "")
       subset_var <- sv
       subset_var_level <- svl
-      test_var <- results2 %>% dplyr::filter(`Model number`==i) %>% .$`Contrast variable` %>% .[1]
+      test_var <- results2_sub %>% dplyr::filter(`Model number`==i) %>% .$`Contrast variable` %>% .[1]
 
       if(subset_var=="DummySubsetVar") {
         subset_by <- ""
         filename_subset_by <- ""
       } else {
         subset_by <- paste0("| Subset variable: ", subset_var, ", level: ", subset_var_level)
-        filename_subset_by <- paste0("subset-variable-", subset_var, "_level-", subset_var_level)
+        filename_subset_by <- paste0("subset-variable-", subset_var, "_level-", subset_var_level, "_")
       }
 
       # Arrange plots in p_list onto a grid.
       plot_grid <- do.call("grid.arrange", c(p_list, ncol=nCol))
       plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("Pathway", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = 1.3)),
                                                          bottom = grid::textGrob("Normalized Enrichment Score", gp = grid::gpar(cex = 1.3)),
-                                                         top = grid::textGrob(paste0("Pathway analysis ", subset_by, " \nTest (contrast) variable: ", test_var)))
+                                                         top = grid::textGrob(paste0("Pathway analysis ", subset_by, 
+                                                                                     "\nTest (contrast) variable: ", test_var,
+                                                                                     "\nNormalization method: ", normalization_method)))
 
       # Save to EPS and PNG and then ...
       eps_path <- paste0(output_dir_pubs, "FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".eps") #paste0(output_dir_pubs, "")
       png_path <- paste0(output_dir_pubs, "FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".png") #paste0(output_dir_pubs, "")
       plot <- plot_grid# %>% ggpubr::as_ggplot()
       saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
-      savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * scaling_factor))
+      savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * res_scaling_factor))
      
       # ... add to the PowerPoint.
       pptx <- pptx %>%
@@ -281,8 +295,11 @@ for(sv in names(plot_list_pathway_analysis)) {
   }
 }
 
-## ---------------------------
-# Export to disk.
+###################################################################
+##
+## Export to disk.
+##
+###################################################################
 
 # Export PowerPoint file.
 print(pptx, cl_args[5])
