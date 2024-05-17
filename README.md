@@ -91,6 +91,13 @@ A tutorial with more details is forthcoming. Sometime. Maybe.
 After the pipeline is finished running, the folder containing the output files will be available in the `out` directory. See the `README.md` file in the `out` directory for an explanation of the outputs. 
 
 ## Changelog
+<b>2024/05/17</b> - v0.3.0-alpha:
+* Added several new normalization methods based on van Hijfte et al (<i>iScience</i>, 2023) and NanoString's GeoMx whitepaper.
+* Corrected normalization method: previously, background subtraction and background normalization had been conflated; they have been given their separate normalization methods with the proper nomenclature.
+* Added module for the detection of marker genes for a given group of data points and plot these markers as a heatmap. 
+* Modules through the differential-expression module (i.e., unsupervised analysis, differential-expression analysis, and marker identification) now have the ability to be run on multiple normalization methods. 
+* Improved automated dimension selection for graph export.
+
 <b>2024/04/11</b> - v0.2.0-beta:
 * Added differential-expression, pathway-analysis, and immune-deconvolution modules.
 * Added ability to output PNG and EPS files.
