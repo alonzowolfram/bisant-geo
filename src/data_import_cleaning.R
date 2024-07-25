@@ -1,3 +1,8 @@
+###################################################################
+##                                                                
+## Setup 
+##
+###################################################################
 ## Source the setup.R file.
 source("src/setup.R")
 
@@ -8,15 +13,25 @@ if(!is.null(pkc_filenames) && sum(pkc_filenames!="") < 0) {
   pkc_files <- paste0(pkc_dir, "/", pkc_filenames %>% .[.!=""])
 } else {
   pkc_files <- dir(pkc_dir, pattern = pkc_filename_pattern,
-                 full.names = TRUE, recursive = TRUE)
+                   full.names = TRUE, recursive = TRUE)
 }
 
 # Get the sheet name if it's not set.
 if(is.null(phenodata_sheet_name) || phenodata_sheet_name=="") {
-    # Read in the sample annotation file and get the first sheet name off of it. 
-    phenodata_sheet_name <- readxl::excel_sheets(sample_annotation_file)[1] 
+  # Read in the sample annotation file and get the first sheet name off of it. 
+  phenodata_sheet_name <- readxl::excel_sheets(sample_annotation_file)[1] 
 }
 
+###################################################################
+##                                                                
+## Data import and cleaning 
+##
+###################################################################
+## ----------------------------------------------------------------
+##
+## Data loading
+##
+## ----------------------------------------------------------------
 # Load the data to create a data object using the readNanoStringGeoMxSet function.
 data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
                                       pkcFiles = pkc_files,
@@ -26,6 +41,11 @@ data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
                                       protocolDataColNames = protocol_data_col_names,
                                       experimentDataColNames = experiment_data_col_names)
 
+## ----------------------------------------------------------------
+##
+## Data cleaning
+##
+## ----------------------------------------------------------------
 # Shift any expression counts with a value of 0 to 1 to enable in downstream transformations.
 data_object <- shiftCountsOne(data_object, useDALogic = TRUE)
 
@@ -41,6 +61,29 @@ for(element in to_lowercase) {
   }
 }
 
+## ----------------------------------------------------------------
+##
+## Neovariable generation
+##
+## ----------------------------------------------------------------
+# Create the specified neovariables (if provided) and add to the pData.
+if(!is.null(neovariables) && (sum(neovariables != "") > 0)) {
+  neovariables <- neovariables %>% .[. != ""]
+  for(neovariable in neovariables) {
+    # Split into its component parts.
+    neovariable_comps <- neovariable %>% strsplit("\\+") %>% unlist
+    
+    # Create the neovariable.
+    neovariable_name <- paste0(neovariable_comps, collapse = "_")
+    pData(data_object) <- pData(data_object) %>% tidyr::unite(!!as.name(neovariable_name), neovariable_comps, remove = FALSE, na.rm = FALSE)
+  }
+}
+
+## ----------------------------------------------------------------
+##
+## PowerPoint
+##
+## ----------------------------------------------------------------
 ## Initialize PowerPoint file.
 if(!is.null(ppt_template_file) && ppt_template_file != "") {
     pptx <- read_pptx(ppt_template_file)
@@ -65,9 +108,11 @@ pptx <- pptx %>%
 # layout_summary(pptx)
 # layout_properties(pptx)
 
-## ---------------------------
-# Export to disk.
-
+## ----------------------------------------------------------------
+##
+## Export to disk
+##
+## ----------------------------------------------------------------
 # Export the NanoStringGeoMxSet object.
 saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw.rds"))
 # Output everything to the PowerPoint.

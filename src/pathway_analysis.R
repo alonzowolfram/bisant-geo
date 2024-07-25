@@ -104,7 +104,11 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
     for(model_number in model_numbers) {
       i <- model_number %>% regexPipes::gsub("model_", "")
       
+      # Get the contrasts.
       contrasts <- results2_sub %>% dplyr::filter(`Subset variable`==subset_var & `Subset level`==subset_var_level & `Model number`==model_number) %>% .$Contrast %>% unique
+      # Get the contrast variable. 
+      contrast_var <- results2_sub %>% dplyr::filter(`Model number`==model_number) %>% .$`Contrast variable` %>% .[1]
+      
       for(contrast in contrasts) {
         # Subset. 
         results2_sub_sub <- results2_sub %>% dplyr::filter(
@@ -142,6 +146,11 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         # If the number of pathways > limits for graphing, perform cutoff by PathwayScore.
         if(!is.null(n_max_pathways) & n_max_pathways != "") if(nrow(df_sub) > n_max_pathways) df_sub <- df_sub %>% dplyr::top_n(n = n_max_pathways, wt = PathwayScore)
         
+        # Add information about the model (model number, contrast variable, current contrast.)
+        df_sub$`Model number` <- model_number
+        df_sub$`Contrast variable` <- contrast_var
+        df_sub$Contrast <- contrast
+          
         # Add column indicating percentile (how high up the list a given pathway is.)
         df_sub <- df_sub %>% dplyr::arrange(-PathwayScore) %>% dplyr::mutate(percentile = 100 - (1:nrow(.) / nrow(.) * 100))
         df_sub$percentile <- format(round(df_sub$percentile, 1), nsmall = 1)
@@ -212,7 +221,9 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         for(pathway in names(msigdbr_pathway_list)) {
           plotEnrichment(msigdbr_pathway_list[[pathway]], ranks, gseaParam = 1, ticksSize = 0.2) +
             ggtitle(paste0(pathway, " | contrast: ", contrast, " | subset by ", subset_var, " | level: ", subset_var_level))
-          ggsave(filename = paste0(output_dir_pubs, pathway, "_", contrast, "_model-", i, "_subset-var", subset_var, "_level-", subset_var_level, ".png"), height = 9, width = 10, units = "in")
+          ggsave(filename = paste0(output_dir_pubs, 
+                                   paste0(pathway, "_", contrast, "_model-", i, "_subset-var", subset_var, "_level-", subset_var_level, ".png") %>% regexPipes::gsub("\\/", "_")), 
+                 height = 9, width = 10, units = "in")
 
         }
         
@@ -240,6 +251,13 @@ for(sv in names(plot_list_pathway_analysis)) {
       p_list <- plot_list_pathway_analysis[[sv]][[svl]][[model_num]]
 
       n <- length(p_list)
+      if(n > 16) {
+        # Stop right there.
+        warning(paste0("The combination of ", sv, " - ", svl, " - ", model_num, " has ", n, " plots, too many for graphing. Please graph these manually. Skipping to the next list of graphs."))
+        rm(p_list)
+        gc()
+        next
+      }
       nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
       
       # Set the scaling factors for label and legend size.
@@ -273,8 +291,10 @@ for(sv in names(plot_list_pathway_analysis)) {
                                                                                      "\nNormalization method: ", normalization_method)))
 
       # Save to EPS and PNG and then ...
-      eps_path <- paste0(output_dir_pubs, "FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".eps") #paste0(output_dir_pubs, "")
-      png_path <- paste0(output_dir_pubs, "FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".png") #paste0(output_dir_pubs, "")
+      eps_path <- paste0(output_dir_pubs, 
+                         paste0("FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".eps") %>% regexPipes::gsub("\\/", "_")) #paste0(output_dir_pubs, "")
+      png_path <- paste0(output_dir_pubs, 
+                         paste0("FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".png") %>% regexPipes::gsub("\\/", "_")) #paste0(output_dir_pubs, "")
       plot <- plot_grid# %>% ggpubr::as_ggplot()
       saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
       savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * res_scaling_factor))

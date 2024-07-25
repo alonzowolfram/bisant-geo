@@ -42,6 +42,16 @@ probe_qc_passed <-
 dim(probe_qc_passed)
 data_object <- probe_qc_passed 
 
+# Subset object to exclude manually selected probes.
+probes_exclude <- probes_exclude %>% str_split(",") %>% unlist()
+if(sum(probes_exclude == "None") < length(probes_exclude)) {
+  probe_qc_passed_2 <- 
+    subset(data_object, 
+           !(fData(data_object)[["TargetName"]] %in% probes_exclude))
+  dim(probe_qc_passed_2)
+  data_object <- probe_qc_passed_2
+}
+
 # Create gene-level count data. 
 # Check how many unique targets the object has.
 length(unique(featureData(data_object)[["TargetName"]]))

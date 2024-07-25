@@ -1,3 +1,10 @@
+## ---------------------------
+#     IMPORTANT NOTE ABOUT THIS MODULE:
+#     For some weird reason, manipulation of the pData data frame in this module
+#     messes up the rownames (including the sample names of the NanoStringGeoMx object).
+#     I haven't figured out how to fix it yet, so for now we are just working around the issue. 
+## ---------------------------
+
 ## Source the setup.R file.
 source("src/setup.R")
 
@@ -217,8 +224,10 @@ for(norm_method in names(plot_list_unsupervised_clustering)) {
       # scaling_factor <- ifelse(nCol > 1, (nCol / 2)^2, 1)  # Number of rows in current grid / 2 (base number)
 
       # Save to EPS and PNG and then ...
-      eps_path <- paste0(output_dir_pubs, "unsupervised-analysis_", norm_method, "-", dim_red_method, "-", compartment_var, ".eps")
-      png_path <- paste0(output_dir_pubs, "unsupervised-analysis_", norm_method, "-", dim_red_method, "-", compartment_var, ".png")
+      eps_path <- paste0(output_dir_pubs, 
+                         paste0("unsupervised-analysis_", norm_method, "-", dim_red_method, "-", compartment_var, ".eps") %>% regexPipes::gsub("\\/", "_"))
+      png_path <- paste0(output_dir_pubs, 
+                         paste0("unsupervised-analysis_", norm_method, "-", dim_red_method, "-", compartment_var, ".png") %>% regexPipes::gsub("\\/", "_"))
       saveEPS(plot, eps_path, width = plot_width, height = plot_height)
       savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
     }
@@ -269,8 +278,10 @@ for(norm_method in names(plot_list_unsupervised_clustering)) {
     scaling_factor <- ifelse(nCol > 1, (nCol / 2)^2, 1)  # Number of rows in current grid / 2 (base number)
 
     # Save to EPS and PNG and then ...
-    eps_path <- paste0(output_dir_pubs, "unsupervised-analysis_", norm_method, "-", dim_red_method, ".eps")
-    png_path <- paste0(output_dir_pubs, "unsupervised-analysis_", norm_method, "-", dim_red_method, ".png")
+    eps_path <- paste0(output_dir_pubs, 
+                       paste0("unsupervised-analysis_", norm_method, "-", dim_red_method, ".eps") %>% regexPipes::gsub("\\/", "_"))
+    png_path <- paste0(output_dir_pubs, 
+                       paste0("unsupervised-analysis_", norm_method, "-", dim_red_method, ".png") %>% regexPipes::gsub("\\/", "_"))
     saveEPS(plot, eps_path, width = plot_width, height = plot_height)
     savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
 

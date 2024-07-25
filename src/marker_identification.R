@@ -146,6 +146,8 @@ for(i in 1:nrow(param_combos)) {
         test_var_levels <- pData(target_data_object_2) %>% .$TestVar %>% levels
         for(test_var_level in test_var_levels) {
           print(paste0("Working on level ", test_var_level, " for the test variable; normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+          # Error catching: https://stackoverflow.com/a/55937737/23532435
+          skip_to_next <- FALSE
           
           # Set the random seed.
           set.seed(random_seed)
@@ -160,13 +162,18 @@ for(i in 1:nrow(param_combos)) {
           pData(tdo_tmp)$TestVar <- as.factor(pData(tdo_tmp)$TestVar)
           
           # Generate the model.
-          mixedOutmc <- mixedModelDE(tdo_tmp,
+          mixedOutmc <- tryCatch(mixedModelDE(tdo_tmp, # Error handling needed because sometimes there might not be enough samples to perform DE.
                                      elt = "log_norm",
                                      modelFormula = model_formula,
                                      groupVar = "TestVar",
                                      nCores = parallel::detectCores(),
-                                     multiCore = TRUE)
+                                     multiCore = TRUE),
+                                 error = function(e) {skip_to_next <<- TRUE})
           rm(tdo_tmp)
+          if(skip_to_next) {
+            warning(paste0("An error occurred when trying to perform differential expression for normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+            next
+          }
           
           # Format results as data.frame.
           r_test <- do.call(rbind, mixedOutmc["lsmeans", ])
@@ -199,7 +206,96 @@ for(i in 1:nrow(param_combos)) {
         
       } # End loop level 4: normalization method. 
       
-    }
+    } # End loop level 3: subset variable levels.
+    
+    # Now check if we have any manual subset levels.
+    subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
+    if(!is.null(subset_var_levels_manual_i)) {
+      if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) {
+        subset_var_level <- paste(subset_var_levels_manual_i, collapse = "_")
+        markers[[paste0("model_", i)]][[subset_var]][[subset_var_level]] <- list()
+        print(paste0("Working on levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
+        
+        # Get all the samples belonging to the current subset_var_level.
+        ind <- pData(target_data_object_2)[[subset_var]] %in% subset_var_levels_manual_i
+        
+        # Set the model formula based on whether we have a random slope or not. 
+        model_formula <- ifelse(random_slope_i %in% c("no", "FALSE"), "~ TestVar + (1 | RandomInterceptVar)", "~ TestVar + (1 + TestVar | RandomInterceptVar)") %>% as.formula
+        
+        # loop level 4 (current normalization method) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
+        for(norm_method in normalization_methods) {
+          markers[[paste0("model_", i)]][[subset_var]][[subset_var_level]][[norm_method]] <- list()
+          print(paste0("Working on normalization method ", norm_method, " for levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
+          
+          # Create a log2 transform of the data for analysis.
+          assayDataElement(object = target_data_object_2, elt = "log_norm", validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
+            assayDataApply(target_data_object_2, 2, FUN = function(x) log2(x+1), elt = norm_method)
+          
+          # loop level 5 (level of current test variable) << loop level 4 (current normalization method) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
+          test_var_levels <- pData(target_data_object_2) %>% .$TestVar %>% levels
+          for(test_var_level in test_var_levels) {
+            print(paste0("Working on level ", test_var_level, " for the test variable; normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+            # Error catching: https://stackoverflow.com/a/55937737/23532435
+            skip_to_next <- FALSE
+            
+            # Set the random seed.
+            set.seed(random_seed)
+            
+            # Create a temporary target data object in which
+            # the levels of the test variable that are NOT the current test_var_level
+            # will be set to "Other"; the comparison will then be
+            # the current test_var_level vs. "Other".
+            tdo_tmp <- target_data_object_2 %>% subset(!(TargetName %in% neg_probes), ind) # Exclude negative probes (b/c variance might be 0, and this will screw up LLM); and include only the samples in ind (samples belonging to current subset_var_level, loop level 3.)
+            pData(tdo_tmp)$TestVar <- as.character(pData(tdo_tmp)$TestVar)
+            pData(tdo_tmp)$TestVar[pData(tdo_tmp)$TestVar != test_var_level] <- "ZZZ" # Make sure the other levels aren't alphabetically after this! 
+            pData(tdo_tmp)$TestVar <- as.factor(pData(tdo_tmp)$TestVar)
+            
+            # Generate the model.
+            mixedOutmc <- tryCatch(mixedModelDE(tdo_tmp, # Error handling needed because sometimes there might not be enough samples to perform DE.
+                                                elt = "log_norm",
+                                                modelFormula = model_formula,
+                                                groupVar = "TestVar",
+                                                nCores = parallel::detectCores(),
+                                                multiCore = TRUE),
+                                   error = function(e) {skip_to_next <<- TRUE})
+            rm(tdo_tmp)
+            if(skip_to_next) {
+              warning(paste0("An error occurred when trying to perform differential expression for normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+              next
+            }
+            
+            # Format results as data.frame.
+            r_test <- do.call(rbind, mixedOutmc["lsmeans", ])
+            tests <- rownames(r_test)
+            r_test <- as.data.frame(r_test)
+            r_test$Contrast <- tests
+            r_test$`Contrast level` <- test_var_level
+            
+            # Use lapply in case you have multiple levels of your test factor to
+            # correctly associate gene name with its row in the results table.
+            r_test$Gene <- 
+              unlist(lapply(colnames(mixedOutmc),
+                            rep, nrow(mixedOutmc["lsmeans", ][[1]])))
+            r_test$`Subset variable` <- subset_var
+            r_test$`Subset level` <- subset_var_level
+            r_test$`Normalization method` <- normalization_names[names(normalization_names)==norm_method]
+            r_test$FDR <- p.adjust(r_test$`Pr(>|t|)`, method = "fdr")
+            r_test <- r_test[, c("Gene", "Subset variable", "Subset level", "Normalization method", "Contrast", "Contrast level", "Estimate", 
+                                 "Pr(>|t|)", "FDR")]
+            r_test$`Contrast variable` <- test_var
+            r_test$`Model number` <- i
+            r_test <- r_test %>% dplyr::relocate(`Contrast variable`, .before = Contrast)
+            results3 <- rbind(results3, r_test)
+            
+            # Add the markers to the vector. 
+            markers[[paste0("model_", i)]][[subset_var]][[subset_var_level]][[norm_method]][[test_var_level]] <- 
+              r_test %>% dplyr::filter(FDR < de_genes_cutoffs[1]) %>% .$Gene
+            
+          } # End loop level 5: test variable levels.
+          
+        } # End loop level 4: normalization method. 
+      }
+    } # End if there are manual subset levels. 
     
   }
   
@@ -249,6 +345,8 @@ for(model_num in names(markers)) {
       
       for(norm_method in names(markers[[model_num]][[subset_var]][[subset_var_level]])) {
         print(paste0("Creating heatmap for model number ", i, ", subset variable ", subset_var, ", subset variable level ", subset_var_level, ", normalization method ", norm_method))
+        # Error catching: https://stackoverflow.com/a/55937737/23532435
+        skip_to_next <- FALSE
         
         # Make a copy of the original target_data_object.
         target_data_object_2 <- target_data_object
@@ -264,22 +362,29 @@ for(model_num in names(markers)) {
         exprs_mat <- assayDataElement(target_data_object_2[GOI, ind], elt = "log_norm")
         annot <- data.frame(pData(target_data_object_2)[ind, heatmap_ann_vars])
         rownames(annot) <- colnames(exprs_mat)
-        de_heatmaps[[model_num]][[subset_var]][[subset_var_level]][[norm_method]][["nMarkers"]] <- length(GOI)
-        de_heatmaps[[model_num]][[subset_var]][[subset_var_level]][[norm_method]][["heatmap"]] <- pheatmap(exprs_mat,
-                                                                                                           scale = "row",
-                                                                                                           show_rownames = TRUE, show_colnames = FALSE,
-                                                                                                           border_color = NA,
-                                                                                                           clustering_method = "average",
-                                                                                                           clustering_distance_rows = "correlation",
-                                                                                                           clustering_distance_cols = "correlation",
-                                                                                                           breaks = seq(-3, 3, 0.05),
-                                                                                                           color = colorRampPalette(c("purple3", "black", "yellow2"))(120),
-                                                                                                           annotation_col = annot, # https://www.researchgate.net/post/R-error-gpar-element-fill-must-not-be-length-0
-                                                                                                           # Apparently pData loses the rownames, hence using the colnames of exprs_mat as the rownames of the annotation data frame.
-                                                                                                           main = paste0("Test variable: ", test_var, 
-                                                                                                                         "\nSubset variable: ", subset_var, " | Subset level: ", subset_var_level,
-                                                                                                                         "\nNormalization method: ", norm_method)
+        p_heatmap <- tryCatch(pheatmap(exprs_mat,
+                                       scale = "row",
+                                       show_rownames = TRUE, show_colnames = FALSE,
+                                       border_color = NA,
+                                       clustering_method = "average",
+                                       clustering_distance_rows = "correlation",
+                                       clustering_distance_cols = "correlation",
+                                       breaks = seq(-3, 3, 0.05),
+                                       color = colorRampPalette(c("purple3", "black", "yellow2"))(120),
+                                       annotation_col = annot, # https://www.researchgate.net/post/R-error-gpar-element-fill-must-not-be-length-0
+                                       # Apparently pData loses the rownames, hence using the colnames of exprs_mat as the rownames of the annotation data frame.
+                                       main = paste0("Test variable: ", test_var, 
+                                                     "\nSubset variable: ", subset_var, " | Subset level: ", subset_var_level,
+                                                     "\nNormalization method: ", norm_method)
+                                       ),
+                              error = function(e) {skip_to_next <<- TRUE}
         )
+        if(skip_to_next) {
+          warning(paste0("An error occurred creating heatmap for model number ", i, ", subset variable ", subset_var, ", subset variable level ", subset_var_level, ", normalization method ", norm_method, ". Skipping to the next heatmap."))
+          next
+        }
+        de_heatmaps[[model_num]][[subset_var]][[subset_var_level]][[norm_method]][["nMarkers"]] <- length(GOI)
+        de_heatmaps[[model_num]][[subset_var]][[subset_var_level]][[norm_method]][["heatmap"]] <- p_heatmap
         
         rm(target_data_object_2)
         gc()
@@ -369,8 +474,10 @@ for(model_num in names(de_heatmaps)) {
         # scaling_factor_res <- mean(c(scaling_factor_y, scaling_factor_x))
         
         # Save to EPS and PNG and then ...
-        eps_path <- paste0(output_dir_pubs, "LMM-marker-genes_heatmap-", test_var, "-", subset_var, "-", subset_var_level, "-", norm_method, ".eps")
-        png_path <- paste0(output_dir_pubs, "LMM-marker-genes_heatmap-", test_var, "-", subset_var, "-", subset_var_level, "-", norm_method, ".png")
+        eps_path <- paste0(output_dir_pubs, 
+                           paste0("LMM-marker-genes_heatmap-", test_var, "-", subset_var, "-", subset_var_level, "-", norm_method, ".eps") %>% regexPipes::gsub("\\/", "_"))
+        png_path <- paste0(output_dir_pubs, 
+                           paste0("LMM-marker-genes_heatmap-", test_var, "-", subset_var, "-", subset_var_level, "-", norm_method, ".png") %>% regexPipes::gsub("\\/", "_"))
         saveEPS(plot, eps_path, width = plot_width, height = ((plot_height * scaling_factor_y) + addition_factor_y))
         savePNG(plot, png_path, width = plot_width, height = ((plot_height * scaling_factor_y) + addition_factor_y), units = units, res = (res))
         

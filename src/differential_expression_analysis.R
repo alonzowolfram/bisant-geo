@@ -87,9 +87,9 @@ for(i in 1:nrow(param_combos)) {
     # Since there are no subset variables, we will add a column that will act as a dummy subset variable
     # and change subset_vars to be the name of this dummy subset variable.
     # This will allow us to use one loop for either case (controls switch 1a or 1b).
-    pData(target_data_object)[["DummySubsetVar"]] <- "DummyLevel"
-    pData(target_data_object)[["DummySubsetVar"]] <- as.factor(pData(target_data_object)[["DummySubsetVar"]])
-    subset_vars <- c("DummySubsetVar")
+    pData(target_data_object)[["All observations"]] <- "DummyLevel"
+    pData(target_data_object)[["All observations"]] <- as.factor(pData(target_data_object)[["All observations"]])
+    subset_vars <- c("All observations")
     
   } # End control switch 1a (no subset variables) << loop level 1 (model).
   
@@ -102,9 +102,9 @@ for(i in 1:nrow(param_combos)) {
       # Add a column that will act as a dummy subset variable
       # and change subset_vars to be the name of this dummy subset variable.
       # This will allow us to use one loop for either case.
-      pData(target_data_object)[["DummySubsetVar"]] <- "DummyLevel"
-      pData(target_data_object)[["DummySubsetVar"]] <- as.factor(pData(target_data_object)[["DummySubsetVar"]])
-      subset_var <- "DummySubsetVar"
+      pData(target_data_object)[["All observations"]] <- "DummyLevel"
+      pData(target_data_object)[["All observations"]] <- as.factor(pData(target_data_object)[["All observations"]])
+      subset_var <- "All observations"
     }
     
     # Check that the current subset_var is not the same as either test_var or random_intercept_var.
@@ -129,9 +129,14 @@ for(i in 1:nrow(param_combos)) {
       # loop level 4 (current normalization method) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
       for(norm_method in normalization_methods) {
         print(paste0("Working on normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+        # Error catching: https://stackoverflow.com/a/55937737/23532435
+        skip_to_next <- FALSE
         
         # Create a log2 transform of the data for analysis.
         assayDataElement(object = target_data_object, elt = "log_norm", validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
+          assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
+        # Add the log-transformed data to the data object as well under the appropriate normalizations.
+        assayDataElement(object = target_data_object, elt = paste0("log_", norm_method), validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
           assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
         
         # # Set up the data. 
@@ -158,16 +163,21 @@ for(i in 1:nrow(param_combos)) {
         
         # Generate the model.
         tdo_sub <- subset(target_data_object, TargetName %in% top_cv_genes, ind)
-        mixedOutmc <- mixedModelDE(tdo_sub,
+        mixedOutmc <- tryCatch(mixedModelDE(tdo_sub, # Error handling needed because sometimes there might not be enough samples to perform DE.
                                    elt = "log_norm",
                                    modelFormula = model_formula,
                                    groupVar = "TestVar",
                                    nCores = parallel::detectCores(),
-                                   multiCore = TRUE)
+                                   multiCore = TRUE),
+                               error = function(e) {skip_to_next <<- TRUE})
         # lmmres <- lmmSeq(model_formula,
         #                  maindata = exprs[, ind], # ind
         #                  metadata = metadata[ind, ], # ind
         #                  progress = TRUE)
+        if(skip_to_next) {
+          warning(paste0("An error occurred when trying to perform differential expression for normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+          next
+        }
         
         # Format results as data.frame.
         r_test <- do.call(rbind, mixedOutmc["lsmeans", ])
@@ -193,19 +203,110 @@ for(i in 1:nrow(param_combos)) {
         
       } # End loop level 4: normalization method. 
       
-    }
+    } # End loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model).
     
-  }
+    # Now check if we have any manual subset levels.
+    subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
+    if(!is.null(subset_var_levels_manual_i)) {
+      if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) {
+        print(paste0("Working on levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
+        
+        # Get all the samples belonging to the current subset_var_level.
+        ind <- pData(target_data_object)[[subset_var]] %in% subset_var_levels_manual_i
+        
+        # Set the model formula based on whether we have a random slope or not. 
+        model_formula <- ifelse(random_slope_i %in% c("no", "FALSE"), "~ TestVar + (1 | RandomInterceptVar)", "~ TestVar + (1 + TestVar | RandomInterceptVar)") %>% as.formula
+        
+        # loop level 4 (current normalization method) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
+        for(norm_method in normalization_methods) {
+          print(paste0("Working on normalization method ", norm_method, " for levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
+          # Error catching: https://stackoverflow.com/a/55937737/23532435
+          skip_to_next <- FALSE
+          
+          # Create a log2 transform of the data for analysis.
+          assayDataElement(object = target_data_object, elt = "log_norm", validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
+            assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
+          # Add the log-transformed data to the data object as well under the appropriate normalizations.
+          assayDataElement(object = target_data_object, elt = paste0("log_", norm_method), validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
+            assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
+          
+          # # Set up the data. 
+          # # Expresssion: rows are GENES and columns are SAMPLES. 
+          # # Also, remove negative probes.
+          # exprs <- target_data_object@assayData$log_norm %>% .[!(rownames(.) %in% neg_probes),]
+          # metadata <- sData(target_data_object)
+          
+          # Set the random seed.
+          set.seed(random_seed)
+          # Calculate coefficient of variance for each gene.
+          CV_dat <- assayDataApply(target_data_object,
+                                   elt = "log_norm", MARGIN = 1, calc_CV) %>% .[!is.na(.)]
+          # Keep only the genes with the highest CVs.
+          mean_cv <- mean(CV_dat, na.rm = T)
+          sd_cv <- sd(CV_dat, na.rm = T)
+          if(is.null(cv_cutoff) || cv_cutoff == "" || !is.finite(cv_cutoff)) {
+            print("cv_cutoff for genes either has not been provided or is not a numeric value. Using all genes for differential expression.")
+            top_cv_genes <- CV_dat %>% names
+          } else {
+            print("Using cv_cutoff of ", cv_cutoff, " for differential expression.")
+            top_cv_genes <- CV_dat %>% .[. > (mean_cv + cv_cutoff*sd_cv)] %>% names
+          }
+          
+          # Generate the model.
+          tdo_sub <- subset(target_data_object, TargetName %in% top_cv_genes, ind)
+          mixedOutmc <- tryCatch(mixedModelDE(tdo_sub, # Error handling needed because sometimes there might not be enough samples to perform DE.
+                                              elt = "log_norm",
+                                              modelFormula = model_formula,
+                                              groupVar = "TestVar",
+                                              nCores = parallel::detectCores(),
+                                              multiCore = TRUE),
+                                 error = function(e) {skip_to_next <<- TRUE})
+          # lmmres <- lmmSeq(model_formula,
+          #                  maindata = exprs[, ind], # ind
+          #                  metadata = metadata[ind, ], # ind
+          #                  progress = TRUE)
+          if(skip_to_next) {
+            warning(paste0("An error occurred when trying to perform differential expression for normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+            next
+          }
+          
+          # Format results as data.frame.
+          r_test <- do.call(rbind, mixedOutmc["lsmeans", ])
+          tests <- rownames(r_test)
+          r_test <- as.data.frame(r_test)
+          r_test$Contrast <- tests
+          
+          # Use lapply in case you have multiple levels of your test factor to
+          # correctly associate gene name with its row in the results table.
+          r_test$Gene <- 
+            unlist(lapply(colnames(mixedOutmc),
+                          rep, nrow(mixedOutmc["lsmeans", ][[1]])))
+          r_test$`Subset variable` <- subset_var
+          r_test$`Subset level` <- paste(subset_var_levels_manual_i, collapse = ",")
+          r_test$`Normalization method` <- normalization_names[names(normalization_names)==norm_method]
+          r_test$FDR <- p.adjust(r_test$`Pr(>|t|)`, method = "fdr")
+          r_test <- r_test[, c("Gene", "Subset variable", "Subset level", "Normalization method", "Contrast", "Estimate", 
+                               "Pr(>|t|)", "FDR")]
+          r_test$`Contrast variable` <- test_var
+          r_test$`Model number` <- i
+          r_test <- r_test %>% dplyr::relocate(`Contrast variable`, .before = Contrast)
+          results2 <- rbind(results2, r_test)
+          
+        } # End loop level 4: normalization method. 
+      }
+    } # End if there are manual subset levels.
+    
+  } # End loop level 2 (subset variable) << loop level 1 (model).
   
   # Reset the variable names. 
   # First check if there's an additional column added if there are no subset variables (see control switch 1a.)
   # If there is, remove it. 
-  if("DummySubsetVar" %in% colnames(pData(target_data_object))) pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-DummySubsetVar)
+  if("All observations" %in% colnames(pData(target_data_object))) pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-`All observations`)
   # Then reset the variable names. 
   colnames(pData(target_data_object)) <- orig_var_names 
   
-  # If we changed subset_vars to "DummySubsetVar", change it back to NA.
-  if(sum(subset_vars=="DummySubsetVar", na.rm = T) == 1) subset_vars <- NA
+  # If we changed subset_vars to "All observations", change it back to NA.
+  if(sum(subset_vars=="All observations", na.rm = T) == 1) subset_vars <- NA
   
 } # End loop level 1: model.
 
@@ -312,7 +413,7 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
           random_slope_status <- ifelse(random_slope_i %in% c("no", "FALSE"), " | No random slope", " | With random slope")
           test_var_lv_1 <- contrast %>% strsplit(" - ") %>% unlist %>% .[1] #pData(target_data_object)[[test_var]] %>% levels %>% .[1]
           test_var_lv_2 <- contrast %>% strsplit(" - ") %>% unlist %>% .[2] #pData(target_data_object)[[test_var]] %>% levels %>% .[2]
-          if(subset_var=="NA" || is.na(subset_var) || subset_var=="DummySubsetVar") {
+          if(subset_var=="NA" || is.na(subset_var) || subset_var=="All observations") {
             subset_by <- ""
           } else {
             subset_by <- paste0("| Subset variable: ", subset_var, ", level: ", subset_var_level)
@@ -386,6 +487,13 @@ for(subset_var in names(plot_list_diff_exprs)) {
         p_list <- plot_list_diff_exprs[[subset_var]][[subset_var_level]][[model_num]][[normalization_method]]
         
         n <- length(p_list)
+        if(n > 16) {
+          # Stop right there.
+          warning(paste0("The combination of ", subset_var, " - ", subset_var_level, " - ", model_num, " - ", normalization_method, " has ", n, " volcano plots, too many for graphing. Please graph these manually. Skipping to the next list of graphs."))
+          rm(p_list)
+          gc()
+          next
+        }
         nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
         
         # Set the scaling factors for label and legend size.
@@ -417,7 +525,7 @@ for(subset_var in names(plot_list_diff_exprs)) {
         test_var <- param_combos[i,2]
         random_intercept_var <- param_combos[i,3]
         random_slope_status <- ifelse(random_slope_i %in% c("no", "FALSE"), " | No random slope", " | With random slope")
-        if(subset_var=="NA" || is.na(subset_var) || subset_var=="DummySubsetVar") {
+        if(subset_var=="NA" || is.na(subset_var) || subset_var=="All observations") {
           subset_by <- ""
         } else {
           subset_by <- paste0("| Subset variable: ", subset_var, ", level: ", subset_var_level)
@@ -439,6 +547,8 @@ for(subset_var in names(plot_list_diff_exprs)) {
         plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[model_num]][[normalization_method]][["plot"]] <- plot_grid2
         plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[model_num]][[normalization_method]][["nCol"]] <- nCol
         
+        rm(plot_grid2, p_list)
+        gc()
       }
     }
   }
@@ -467,8 +577,10 @@ for(subset_var in names(plot_list_diff_exprs_grid)) {
         scaling_factor <- ifelse(nCol > 1, (nCol / 2)^2, 1)  # Number of rows in current grid / 2 (base number)
         
         # Save to EPS and PNG and then ...
-        eps_path <- paste0(output_dir_pubs, "LMM-differential-expression_graph-", subset_var, "-", subset_var_level, "-", item, "-", normalization_method, ".eps")
-        png_path <- paste0(output_dir_pubs, "LMM-differential-expression_graph-", subset_var, "-", subset_var_level, "-", item, "-", normalization_method, ".png")
+        eps_path <- paste0(output_dir_pubs, 
+                           paste0("LMM-differential-expression_graph-", subset_var, "-", subset_var_level, "-", item, "-", normalization_method, ".eps") %>% regexPipes::gsub("\\/", "_"))
+        png_path <- paste0(output_dir_pubs, 
+                           paste0("LMM-differential-expression_graph-", subset_var, "-", subset_var_level, "-", item, "-", normalization_method, ".png") %>% regexPipes::gsub("\\/", "_"))
         saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
         savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * scaling_factor))
         
