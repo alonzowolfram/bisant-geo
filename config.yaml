@@ -94,6 +94,19 @@ output:
 experiment:
 
   # ----------------------------------------------------------------------
+  #     General settings
+  # ----------------------------------------------------------------------
+  general: 
+
+    # [Required] Species name (required for pathway analysis and immune deconvolution).
+    # The following values are allowed: c("Homo sapiens", "Mus musculus")
+    species: Homo sapiens
+
+    # [Optional] Random seed to be used in algorithms that use stochastic processes (e.g. UMAP).
+    # If not provided, it will default to 1026. 
+    random_seed: 1026
+
+  # ----------------------------------------------------------------------
   #     Annotation column names
   # ----------------------------------------------------------------------
   annotation: 
@@ -111,6 +124,13 @@ experiment:
     # [Required] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to 
     # the experiment data column names.
     experiment_data_col_names: Experiment data column names go here
+
+    # [Optional] Neo-variables, created by pasting together two or more existing variables in the sample annotation.
+    # Use a plus sign ("+") to combine variables. 
+    # Separate each neo-variable with a comma (",").
+    # These neo-variables can then be used in downstream analyses;
+    # the names of these neo-variables will be the original names, separated by an underscore ("_").
+    neovariables: Neo-variables go here. 
 
   # ----------------------------------------------------------------------
   #     Segment QC settings
@@ -193,6 +213,10 @@ experiment:
     # We typically want to pick a cutoff that will leave us with at least 8000 genes.
     percent_of_segments: 5
 
+    # [Required] Probes to exclude from the analysis. Separate probes with commas (",").
+    # If you want to keep all probes, input "None".
+    probes_exclude: None
+
   # ----------------------------------------------------------------------
   #     Normalization settings
   # ----------------------------------------------------------------------
@@ -213,6 +237,46 @@ experiment:
 
     # [Required] The annotation of interest (e.g. Segment, Region).
     ann_of_interest: Annotation of interest goes here
+
+  # ----------------------------------------------------------------------
+  #     16S analysis
+  # ----------------------------------------------------------------------
+  analysis_16s:
+
+    # [Optional] Name of the 16S module.
+    # Will probably be something like "BiS_pilot_1_RnD_v1.2" (basically the name of the appropriate PKC file
+    # without the .pkc extension.)
+    module_16s: Name of 16S module goes here.
+
+    # [Optional] Percentile to serve as cutoff for 16S score (high vs low 16S).
+    # Samples with values >= this percentile will be classified as "high 16S",
+    # while values < this percentile will be classified as "low 16S".
+    # This classification will be stored to the metadata (pData), where it can be used for other analyses.
+    # If not provided, the value will default to 50 (50th percentile, a.k.a median)
+    # You can provide multiple values, separated by a comma (",").
+    # Each percentile provided will be evaluated individually. 
+    # NOTE: for each cutoff provided, the pipeline will generate a score (high vs low 16S)
+    # that will be added to the metadata (pData). The name will be `Grouping16S_` + [the cutoff value].
+    # For example, if you entered 50,75 as cutoffs, the pipeline will generate two sets of scores:
+    # `Grouping16S_50` and `Grouping16S_75` that will be added as columns to the pData.
+    # You can use these variables for downstream analysis, such as unsupervised analysis
+    # or differential expression analysis - i.e., you can enter these variables in 
+    # the parameters in following sections, if you so wish.
+    percentile_16s_cutoff: 50
+
+    # [Optional] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to
+    # the variables you'd like to subset the data set by before running 16S analysis.
+    # You can provide multiple variables, separated by commas (,).
+    # If you have a subsetting variable but also want to conduct a 16S analysis
+    # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one. 
+    exprs_16s_subset_vars: 
+
+    # [Optional] The column in the annotation to use as a primary grouping variable.
+    # If provided, a box-and-whiskers plot will be generated of 16S expression levels (defined as the geometric mean of the normalized
+    # values of all 16S probes that passed QC) across the provided grouping variable(s), one
+    # variable at a time.
+    # If left blank, 16S expression levels will not be graphed at all.
+    exprs_16s_grouping_vars: Grouping variables go here.
 
   # ----------------------------------------------------------------------
   #     Unsupervised analysis settings
@@ -294,6 +358,15 @@ experiment:
     # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one. 
     subset_vars: Subsetting variables go here
 
+    # [Optional] Values of the above subset_vars to include when subsetting.
+    # For each variable in subset_vars above, separate the values of that variable with commas,
+    # and separate multiple variables with semi-colons (;). 
+    # So, if subset_var_levels_manual is not empty, then for each value of subset_vars, 
+    # the pipeline, _in addition to_ subsets by each level individually, will _also_
+    # do a subset consisting of only the subset_var_levels_manual values. 
+    # You can skip a subsetting variable by inputting NA.
+    subset_var_levels_manual: Subsetting variable levels go here
+
     # [Optional] Cutoff, in number of standard deviations (SDs) away from the mean of the coefficient of variance,
     # to filter genes before running differential expression via linear mixed models.
     # For example, if you enter "2", only genes with a coefficient of variance 2SD _higher_ than 
@@ -327,10 +400,6 @@ experiment:
   pathway_analysis:
 
     # Pathway analysis is conducted using the FGSEA algorithm with pathways from mSigDB. 
-
-    # [Required] Species name for the pathways to be retrieved from mSigDB.
-    # The following values are allowed: c("Homo sapiens", "Mus musculus")
-    species: Species name goes here
 
     # [Optional] Absolute path to a CSV, TSV, or Excel (.xlsx) file containing the 
     # mSigDB pathway sets of interest. 
@@ -375,43 +444,82 @@ experiment:
   # ----------------------------------------------------------------------
   immune_deconvolution:
 
-    # [Required] Path to LM22 matrix.
-    path_to_lm22: path/to/lm22/matrix
+    # [Optional] Names of modules containing expression data (e.g. WTA).
+    # You can include multiple modules, separated with a comma (",").
+    # Will probably be something like "Hs_R_NGS_WTA_v1.0" (basically the name of the appropriate PKC file
+    # without the .pkc extension.)
+    modules_exprs: Names of expression modules go here.
 
-    # [Required] Path to CIBERSORT.R file.
-    path_to_cibersort: path/to/CIBERSORT.R
+    ## !-- The next two settings are unused for now. --##
+    # # [Required] Path to LM22 matrix.
+    # path_to_lm22: path/to/lm22/matrix
+    # # [Required] Path to CIBERSORT.R file.
+    # path_to_cibersort: path/to/CIBERSORT.R
 
     # [Optional] names of immune deconvolution methods to use.
     # Multiple values are accepted; separate them with a comma (,).
     # Possible values:
     # quantiseq
-    # cibersort
-    # cibersort_abs
+    # [CURRENTLY UNAVAILABLE] cibersort
+    # [CURRENTLY UNAVAILABLE] cibersort_abs
     # mcp_counter
     # xcell
     # epic
     # abis
     # estimate
-    imm_decon_methods: cibersort,cibersort_abs,mcp_counter
+    # spatialdecon
+    imm_decon_methods: mcp_counter,spatialdecon
 
-    # For graphing: observation names.
-    individual_identifier:
-    compartment_identifier:
-    segment_identifier:
+    # [Optional] For graphing: observation names.
+    # The column name(s) in the sample annotation containing the variables
+    # you want to paste together to use as observation identifiers. 
+    # Separate multiple names with commas (","). 
+    # These identifiers will be used in addition to the annotation row names.
+    # If left blank, only the row names will be used as identifiers. 
+    observation_identifiers:
 
-    # [Required] path to human genome reference FASTA.
-    path_to_hg_fasta: Path/to/HG/FASTA
-    # [Required] path to human genome reference GTF.
-    path_to_hg_gtf: Path/to/HG/GFT
+    # [Optional] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to
+    # the variables you'd like to subset the data set by before running immune deconvolution.
+    # You can provide multiple variables, separated by commas (,).
+    # If you have a subsetting variable but also want to conduct immune deconvolution
+    # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one. 
+    imm_decon_subset_vars: 
+
+    # [Optional] Grouping variable(s).
+    # If provided, the data will be grouped by the provided variables, one at a time,
+    # before graphing. 
+    # Multiple values are accepted; separate them with a comma (,).
+    imm_decon_grouping_vars: 
+
+    ## !-- The next two settings are unused for now. --##
+    # # [Required] path to human genome reference FASTA.
+    # path_to_hg_fasta: Path/to/HG/FASTA
+    # # [Required] path to human genome reference GTF.
+    # path_to_hg_gtf: Path/to/HG/GFT
 
   # ----------------------------------------------------------------------
-  #     Miscellaneous settings
+  #     TCR analysis
   # ----------------------------------------------------------------------
-  misc:
+  tcr_analysis:
 
-    # [Optional] Random seed to be used in algorithms that use stochastic processes (e.g. UMAP).
-    # If not provided, it will default to 1026. 
-    random_seed: 1026
+    # [Optional] Name of the TCR module.
+    # Will probably be something like "Hs_R_NGS_TCR_v1.0" (basically the name of the appropriate PKC file
+    # without the .pkc extension.)
+    # If left blank, the pipeline will skip the TCR analysis.
+    module_tcr: Name of TCR module goes here.
+
+    # [Optional] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to
+    # the variables you'd like to subset the data set by before running TCR analysis.
+    # You can provide multiple variables, separated by commas (,).
+    # If you have a subsetting variable but also want to conduct a TCR analysis
+    # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one. 
+    tcr_subset_vars: 
+
+    # [Optional] Names of variables by which to group samples for graphing of 
+    # diversity (Shannon/Simpson/inverse Simpson) and distribution (Gini) metrics.
+    # If left blank, no grouping will be performed.
+    # Multiple variables can be provided, separated with commas (",").
+    tcr_grouping_vars: Names of grouping variables go here.
 
 ## !-- Settings below this line are unused for now --##
 # # =================================================================================================
