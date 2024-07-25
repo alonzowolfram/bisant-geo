@@ -91,6 +91,11 @@ A tutorial with more details is forthcoming. Sometime. Maybe.
 After the pipeline is finished running, the folder containing the output files will be available in the `out` directory. See the `README.md` file in the `out` directory for an explanation of the outputs. 
 
 ## Changelog
+<b>2024/07/25</b> - v0.3.1-alpha:
+* Added ability to create neo-variables based on two or more existing variables.
+* Added more functionality for grouping/subsetting data in downstream analysis modules (differential expression, marker identification, immune deconvolution).
+* Bug fix: replace forward slashes (`/`) with underscores (`_`) in dynamically generated file names to prevent errors. 
+
 <b>2024/05/17</b> - v0.3.0-alpha:
 * Added several new normalization methods based on van Hijfte et al (<i>iScience</i>, 2023) and NanoString's GeoMx whitepaper.
 * Corrected normalization method: previously, background subtraction and background normalization had been conflated; they have been given their separate normalization methods with the proper nomenclature.
