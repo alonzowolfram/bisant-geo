@@ -132,6 +132,16 @@ experiment:
     # the names of these neo-variables will be the original names, separated by an underscore ("_").
     neovariables: Neo-variables go here. 
 
+    # [Optional] Filtering variables.
+    # For each variable, follow this pattern:
+    # var1,include,value1,value2,...
+    # where var1 = the name of the variable to subset on,
+    # include = can be 1 of either "include" or "exclude", where the following values are either included or excluded,
+    # value1,value2,...,valuen = values of var1 to either include or exclude (depending on whether "include" or "exclude" is specified).
+    # Separate multiple variables with semicolons, e.g.
+    # var2,include,value1,value2,...;var2,exclude,value1,value2,...
+    filter_vars: Filtering variables go here. 
+
   # ----------------------------------------------------------------------
   #     Segment QC settings
   # ----------------------------------------------------------------------

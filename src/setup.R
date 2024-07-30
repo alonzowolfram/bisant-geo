@@ -90,8 +90,10 @@ sample_annotation_file <- data$sample_annotation_file
 phenodata_sheet_name <- data$phenodata_sheet_name
 ppt_template_file <- data$ppt_template_file
 previous_run_out_dir <- data$previous_run_out_dir
+
 ## Outputs
 # (output_dir read in from command line arguments)
+
 ## Experiment
 experiment <- config$experiment
 ### General
@@ -104,6 +106,7 @@ phenodata_dcc_col_name <- annotation$phenodata_dcc_col_name
 protocol_data_col_names <- annotation$protocol_data_col_names
 experiment_data_col_names <- annotation$experiment_data_col_names
 neovariables <- annotation$neovariables
+filter_vars <- annotation$filter_vars
 ### Segment QC
 segment_qc <- experiment$segment_qc
 min_segment_reads <- segment_qc$min_segment_reads

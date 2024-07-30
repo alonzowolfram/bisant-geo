@@ -63,6 +63,36 @@ for(element in to_lowercase) {
 
 ## ----------------------------------------------------------------
 ##
+## Filtering
+##
+## ----------------------------------------------------------------
+# Filter observations by the criteria given in filter_vars, if applicable.
+# https://bioconductor.org/packages/release/bioc/vignettes/GeomxTools/inst/doc/Developer_Introduction_to_the_NanoStringGeoMxSet.html
+# filter_vars <- "segment,include,Full ROI,Tumor;Tags,exclude,Stroma"
+if(!is.null(filter_vars) & filter_vars != "") {
+  filter_vars <- filter_vars %>% strsplit(";") %>% unlist
+  for(var in filter_vars) {
+    var <- var %>% strsplit(",") %>% unlist
+    if(!(var[1] %in% colnames(pData(data_object)))) {
+      warning(paste0("The variable ", var[1], " is not included in the pData for this data set. Skipping this variable."))
+      next
+    }
+    
+    var_values <- var[3:length(var)]
+    if((var[2] %>% str_to_lower()) == "include") {
+      data_object <- data_object %>% .[,.[[var[1]]] %in% var_values]
+    } else if((var[2] %>% str_to_lower()) == "exclude") {
+      data_object <- data_object %>% .[,!(.[[var[1]]] %in% var_values)]
+    } else {
+      warning("Skipping this element of filter_vars. Please enter a value of 'include' or 'exclude' as the second element of filter_vars. And check your spelling!")
+      next
+    }
+    
+  }
+}
+
+## ----------------------------------------------------------------
+##
 ## Neovariable generation
 ##
 ## ----------------------------------------------------------------

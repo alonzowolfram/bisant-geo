@@ -40,16 +40,30 @@ now = datetime.now()
 OUTPUT_PATH = generateOutputPath(config["data"]["previous_run_out_dir"], config["output"]["output_dir"], config["project"]["meta"]["project_name"], config["project"]["meta"]["run_name"], now)
 
 # --- Rules --- # 
-rule target:
+rule tcr_analysis: 
     input:
-        R_file_imm_decon = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_immune-deconvolution.rds",
-        R_file_path_anal = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_pathway-analysis.rds",
-        R_file_unsup_anal = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
+        script = "src/TCR_analysis.R",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
+        previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_immune-deconvolution.rds"
+    output:
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_TCR-analysis.rds",
+        raw_plots = OUTPUT_PATH + "Rdata/TCR-analysis_plots-list.rds",
+        anova_results = OUTPUT_PATH + "Rdata/TCR-analysis_ANOVA-res-list.rds"
+    params:
+        output_path = OUTPUT_PATH,
+        current_module = "tcr_analysis",
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
+    log:
+        out = OUTPUT_PATH + "logs/TCR-analysis.out",
+        err = OUTPUT_PATH + "logs/TCR-analysis.err" 
+    shell:
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule immune_deconvolution: 
     input:
         script = "src/immune_deconvolution.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
         previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_pathway-analysis.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_immune-deconvolution.rds",
@@ -88,7 +102,7 @@ rule pathway_analysis:
 rule marker_identification:
     input:
         script = "src/marker_identification.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
         previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_marker-identification.rds",
@@ -107,7 +121,7 @@ rule marker_identification:
 rule differential_expression_analysis:
     input:
         script = "src/differential_expression_analysis.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
         previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds",
@@ -126,7 +140,7 @@ rule differential_expression_analysis:
 rule unsupervised_analysis:
     input:
         script = "src/unsupervised_analysis.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
     params:
@@ -137,6 +151,23 @@ rule unsupervised_analysis:
     log:
         out = OUTPUT_PATH + "logs/unsupervised-analysis.out",
         err = OUTPUT_PATH + "logs/unsupervised-analysis.err" 
+    shell:
+        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+
+rule analysis_16s: 
+    input:
+        script = "src/16S_analysis.R",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
+    output:
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds"
+    params:
+        output_path = OUTPUT_PATH,
+        current_module = "16S_analysis",
+        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+        config_path = CONFIG_PATH
+    log:
+        out = OUTPUT_PATH + "logs/16S-analysis.out",
+        err = OUTPUT_PATH + "logs/16S-analysis.err" 
     shell:
         "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
