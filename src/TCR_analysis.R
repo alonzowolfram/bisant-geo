@@ -95,12 +95,17 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
   tcr_probes <- fData(target_data_object_tcr)$TargetName[base::grepl("TR[A/B/D/G][C/J/V]", fData(target_data_object_tcr)$TargetName)]
   
   # Calculate distribution (Gini coefficient).
-  pData(target_data_object)$Gini <- apply(assayDataElement(target_data_object_tcr, elt = "bgsub")[tcr_probes, ], 2, calculate_gini_coefficient)
+  gini <- apply(assayDataElement(target_data_object_tcr, elt = "bgsub")[tcr_probes, ], 2, calculate_gini_coefficient)
+  gini[!is.finite(gini)] <- NA
+  pData(target_data_object)$Gini <- gini
   
   # Calculate diversity (Shannon, Simpson, and inverse Simpson).
   shannon_h <- vegan::diversity(t(assayData(target_data_object_tcr)$bgsub[tcr_probes, ]), index = "shannon", MARGIN = 1)
   simpson <- vegan::diversity(t(assayData(target_data_object_tcr)$bgsub[tcr_probes, ]), index = "simpson", MARGIN = 1)
   invsimpson <- vegan::diversity(t(assayData(target_data_object_tcr)$bgsub[tcr_probes, ]), index = "invsimpson", MARGIN = 1)
+  shannon_h[!is.finite(shannon_h)] <- NA
+  simpson[!is.finite(simpson)] <- NA
+  invsimpson[!is.finite(invsimpson)] <- NA
   pData(target_data_object)$ShannonH <- shannon_h
   pData(target_data_object)$Simpson <- simpson
   pData(target_data_object)$InvSimpson <- invsimpson
@@ -126,10 +131,10 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
     pdata[[var]] <- as.factor(pdata[[var]])
     
     # Perform ANOVA.
-    anova_res_shannon <- aov(data = pdata, ShannonH ~ get(var))
-    anova_res_simpson <- aov(data = pdata, Simpson ~ get(var))
-    anova_res_invsimpson <- aov(data = pdata, InvSimpson ~ get(var))
-    anova_res_gini <- aov(data = pdata, Gini ~ get(var))
+    anova_res_shannon <- aov(data = pdata, ShannonH ~ get(var), na.action=na.exclude)
+    anova_res_simpson <- aov(data = pdata, Simpson ~ get(var), na.action=na.exclude)
+    anova_res_invsimpson <- aov(data = pdata, InvSimpson ~ get(var), na.action=na.exclude)
+    anova_res_gini <- aov(data = pdata, Gini ~ get(var), na.action=na.exclude)
     
     tukey_res_shannon <- TukeyHSD(anova_res_shannon)
     tukey_res_simpson <- TukeyHSD(anova_res_simpson)
