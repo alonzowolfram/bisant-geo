@@ -14,12 +14,6 @@ pptx <- read_pptx(cl_args[5])
 # Set the normalization method.
 normalization_method <- normalization_names[names(normalization_names)==normalization_methods[1]]
 
-# Add a section header.
-pptx <- pptx %>%
-  officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("TCR analysis"),
-                   location = ph_location_label(ph_label = "Title 1"))
-
 ###################################################################
 ##
 ## TCR analysis

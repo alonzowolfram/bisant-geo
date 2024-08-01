@@ -200,6 +200,10 @@ for(method in names(imm_decon_res_list)) {
                            by = "All ROIs")
         # Replace NAs with character strings.
         df3[[grouping_var]] <- df3[[grouping_var]] %>% tidyr::replace_na('NA') # https://www.statology.org/replace-na-with-string-in-r/
+        # If imm_decon_remove_na is TRUE (or true or True or tRuE or whatever), remove observations with NAs.
+        if(imm_decon_remove_na | str_to_lower(imm_decon_remove_na)=="true") {
+          df3 <- df3 %>% dplyr::filter(!!as.name(grouping_var) != "NA")
+        }
         
         # If the number of unique values of the pData column `grouping_var` > 50, split into multiple groups for graphing. 
         # https://forum.posit.co/t/diagram-overload-split-data-into-multiple-charts/104355
@@ -229,9 +233,11 @@ for(method in names(imm_decon_res_list)) {
               theme(panel.grid.minor = element_blank(),
                     panel.grid.major = element_blank()) + 
               scale_x_discrete(limits = rev(levels(imm_decon_res_list[[method]]))) + 
-              labs(title = paste0(method, " deconvolution | subset by ", subset_tag, 
+              labs(y = "quantity",
+                title = paste0(method, " deconvolution | subset by ", subset_tag, 
                                   " | level ", subset_var_level, 
-                                  "\n Group ", group))
+                                  "\n compartmentalized by ", grouping_var,
+                                  " | group ", group))
             if(length(unique_values) > 10) {
               plot <- plot + coord_flip()
             }
@@ -239,9 +245,9 @@ for(method in names(imm_decon_res_list)) {
             
             # Save to EPS and PNG and then ...
             eps_path <- paste0(output_dir_pubs, 
-                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_group-", group, "_between-cell-type-comparison.eps") %>% regexPipes::gsub("\\/", "_"))
+                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_compartment-var-", grouping_var, "_group-", group, "_between-cell-type-comparison.eps") %>% regexPipes::gsub("\\/", "_"))
             png_path <- paste0(output_dir_pubs, 
-                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_group-", group, "_between-cell-type-comparison.png") %>% regexPipes::gsub("\\/", "_"))
+                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_compartment-var-", grouping_var, "_group-", group, "_between-cell-type-comparison.png") %>% regexPipes::gsub("\\/", "_"))
             saveEPS(plot, eps_path, width = plot_width, height = plot_height)
             savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
             
@@ -276,15 +282,18 @@ for(method in names(imm_decon_res_list)) {
               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
                     panel.grid.minor = element_blank(),
                     panel.grid.major = element_blank()) +
-              labs(title = paste0(method, " deconvolution | group ", group))
+              labs(title = paste0(method, " deconvolution | subset by ", subset_tag, 
+                                  " | level ", subset_var_level, 
+                                  "\n compartmentalized by ", grouping_var,
+                                  " | group ", group))
             
             plot_list[[method]][[group]] <- plot
             
             # Save to EPS and PNG and then ...
             eps_path <- paste0(output_dir_pubs, 
-                               paste0(method, "_group-", group, "_between-sample-comparison.eps") %>% regexPipes::gsub("\\/", "_"))
+                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_compartment-var-", grouping_var, "_group-", group, "_between-sample-comparison.eps") %>% regexPipes::gsub("\\/", "_"))
             png_path <- paste0(output_dir_pubs, 
-                               paste0(method, "_group-", group, "_between-sample-comparison.png") %>% regexPipes::gsub("\\/", "_"))
+                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_compartment-var-", grouping_var, "_group-", group, "_between-sample-comparison.png") %>% regexPipes::gsub("\\/", "_"))
             saveEPS(plot, eps_path, width = plot_width, height = plot_height)
             savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
             

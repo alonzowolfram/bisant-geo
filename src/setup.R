@@ -164,6 +164,7 @@ imm_decon_methods <- immune_deconvolution$imm_decon_methods
 observation_identifiers <- immune_deconvolution$observation_identifiers
 imm_decon_subset_vars <- immune_deconvolution$imm_decon_subset_vars
 imm_decon_grouping_vars <- immune_deconvolution$imm_decon_grouping_vars
+imm_decon_remove_na <- immune_deconvolution$imm_decon_remove_na
 ### TCR analysis
 tcr_analysis <- experiment$tcr_analysis
 module_tcr <- tcr_analysis$module_tcr

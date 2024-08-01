@@ -501,6 +501,12 @@ experiment:
     # Multiple values are accepted; separate them with a comma (,).
     imm_decon_grouping_vars: 
 
+    # [Optional] Whether or not when graphing to remove observations with NA 
+    # as the value for the grouping variable of interest. 
+    # If set to TRUE, observations with NA as the value for the grouping variable of interest
+    # will be removed. Otherwise (including if left blank), observations with NA will be left in.
+    imm_decon_remove_na: TRUE
+    
     ## !-- The next two settings are unused for now. --##
     # # [Required] path to human genome reference FASTA.
     # path_to_hg_fasta: Path/to/HG/FASTA
