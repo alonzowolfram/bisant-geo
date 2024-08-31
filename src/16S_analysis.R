@@ -81,7 +81,7 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
                        location = ph_location_label(ph_label = "Title 1"))
     
     # See if we need to do any subsetting prior to graphing.
-    if(sum(is.na(exprs_16s_subset_vars)) == length(exprs_16s_subset_vars) || sum(exprs_16s_subset_vars=="NA", na.rm = T) == length(exprs_16s_subset_vars[!is.na(exprs_16s_subset_vars)])) {
+    if(sum(is.na(exprs_16s_subset_vars)) == length(exprs_16s_subset_vars) || sum(exprs_16s_subset_vars=="NA", na.rm = T) == length(exprs_16s_subset_vars[!is.na(exprs_16s_subset_vars)]) || "NA" %in% exprs_16s_subset_vars || NA %in% exprs_16s_subset_vars) {
       # Since there are no subset variables, we will add a column that will act as a dummy subset variable
       # and change exprs_16s_subset_vars to be the name of this dummy subset variable.
       # This will allow us to use one loop for either case (controls switch 1a or 1b).
@@ -99,6 +99,11 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
     for(subset_var in exprs_16s_subset_vars) {
       plot_list[[subset_var]] <- list()
       anova_list[[subset_var]] <- list()
+      
+      # Check if it's NA.
+      if(is.na(subset_var) || subset_var=="NA") {
+        subset_var <- "Complete data set"
+      }
       
       # Get the levels. 
       subset_var_levels <- pData(target_data_object)[[subset_var]] %>% unique
@@ -122,11 +127,19 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
             )
             colnames(dat) <- c("16S expression", grouping_var)
             
-            # Perform ANOVA.
-            anova_res <- aov(`16S expression` ~ get(grouping_var), data = dat)
-            tukey_res <- TukeyHSD(anova_res)
-            anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["ANOVA"]] <- anova_res
-            anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- tukey_res
+            # Check that we have enough levels to perform ANOVA.
+            n_grouping_var_levels <- dat$Group %>% unique %>% length
+            if(n_grouping_var_levels < 2) {
+              warning("Grouping variable ", grouping_var, " has fewer than 2 levels. Skipping ANOVA.")
+              anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["ANOVA"]] <- NA
+              anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- NA
+            } else {
+              # Perform ANOVA.
+              anova_res <- aov(`16S expression` ~ get(grouping_var), data = dat)
+              tukey_res <- TukeyHSD(anova_res)
+              anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["ANOVA"]] <- anova_res
+              anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- tukey_res
+            }
             
             # Make sure we have enough colors.
             n_colors <- dat[[grouping_var]] %>% unique %>% length
