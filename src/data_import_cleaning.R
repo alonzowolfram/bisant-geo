@@ -69,7 +69,7 @@ for(element in to_lowercase) {
 # Filter observations by the criteria given in filter_vars, if applicable.
 # https://bioconductor.org/packages/release/bioc/vignettes/GeomxTools/inst/doc/Developer_Introduction_to_the_NanoStringGeoMxSet.html
 # filter_vars <- "segment,include,Full ROI,Tumor;Tags,exclude,Stroma"
-if(!is.null(filter_vars) & filter_vars != "") {
+if(!(is.null(filter_vars) || filter_vars=="")) {
   filter_vars <- filter_vars %>% strsplit(";") %>% unlist
   for(var in filter_vars) {
     var <- var %>% strsplit(",") %>% unlist

@@ -264,6 +264,14 @@ experiment:
     # This classification will be stored to the metadata (pData), where it can be used for other analyses.
     # If not provided, the value will default to 50 (50th percentile, a.k.a median)
     # You can provide multiple values, separated by a comma (",").
+    # -----------------------------------------------------------------------------------------
+    # NOTE: IF YOU ENTER MULTIPLE VALUES, SURROUND THE ENTIRE STRING WITH QUOTATION MARKS ("").
+    # E.G.: IF YOU ONLY WANT TO USE THE 50TH PERCENTILE, JUST ENTER 50. 
+    # BUT IF YOU WANT TO USE THE 50TH, 66TH, AND 75TH PERCENTILE, ENTER "50,67,75"
+    # NOTE THE QUOTATION MARKS! 
+    # THIS IS DUE TO THE WAY R READS IN YAML FILES--IF IT THINKS IT'S AN INTEGER BUT DOESN'T
+    # CONFORM TO WHAT IT THINKS AN INTEGER SHOULD LOOK LIKE, IT WILL CONVERT IT TO NA!
+    # -----------------------------------------------------------------------------------------
     # Each percentile provided will be evaluated individually. 
     # NOTE: for each cutoff provided, the pipeline will generate a score (high vs low 16S)
     # that will be added to the metadata (pData). The name will be `Grouping16S_` + [the cutoff value].
