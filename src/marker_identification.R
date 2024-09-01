@@ -91,26 +91,26 @@ for(i in 1:nrow(param_combos)) {
     # Since there are no subset variables, we will add a column that will act as a dummy subset variable
     # and change subset_vars to be the name of this dummy subset variable.
     # This will allow us to use one loop for either case (controls switch 1a or 1b).
-    pData(target_data_object_2)[["DummySubsetVar"]] <- "DummyLevel"
-    pData(target_data_object_2)[["DummySubsetVar"]] <- as.factor(pData(target_data_object_2)[["DummySubsetVar"]])
-    subset_vars <- c("DummySubsetVar")
+    pData(target_data_object_2)[["Complete data set"]] <- "DummyLevel"
+    pData(target_data_object_2)[["Complete data set"]] <- as.factor(pData(target_data_object_2)[["Complete data set"]])
+    subset_vars <- c("Complete data set")
     
   } # End control switch 1a (no subset variables) << loop level 1 (model).
   
   # loop level 2 (subset variable) << loop level 1 (model)
   for(subset_var in subset_vars) {
-    print(paste0("Working on subset variable ", subset_var, " for model #", i, "."))
-    
     # Check if the current subset_var is NA.
     if(subset_var == "NA" || is.na(subset_var)) {
       # Add a column that will act as a dummy subset variable
       # and change subset_vars to be the name of this dummy subset variable.
       # This will allow us to use one loop for either case.
-      pData(target_data_object_2)[["DummySubsetVar"]] <- "DummyLevel"
-      pData(target_data_object_2)[["DummySubsetVar"]] <- as.factor(pData(target_data_object_2)[["DummySubsetVar"]])
-      subset_var <- "DummySubsetVar"
+      pData(target_data_object_2)[["Complete data set"]] <- "DummyLevel"
+      pData(target_data_object_2)[["Complete data set"]] <- as.factor(pData(target_data_object_2)[["Complete data set"]])
+      subset_var <- "Complete data set"
       markers[[paste0("model_", i)]][[subset_var]] <- list()
     }
+    
+    print(paste0("Working on subset variable ", subset_var, " for model #", i, "."))
     
     # Check that the current subset_var is not the same as either test_var or random_intercept_var.
     if(test_var==subset_var || random_intercept_var==subset_var) {
@@ -302,12 +302,12 @@ for(i in 1:nrow(param_combos)) {
   # Reset the variable names. 
   # First check if there's an additional column added if there are no subset variables (see control switch 1a.)
   # If there is, remove it. 
-  if("DummySubsetVar" %in% colnames(pData(target_data_object))) pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-DummySubsetVar)
+  if("Complete data set" %in% colnames(pData(target_data_object))) pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-`Complete data set`)
   # Then reset the variable names. 
   colnames(pData(target_data_object)) <- orig_var_names 
   
-  # If we changed subset_vars to "DummySubsetVar", change it back to NA.
-  if(sum(subset_vars=="DummySubsetVar", na.rm = T) == 1) subset_vars <- NA
+  # If we changed subset_vars to "Complete data set", change it back to NA.
+  if(sum(subset_vars=="Complete data set", na.rm = T) == 1) subset_vars <- NA
   
   # Remove target data object copy.
   rm(target_data_object_2)
@@ -329,14 +329,14 @@ for(model_num in names(markers)) {
   
   for(subset_var in names(markers[[model_num]])) {
     if(length(markers[[model_num]][[subset_var]]) < 1) next
-    if(subset_var %in% c("NA", "DummySubsetVar")) next
+    if(subset_var %in% c("NA", "Complete data set")) next
     
     de_heatmaps[[model_num]][[subset_var]] <- list()
     
     for(subset_var_level in names(markers[[model_num]][[subset_var]])) {
       de_heatmaps[[model_num]][[subset_var]][[subset_var_level]] <- list()
       # Get all the samples belonging to the current subset_var_level.
-      if(subset_var == "DummySubsetVar") {
+      if(subset_var == "Complete data set") {
         ind <- 1:nrow(pData(target_data_object))
       } else {
         ind <- pData(target_data_object)[[subset_var]] == subset_var_level
@@ -361,7 +361,7 @@ for(model_num in names(markers)) {
           .[!(. %in% neg_probes)]
         exprs_mat <- assayDataElement(target_data_object_2[GOI, ind], elt = "log_norm")
         annot <- data.frame(pData(target_data_object_2)[ind, heatmap_ann_vars])
-        rownames(annot) <- colnames(exprs_mat)
+        rownames(annot) <- colnames(exprs_mat) %>% tidyr::replace_na("NA") %>% make.unique(sep = ".")
         p_heatmap <- tryCatch(pheatmap(exprs_mat,
                                        scale = "row",
                                        show_rownames = TRUE, show_colnames = FALSE,
@@ -420,7 +420,7 @@ for(model_num in names(markers)) {
 #       test_var <- param_combos[i,2]
 #       random_intercept_var <- param_combos[i,3]
 #       random_slope_status <- ifelse(random_slope_i %in% c("no", "FALSE"), " | No random slope", " | With random slope")
-#       if(subset_var=="NA" || is.na(subset_var) || subset_var=="DummySubsetVar") {
+#       if(subset_var=="NA" || is.na(subset_var) || subset_var=="Complete data set") {
 #         subset_by <- ""
 #       } else {
 #         subset_by <- paste0("| Subset variable: ", subset_var, ", level: ", subset_var_level)

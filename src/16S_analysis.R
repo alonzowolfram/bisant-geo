@@ -213,6 +213,11 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
   
 }
 
+# Check if there's an additional column added if there are no subset variables.
+# If there is, remove it. 
+# (Otherwise, this will mess things up downstream.)
+if("Complete data set" %in% colnames(pData(target_data_object))) pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-`Complete data set`)
+
 ###################################################################
 ##
 ## Export to disk
