@@ -87,7 +87,7 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
       # This will allow us to use one loop for either case (controls switch 1a or 1b).
       pData(target_data_object)[["Complete data set"]] <- "Dummy level"
       pData(target_data_object)[["Complete data set"]] <- as.factor(pData(target_data_object)[["Complete data set"]])
-      exprs_16s_subset_vars <- c("Complete data set")
+      exprs_16s_subset_vars[is.na(exprs_16s_subset_vars)] <- c("Complete data set")
       
     } # End control switch 1a (no subset variables) << loop level 1 (model).
     
@@ -181,6 +181,8 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
     for(subset_var in names(plot_list)) {
       for(subset_var_level in names(plot_list[[subset_var]])) {
         p_list <- plot_list[[subset_var]][[subset_var_level]]
+        
+        if(is.null(p_list)) next 
         
         n <- length(p_list)
         nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
