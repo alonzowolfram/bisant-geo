@@ -1,0 +1,67 @@
+---
+output: html_notebook
+title: 'GeoMx report'
+params:
+  pkc_summary_file: ''
+  ntc_summary_file: ''
+  qc_segments_summary_file: ''
+  plot_list_qc_segments_file: ''
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Getting arguments from the command line:
+# https://stackoverflow.com/questions/49904943/run-rmarkdown-with-arguments-on-the-command-line/76567366#76567366
+# https://bookdown.org/yihui/rmarkdown-cookbook/parameterized-reports.html#parameterized-reports
+
+# Dynamically building Rmd files:
+# https://stackoverflow.com/questions/62754099/dynamically-building-rmarkdown
+# https://stackoverflow.com/questions/21729415/generate-dynamic-r-markdown-blocks
+
+# Reading in external scripts into a chunk:
+# https://bookdown.org/yihui/rmarkdown-cookbook/option-code.html
+
+# How to do tabbed sections: 
+# https://epirhandbook.com/new_pages/rmarkdown.html
+
+# Embedding Shiny apps:
+# https://bookdown.org/yihui/rmarkdown/shiny-embedded.html
+```
+
+# Study design
+```{r}
+if(file.exists(params$pkc_summary_file)) {
+  pkc_summary_df <- readRDS(params$pkc_summary_file)
+  knitr::kable(pkc_summary_df)
+}
+
+```
+
+# QC - segments
+```{r}
+if(file.exists(params$qc_segments_summary_file)) {
+  qc_segments_summary_df <- readRDS(params$qc_segments_summary_file)
+  knitr::kable(qc_segments_summary_df)
+}
+
+if(file.exists(params$ntc_summary_file)) {
+  ntc_summary_df <- readRDS(params$ntc_summary_file)
+  knitr::kable(ntc_summary_df)
+}
+```
+
+```{r}
+if(file.exists(params$plot_list_qc_segments_file)) {
+  plot_list_qc_segments <- readRDS(params$plot_list_qc_segments_file)
+  for(item in plot_list_qc_segments) {
+    print(item)
+  }
+  
+}
+```
+
+# Session info
+```{r}
+sessionInfo()
+```
