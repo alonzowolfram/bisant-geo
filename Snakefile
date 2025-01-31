@@ -6,6 +6,9 @@
 # --- Necessary Python packages --- #
 from datetime import datetime
 import sys 
+import os
+import filecmp
+import shutil
 
 # --- Importing configuration files --- #
 # https://stackoverflow.com/questions/67108673/accessing-the-path-of-the-configfile-within-snakefile
@@ -39,10 +42,55 @@ def generateOutputPath(previous_run_out_dir, output_path, project_name, run_name
 now = datetime.now()
 OUTPUT_PATH = generateOutputPath(config["data"]["previous_run_out_dir"], config["output"]["output_dir"], config["project"]["meta"]["project_name"], config["project"]["meta"]["run_name"], now)
 
+# Nextflow vs Snakemake stuff
+WORKFLOW_SYSTEM = "Snakemake"
+PROJECT_DIRECTORY = ""
+
 # --- Rules --- # 
+# https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#onstart-onsuccess-and-onerror-handlers
+onsuccess:
+    workflow_system = WORKFLOW_SYSTEM,
+    config_path = CONFIG_PATH,
+    output_path = OUTPUT_PATH,
+    project_directory = PROJECT_DIRECTORY,
+    out = output_path[0] + "logs/make_report.out",
+    err = output_path[0] + "logs/make_report.err",
+    R_file = output_path[0] + "Rdata/latest_rule.Rds",
+        
+    # Ensure the output directory exists.
+    os.makedirs(output_path[0] + "config/", exist_ok=True)
+
+    # Get the current timestamp.
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+
+    # Export the current conda environment.
+    os.system("conda list --export > " + output_path[0] + "config/conda_" + timestamp + ".env")
+
+    # Extract the base name of the input config file (without extension.)
+    config_name, config_ext = os.path.splitext(os.path.basename(config_path[0]))
+
+    # Path to the new file.
+    new_file = os.path.join(output_path[0] + "config/", f"{config_name}_{timestamp}{config_ext}")
+
+    # Find the latest file in the `config` directory that matches this config base name
+    existing_files = sorted(
+        [f for f in os.listdir(output_path[0] + "config/") if f.startswith(config_name) and f.endswith(config_ext)]
+    )
+    latest_file = os.path.join(output_path[0] + "config/", existing_files[-1]) if existing_files else None
+
+    # Compare the current YAML file with the latest file in the folder.
+    if not latest_file or not filecmp.cmp(config_path[0], latest_file, shallow=False):
+        # Copy the file if there are differences or no previous file exists.
+        shutil.copy(config_path[0], new_file)
+        print(f"Copied {config_path[0]} to {new_file}")
+    else:
+        print("No changes detected in configuration YAML file. Skipping copy.")
+
+    # Create the report. 
+    os.system("Rscript src/make_report.R " + config_path[0] + " " + workflow_system[0] + " " + "make_report" + " " + output_path[0] + " " + R_file[0] + " " + project_directory[0] + " 1> " + out[0] + " 2> " + err[0])
+
 rule tcr_analysis: 
     input:
-        script = "src/TCR_analysis.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
         previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_immune-deconvolution.rds"
     output:
@@ -50,6 +98,7 @@ rule tcr_analysis:
         raw_plots = OUTPUT_PATH + "Rdata/TCR-analysis_plots-list.rds",
         anova_results = OUTPUT_PATH + "Rdata/TCR-analysis_ANOVA-res-list.rds"
     params:
+        script = "src/TCR_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "tcr_analysis",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -58,11 +107,10 @@ rule tcr_analysis:
         out = OUTPUT_PATH + "logs/TCR-analysis.out",
         err = OUTPUT_PATH + "logs/TCR-analysis.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule immune_deconvolution: 
     input:
-        script = "src/immune_deconvolution.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
         previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_pathway-analysis.rds"
     output:
@@ -70,6 +118,7 @@ rule immune_deconvolution:
         immune_deconv_results = OUTPUT_PATH + "Rdata/immune-deconvolution_results.rds",
         raw_plots = OUTPUT_PATH + "Rdata/immune-deconvolution_plots-list.rds"
     params:
+        script = "src/immune_deconvolution.R",
         output_path = OUTPUT_PATH,
         current_module = "immune_deconvolution",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -78,17 +127,17 @@ rule immune_deconvolution:
         out = OUTPUT_PATH + "logs/immune-deconvolution.out",
         err = OUTPUT_PATH + "logs/immune-deconvolution.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule pathway_analysis:
     input:
-        script = "src/pathway_analysis.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_marker-identification.rds",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds", # Rdata/NanoStringGeoMxSet_marker-identification.rds
         DE_genes_table = OUTPUT_PATH + "tabular/LMM-differential-expression_results.csv"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_pathway-analysis.rds",
         pathways_table = OUTPUT_PATH + "tabular/pathway-analysis_results.csv"
     params:
+        script = "src/pathway_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "pathway_analysis",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -97,36 +146,36 @@ rule pathway_analysis:
         out = OUTPUT_PATH + "logs/pathway-analysis.out",
         err = OUTPUT_PATH + "logs/pathway-analysis.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} {input.DE_genes_table} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} {input.DE_genes_table} 1> {log.out} 2> {log.err}"
 
-rule marker_identification:
-    input:
-        script = "src/marker_identification.R",
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
-        previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds"
-    output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_marker-identification.rds",
-        marker_table = OUTPUT_PATH + "tabular/LMM-marker_results.csv"
-    params:
-        output_path = OUTPUT_PATH,
-        current_module = "marker_identification",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
-        config_path = CONFIG_PATH
-    log:
-        out = OUTPUT_PATH + "logs/marker-identification.out",
-        err = OUTPUT_PATH + "logs/marker-identification.err" 
-    shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+# rule marker_identification:
+#     input:
+#         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
+#         previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds"
+#     output:
+#         script = "src/marker_identification.R",
+#         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_marker-identification.rds",
+#         marker_table = OUTPUT_PATH + "tabular/LMM-marker_results.csv"
+#     params:
+#         output_path = OUTPUT_PATH,
+#         current_module = "marker_identification",
+#         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
+#         config_path = CONFIG_PATH
+#     log:
+#         out = OUTPUT_PATH + "logs/marker-identification.out",
+#         err = OUTPUT_PATH + "logs/marker-identification.err" 
+#     shell:
+#         "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule differential_expression_analysis:
     input:
-        script = "src/differential_expression_analysis.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds",
         previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds",
         DE_genes_table = OUTPUT_PATH + "tabular/LMM-differential-expression_results.csv"
     params:
+        script = "src/differential_expression_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "differential_expression_analysis",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -135,15 +184,15 @@ rule differential_expression_analysis:
         out = OUTPUT_PATH + "logs/differential-expression-analysis.out",
         err = OUTPUT_PATH + "logs/differential-expression-analysis.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule unsupervised_analysis:
     input:
-        script = "src/unsupervised_analysis.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
     params:
+        script = "src/unsupervised_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "unsupervised_analysis",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -152,15 +201,15 @@ rule unsupervised_analysis:
         out = OUTPUT_PATH + "logs/unsupervised-analysis.out",
         err = OUTPUT_PATH + "logs/unsupervised-analysis.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule analysis_16s: 
     input:
-        script = "src/16S_analysis.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds"
     params:
+        script = "src/16S_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "16S_analysis",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -169,15 +218,15 @@ rule analysis_16s:
         out = OUTPUT_PATH + "logs/16S-analysis.out",
         err = OUTPUT_PATH + "logs/16S-analysis.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule normalization:
     input:
-        script = "src/normalization.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
     params:
+        script = "src/normalization.R",
         output_path = OUTPUT_PATH,
         current_module = "normalization",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -186,15 +235,15 @@ rule normalization:
         out = OUTPUT_PATH + "logs/normalization.out",
         err = OUTPUT_PATH + "logs/normalization.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule qc_probes:
     input:
-        script = "src/qc_probes.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes.rds"
     params:
+        script = "src/qc_probes.R",
         output_path = OUTPUT_PATH,
         current_module = "qc_probes",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -203,15 +252,17 @@ rule qc_probes:
         out = OUTPUT_PATH + "logs/qc-probes.out",
         err = OUTPUT_PATH + "logs/qc-probes.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
 
 rule qc_segments:
     input:
-        script = "src/qc_segments.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-study-design.rds"
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments.rds",
+        R_file_main_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments_main-module.rds",
+        Shiny_app = OUTPUT_PATH + "qc_probes_shiny_app.R"
     params:
+        script = "src/qc_segments.R",
         output_path = OUTPUT_PATH,
         current_module = "qc_segments",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -220,16 +271,20 @@ rule qc_segments:
         out = OUTPUT_PATH + "logs/qc-segments.out",
         err = OUTPUT_PATH + "logs/qc-segments.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        """
+        Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}
+        cp src/qc_probes_shiny_app.R {params.output_path}
+        """
 
 rule qc_study_design:
     input:
-        script = "src/qc_study-design.R",
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-study-design.rds",
+        R_file_main_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw_main-module.rds",
         Shiny_app = OUTPUT_PATH + "qc_segments_shiny_app.R"
     params:
+        script = "src/qc_study-design.R",
         output_path = OUTPUT_PATH,
         current_module = "qc_study_design",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -239,17 +294,16 @@ rule qc_study_design:
         err = OUTPUT_PATH + "logs/qc-study-design.err" 
     shell:
         """
-        Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}
+        Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}
         cp src/qc_segments_shiny_app.R {params.output_path}
         """
 
 rule data_import_cleaning:
-    input:
-        script = "src/data_import_cleaning.R"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
     params:
+        script = "src/data_import_cleaning.R",
         output_path = OUTPUT_PATH,
         current_module = "data_import_cleaning",
         ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
@@ -258,14 +312,4 @@ rule data_import_cleaning:
         out = OUTPUT_PATH + "logs/data-import-cleaning.out",
         err = OUTPUT_PATH + "logs/data-import-cleaning.err" 
     shell:
-        "Rscript {input.script} {params.config_path} {params.output_path} {params.current_module} {params.ppt_file} 1> {log.out} 2> {log.err}"
-
-rule export_env:
-    output:
-        env_file = OUTPUT_PATH + "config/conda.env"
-    params:
-        config_path = CONFIG_PATH,
-        output_path = OUTPUT_PATH,
-        config_file = CONFIG_PATH + "config.yaml"
-    shell:
-        "conda list --export > {params.output_path}config/conda.env; cp {params.config_path} {params.output_path}config/"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {params.ppt_file} 1> {log.out} 2> {log.err}"
