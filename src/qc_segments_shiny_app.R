@@ -89,7 +89,7 @@ server <- function(input, output) {
 
   output$static <- renderTable({
     # Load in the data object.
-    data_object <- readRDS("Rdata/NanoStringGeoMxSet_raw.rds")
+    data_object <- readRDS("Rdata/NanoStringGeoMxSet_raw_main-module.rds")
     
     # Set the QC parameters.
     qc_params <-
