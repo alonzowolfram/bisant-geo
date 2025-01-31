@@ -300,16 +300,14 @@ rule qc_study_design:
 
 rule data_import_cleaning:
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds"
     params:
         script = "src/data_import_cleaning.R",
         output_path = OUTPUT_PATH,
         current_module = "data_import_cleaning",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/data-import-cleaning.out",
         err = OUTPUT_PATH + "logs/data-import-cleaning.err" 
     shell:
-        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} 1> {log.out} 2> {log.err}"
