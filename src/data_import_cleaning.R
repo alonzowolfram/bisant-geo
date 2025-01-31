@@ -1,10 +1,25 @@
+#!/usr/bin/env Rscript
+# https://training.nextflow.io/advanced/structure/#bin
+
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## Setup ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Source the setup.R file.
-source("src/setup.R")
+# Note that we cannot use source() directly in Nextflow; see https://stackoverflow.com/questions/76067626/how-to-call-a-function-present-in-a-different-r-script-from-an-r-executable-usin
+# and https://community.seqera.io/t/source-another-r-script-in-the-bin-directory/1059
+# So we will have to use the workaround suggested above if the workflow system is Nextflow.
+cl_args <- commandArgs(TRUE)
+workflow_system <- cl_args[2]
+if(workflow_system=="Nextflow") {
+  path <- Sys.getenv("PATH") |> strsplit(":")
+  bin_path <- tail(path[[1]], n=1)
+  source(file.path(bin_path, "setup.R"))
+} else {
+  bin_path <- ""
+  source("src/setup.R") # I guess the path it sources from is the current working directory, not the path the R script lives in.
+}
 
 # Automatically list files in each directory for use.
 dcc_files <- dir(dcc_dir, pattern = ".dcc$",
@@ -37,6 +52,8 @@ if(is.null(phenodata_sheet_name) || phenodata_sheet_name=="") {
 # 2024/12/11: We will create a separate object for each PKC module.
 data_object_list <- list()
 for(pkc_file in pkc_files) {
+  message(paste0("Working on PKC file ", pkc_file))
+  
   # Create the data object (a NanoString GeoMx set) from the input files.
   data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
                                         pkcFiles = pkc_file, # Formerly pkc_files, now we only do 1 per object.
@@ -72,7 +89,7 @@ for(module in names(data_object_list)) {
   # to match the expected inputs in the NanoString Bioconductor package tools (https://rdrr.io/github/Nanostring-Biostats/GeomxTools/src/R/NanoStringGeoMxSet-qc.R).
   # https://stackoverflow.com/a/51793188/23532435
   # https://stackoverflow.com/questions/69661679/change-multiple-columns-to-lowercase-with-dplyr-difficulty-with-mutate-across-e
-  to_lowercase <- c("Area", "Nuclei")
+  to_lowercase <- c("Slide Name", "Scan Name", "Panel", "Roi", "Segment", "Aoi", "Area", "Tags", "Nuclei")
   for(element in to_lowercase) {
     if(element %in% colnames(pData(data_object))) {
       pData(data_object) <- pData(data_object) %>% 
@@ -150,3 +167,6 @@ for(module in names(data_object_list)) {
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Export the NanoStringGeoMxSet object.
 saveRDS(data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw.rds"))
+
+# Update latest module completed.
+updateLatestModule(output_dir_rdata, current_module)

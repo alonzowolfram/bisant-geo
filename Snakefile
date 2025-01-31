@@ -260,19 +260,21 @@ rule qc_segments:
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments.rds",
         R_file_main_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments_main-module.rds",
+        R_file_segment_qc_summary_table = OUTPUT_PATH + "Rdata/qc-segments_summary_table.rds",
+        R_file_segment_qc_plot_list = OUTPUT_PATH + "Rdata/qc-segments_plot_list.rds",
         Shiny_app = OUTPUT_PATH + "qc_probes_shiny_app.R"
     params:
+        workflow_system = WORKFLOW_SYSTEM,
         script = "src/qc_segments.R",
         output_path = OUTPUT_PATH,
         current_module = "qc_segments",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/qc-segments.out",
         err = OUTPUT_PATH + "logs/qc-segments.err" 
     shell:
         """
-        Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}
+        Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}
         cp src/qc_probes_shiny_app.R {params.output_path}
         """
 
@@ -282,19 +284,20 @@ rule qc_study_design:
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-study-design.rds",
         R_file_main_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw_main-module.rds",
+        R_file_pkc_summary_table = OUTPUT_PATH + "Rdata/pkc_summary_table.rds",
         Shiny_app = OUTPUT_PATH + "qc_segments_shiny_app.R"
     params:
+        workflow_system = WORKFLOW_SYSTEM,
         script = "src/qc_study-design.R",
         output_path = OUTPUT_PATH,
         current_module = "qc_study_design",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/qc-study-design.out",
         err = OUTPUT_PATH + "logs/qc-study-design.err" 
     shell:
         """
-        Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}
+        Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}
         cp src/qc_segments_shiny_app.R {params.output_path}
         """
 
@@ -302,6 +305,7 @@ rule data_import_cleaning:
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds"
     params:
+        workflow_system = WORKFLOW_SYSTEM,
         script = "src/data_import_cleaning.R",
         output_path = OUTPUT_PATH,
         current_module = "data_import_cleaning",
@@ -310,4 +314,4 @@ rule data_import_cleaning:
         out = OUTPUT_PATH + "logs/data-import-cleaning.out",
         err = OUTPUT_PATH + "logs/data-import-cleaning.err" 
     shell:
-        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} 1> {log.out} 2> {log.err}"

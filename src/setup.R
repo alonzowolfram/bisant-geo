@@ -1,4 +1,6 @@
-## ---------------------------
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##   License ----
+##
 #     bisantine-geo is a Snakemake pipeline for processing, running QC on, and analyzing NanoString GeoMx spatial transcriptomics data.
 #     Copyright (C) 2024 Lon Fong.
 
@@ -14,28 +16,40 @@
 
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
-## ---------------------------
-
-###################################################################
-##                                                                
-## R settings
 ##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
+##                                                                
+## R settings ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 options(scipen = 6, digits = 4) # View outputs in non-scientific notation.
 # memory.limit(30000000)     # this is needed on some PCs to increase memory allowance, but has no impact on Macs.
 
-###################################################################
+# Prevent regexPipes functions from masking base functions.
+# https://stackoverflow.com/a/5564654
+# It's crazy how many of our problems stem from that lol. 8/
+grep <- base::grep
+grepl <- base::grepl
+gsub <- base::gsub
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
-## Functions
+## Functions ----
 ##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Load required functions.
 library(tidyverse) # For a data-science focused data "grammar".
 ## Function to add a slash to a directory path if it doesn't have one already.
 appendSlashToPath <- function(x) {
   ifelse(base::grepl("\\/$", x), x, paste0(x, "/"))
+}
+## Function to check if variable is NULL or empty.
+flagVariable <- function(x) {
+  return(is.null(x) || x=="")
 }
 
 ## Function to generate QC histograms.
@@ -59,11 +73,11 @@ QCHistogram <- function(assay_data = NULL,
   plt
 }
 
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
-## Parameters from configuration YAML file
+## Parameters from configuration YAML file ----
 ##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Set the parameters passed from the configuration YAML file.
 ## Read in the config file. 
@@ -86,8 +100,10 @@ dcc_dir <- data$dcc_dir
 pkc_dir <- data$pkc_dir
 pkc_filename_pattern <- data$pkc_filename_pattern
 pkc_filenames <- data$pkc_filenames
+main_module <- data$main_module
 sample_annotation_file <- data$sample_annotation_file
 phenodata_sheet_name <- data$phenodata_sheet_name
+rmd_template_file <- data$rmd_template_file
 ppt_template_file <- data$ppt_template_file
 previous_run_out_dir <- data$previous_run_out_dir
 
@@ -127,18 +143,25 @@ min_loq <- probe_qc$min_loq
 gene_detection_rate <- probe_qc$gene_detection_rate
 percent_of_segments <- probe_qc$percent_of_segments
 probes_exclude <- probe_qc$probes_exclude
+probes_include <- probe_qc$probes_include
 ### Normalization
 normalization_methods <- experiment$normalization$normalization_methods
 ann_of_interest <- experiment$normalization$ann_of_interest
 ### 16S analysis
 analysis_16s <- experiment$analysis_16s
 module_16s <- analysis_16s$module_16s
+method_16s_probe_selection <- analysis_16s$method_16s_probe_selection
+normalization_16s <- analysis_16s$normalization_16s
 percentile_16s_cutoff <- analysis_16s$percentile_16s_cutoff
 exprs_16s_subset_vars <- analysis_16s$exprs_16s_subset_vars
 exprs_16s_grouping_vars <- analysis_16s$exprs_16s_grouping_vars
 ### Unsupervised analysis
-compartment_vars <- experiment$unsupervised$compartment_vars
-heatmap_ann_vars <- experiment$unsupervised$heatmap_ann_vars
+unsupervised <- experiment$unsupervised
+perform_UMAP <- unsupervised$perform_UMAP
+perform_tSNE <- unsupervised$perform_tSNE
+perform_PCA <- unsupervised$perform_PCA
+compartment_vars <- unsupervised$compartment_vars
+heatmap_ann_vars <- unsupervised$heatmap_ann_vars
 ### Linear mixed models/differential expression
 lmm <- experiment$lmm
 random_slope <- lmm$random_slope
@@ -168,16 +191,18 @@ imm_decon_remove_na <- immune_deconvolution$imm_decon_remove_na
 ### TCR analysis
 tcr_analysis <- experiment$tcr_analysis
 module_tcr <- tcr_analysis$module_tcr
+normalization_tcr <- tcr_analysis$normalization_tcr
 tcr_subset_vars <- tcr_analysis$tcr_subset_vars
 tcr_grouping_vars <- tcr_analysis$tcr_grouping_vars
 
-## ----------------------------------------------------------------
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
 ##
-## Required parameters
+## Required parameters ----
 ##
-## ----------------------------------------------------------------
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Check the required parameters passed from the configuration YAML file based on which module we're running.
 current_module <- cl_args[3]
+
 ## Data
 required_annotation_elements <- c("phenodata_dcc_col_name", "protocol_data_col_names", "experiment_data_col_names")
 if(current_module=="data_import_cleaning") {
@@ -195,11 +220,11 @@ if(current_module=="differential_expression_analysis") if(list(NULL) %in% list(c
 # if(current_module=="immune_deconvolution") if(list(NULL) %in% list(path_to_lm22, path_to_cibersort)) stop("In the configuration YAML file, please provide values for the LM22 path and the CIBERSORT.R path.")
 if(is.null(ann_of_interest) | ann_of_interest=="") stop("Please provide values for ann_of_interest.")
 
-## ----------------------------------------------------------------
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
 ##
-## Optional parameters
+## Optional parameters ----
 ##
-## ----------------------------------------------------------------
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
 # Set values for optional/program-set parameters from the configuration YAML file.
 ## Data
 if(!is.null(previous_run_out_dir) && previous_run_out_dir != "") {
@@ -216,19 +241,6 @@ if(is.null(pkc_filename_pattern) || pkc_filename_pattern=="") {
 if(!is.null(pkc_filenames) && pkc_filenames != "") {
   pkc_filenames <- pkc_filenames %>% strsplit(",") %>% unlist
 }
-## Output
-### Create the directory if it doesn't already exist. 
-if(!dir.exists(output_dir)) dir.create(output_dir)
-### Create the folder structure within the output_dir.
-for(subdir in c("config", "logs", "pubs", "Rdata", "tabular")) {
-  subdir_path <- file.path(output_dir, subdir)
-  if(!dir.exists(subdir_path)) dir.create(subdir_path)
-}
-output_dir_config <- paste0(output_dir, "config/")
-output_dir_logs <- paste0(output_dir, "logs/")
-output_dir_rdata <- paste0(output_dir, "Rdata/")
-output_dir_tabular <- paste0(output_dir, "tabular/")
-output_dir_pubs <- paste0(output_dir, "pubs/")
 
 # Experiment
 ## Annotation.
@@ -236,6 +248,12 @@ if(!is.null(neovariables) && neovariables != "") {
   neovariables <- neovariables %>% strsplit(",") %>% unlist
 }
 ## 16S analysis.
+if(is.null(method_16s_probe_selection) || method_16s_probe_selection == "") {
+  method_16s_probe_selection <- "both"
+}
+if(is.null(normalization_16s) || normalization_16s == "") {
+  normalization_16s <- "bg_sub_q3"
+}
 if(is.null(percentile_16s_cutoff) || percentile_16s_cutoff == "") {
   percentile_16s_cutoff <- 50
 } else {
@@ -251,8 +269,8 @@ if(is.null(exprs_16s_grouping_vars) || exprs_16s_grouping_vars == "") {} else { 
 }
 ## Normalization
 # Create full names for the normalization methods.
-normalization_names <- c("raw", "Q3-normalized", "background-normalized", "background-subtracted", "background-subtracted + Q3-normalized", "background-subtracted + background-normalized", "quantile-normalized")
-names(normalization_names) <- c("exprs", "q3_norm", "neg_norm", "bg_sub", "bg_sub_q3", "bg_sub_neg", "quant")
+normalization_names <- c("raw", "Q3-normalized", "background-normalized", "background-subtracted", "background-subtracted + Q3-normalized", "background-subtracted + P90-normalized", "background-subtracted + background-normalized", "quantile-normalized")
+names(normalization_names) <- c("exprs", "q3_norm", "neg_norm", "bg_sub", "bg_sub_q3", "bg_sub_p90", "bg_sub_neg", "quant")
 if(is.null(normalization_methods) || normalization_methods == "") {
   normalization_methods <- c("quant")
 } else {
@@ -269,6 +287,9 @@ if(is.null(normalization_methods) || normalization_methods == "") {
   }
 }
 ## Unsupervised analysis
+if(flagVariable(perform_UMAP)) perform_UMAP <- TRUE
+if(flagVariable(perform_tSNE)) perform_tSNE <- FALSE
+if(flagVariable(perform_PCA)) perform_PCA <- FALSE
 if(is.null(compartment_vars) || compartment_vars == "") {
   compartment_vars <- ann_of_interest
 } else {
@@ -341,6 +362,9 @@ if(is.null(imm_decon_grouping_vars) || imm_decon_grouping_vars == "") {
   imm_decon_grouping_vars <- imm_decon_grouping_vars %>% strsplit(",") %>% unlist
 }
 ## TCR analysis.
+if(is.null(normalization_tcr) || normalization_tcr == "") {
+  normalization_tcr <- "bg_sub_q3"
+}
 if(is.null(tcr_subset_vars) || tcr_subset_vars == "") {
   tcr_subset_vars <- NA
 } else {
@@ -375,11 +399,11 @@ random_intercept_vars <- random_intercept_vars %>% as.character %>% strsplit(","
 # random_slope_vars <- random_slope_vars %>% as.character %>% strsplit(",") %>% unlist
 individual_pathways <- individual_pathways %>% as.character %>% strsplit(",") %>% unlist
 
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
-## Libraries
+## Required libraries and functions ----
 ##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 library(cowplot) # For plot_grid.
 library(e1071) # Required by CIBERSORT.
 library(fgsea) # For GSEA.
@@ -419,4 +443,43 @@ library(regexPipes) # For pipe-friendly version of base R's regex functions.
 # library(glmmSeq) # General linear mixed models. 
 
 ## Load helper functions.
-source("src/helper_functions.R")
+workflow_system <- cl_args[2]
+if(workflow_system=="Nextflow") {
+  path <- Sys.getenv("PATH") |> strsplit(":")
+  bin_path <- tail(path[[1]], n=1)
+  source(file.path(bin_path, "helper_functions.R"))
+} else {
+  bin_path <- ""
+  source("src/helper_functions.R")
+}
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
+##                                                                
+## File/path settings ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+if(workflow_system == "Nextflow") {
+  output_dir <- ""
+  output_dir_config <- ""
+  output_dir_logs <- ""
+  output_dir_rdata <- ""
+  output_dir_tabular <- ""
+  output_dir_pubs <- ""
+} else {
+  ## Output
+  output_dir <- paste0(appendSlashToPath(cl_args[4]))
+  ### Create the directory if it doesn't already exist. 
+  if(!dir.exists(output_dir)) dir.create(output_dir)
+  ### Create the folder structure within the output_dir.
+  for(subdir in c("config", "logs", "pubs", "Rdata", "tabular")) {
+    subdir_path <- file.path(output_dir, subdir)
+    if(!dir.exists(subdir_path)) dir.create(subdir_path)
+  }
+  output_dir_config <- paste0(output_dir, "config/")
+  output_dir_logs <- paste0(output_dir, "logs/")
+  output_dir_rdata <- paste0(output_dir, "Rdata/")
+  output_dir_tabular <- paste0(output_dir, "tabular/")
+  output_dir_pubs <- paste0(output_dir, "pubs/")
+}
+
+rdata_folder <- ifelse(workflow_system=="Nextflow", "", "Rdata/")
