@@ -41,6 +41,7 @@ plot_list_qc_segments_file <- paste0(output_dir_rdata, "qc-segments_plot_list.rd
 plot_list_qc_probes_file <- paste0(output_dir_rdata, "qc-probes_plot_list.rds")
 qc_probes_summary_file <- paste0(output_dir_rdata, "qc-probes_table.rds")
 goi_detection_rate_table_file <- paste0(output_dir_rdata, "genes-of-interest_detection-rate_table.rds")
+plot_list_normalization_file <- paste0(output_dir_rdata, "normalization_plot_list.rds")
 # Render.
 rmarkdown::render(rmd_template_file,
                   output_file=paste0(output_dir_pubs, "report.html"),
@@ -50,6 +51,7 @@ rmarkdown::render(rmd_template_file,
                               plot_list_qc_segments_file = plot_list_qc_segments_file,
                               plot_list_qc_probes_file = plot_list_qc_probes_file,
                               qc_probes_summary_file = qc_probes_summary_file,
-                              goi_detection_rate_table_file = goi_detection_rate_table_file
+                              goi_detection_rate_table_file = goi_detection_rate_table_file,
+                              plot_list_normalization_file = plot_list_normalization_file
                               )
                   )

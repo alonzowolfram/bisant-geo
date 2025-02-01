@@ -6,6 +6,10 @@ params:
   ntc_summary_file: ''
   qc_segments_summary_file: ''
   plot_list_qc_segments_file: ''
+  plot_list_qc_probes_file: ''
+  qc_probes_summary_file: ''
+  goi_detection_rate_table_file: ''
+  plot_list_normalization_file: ''
 ---
 
 ```{r setup, include=FALSE}
@@ -57,9 +61,44 @@ if(file.exists(params$plot_list_qc_segments_file)) {
   for(item in plot_list_qc_segments) {
     print(item)
   }
-  
 }
 ```
+
+# QC - probes and targets
+```{r}
+if(file.exists(params$qc_probes_summary_file)) {
+  qc_probes_summary <- readRDS(params$qc_probes_summary_file)
+  knitr::kable(qc_probes_summary)
+}
+```
+
+```{r}
+if(file.exists(params$goi_detection_rate_table_file)) {
+  goi_detection_rate_table <- readRDS(params$goi_detection_rate_table_file)
+  knitr::kable(goi_detection_rate_table)
+}
+```
+
+```{r}
+if(file.exists(params$plot_list_qc_probes_file)) {
+  plot_list_qc_probes <- readRDS(params$plot_list_qc_probes_file)
+  for(item in plot_list_qc_probes) {
+    print(item)
+  }
+}
+
+```
+
+# Normalization
+```{r}
+if(file.exists(params$plot_list_normalization_file)) {
+  plot_list_normalization <- readRDS(params$plot_list_normalization_file)
+  for(item in plot_list_normalization) {
+    print(item)
+  }
+}
+```
+
 
 # Session info
 ```{r}

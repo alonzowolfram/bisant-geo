@@ -224,7 +224,8 @@ rule normalization:
     input:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes.rds"
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds",
+        R_file_normalization_plot_list = OUTPUT_PATH + "Rdata/normalization_plot_list.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
         script = "src/normalization.R",
