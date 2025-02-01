@@ -34,16 +34,22 @@ latest_module <- readRDS(rds_path)
 message(paste0("Rendering HTML report using the template found at ", rmd_template_file, "."))
 # saveRDS(iris, paste0(output_dir_pubs, "test.rds"))
 # Set the paths.
-pkc_summary_path <- paste0(output_dir_rdata, "pkc_summary_table.rds")
-qc_segments_summary_path <- paste0(output_dir_rdata, "qc-segments_summary_table.rds")
-ntc_summary_path <- paste0(output_dir_rdata, "ntc_summary_table.rds")
-plot_list_qc_segments_path <- paste0(output_dir_rdata, "qc-segments_plot_list.rds")
+pkc_summary_file <- paste0(output_dir_rdata, "pkc_summary_table.rds")
+qc_segments_summary_file <- paste0(output_dir_rdata, "qc-segments_summary_table.rds")
+ntc_summary_file <- paste0(output_dir_rdata, "ntc_summary_table.rds")
+plot_list_qc_segments_file <- paste0(output_dir_rdata, "qc-segments_plot_list.rds")
+plot_list_qc_probes_file <- paste0(output_dir_rdata, "qc-probes_plot_list.rds")
+qc_probes_summary_file <- paste0(output_dir_rdata, "qc-probes_table.rds")
+goi_detection_rate_table_file <- paste0(output_dir_rdata, "genes-of-interest_detection-rate_table.rds")
 # Render.
 rmarkdown::render(rmd_template_file,
                   output_file=paste0(output_dir_pubs, "report.html"),
-                  params=list(qc_segments_summary_file=qc_segments_summary_path,
-                              ntc_summary_file=ntc_summary_path,
-                              pkc_summary_file=pkc_summary_path,
-                              plot_list_qc_segments_file=plot_list_qc_segments_path
+                  params=list(qc_segments_summary_file = qc_segments_summary_file,
+                              ntc_summary_file = ntc_summary_file,
+                              pkc_summary_file = pkc_summary_file,
+                              plot_list_qc_segments_file = plot_list_qc_segments_file,
+                              plot_list_qc_probes_file = plot_list_qc_probes_file,
+                              qc_probes_summary_file = qc_probes_summary_file,
+                              goi_detection_rate_table_file = goi_detection_rate_table_file
                               )
                   )

@@ -49,7 +49,7 @@ appendSlashToPath <- function(x) {
 }
 ## Function to check if variable is NULL or empty.
 flagVariable <- function(x) {
-  return(is.null(x) || x=="")
+  return(is.null(x) || sum(x=="") >= length(x))
 }
 
 ## Function to generate QC histograms.
@@ -144,6 +144,8 @@ gene_detection_rate <- probe_qc$gene_detection_rate
 percent_of_segments <- probe_qc$percent_of_segments
 probes_exclude <- probe_qc$probes_exclude
 probes_include <- probe_qc$probes_include
+genes_of_interest <- probe_qc$genes_of_interest
+modules_filter_probes <- probe_qc$modules_filter_probes
 ### Normalization
 normalization_methods <- experiment$normalization$normalization_methods
 ann_of_interest <- experiment$normalization$ann_of_interest
@@ -243,11 +245,14 @@ if(!is.null(pkc_filenames) && pkc_filenames != "") {
 }
 
 # Experiment
-## Annotation.
+## Annotation
 if(!is.null(neovariables) && neovariables != "") {
   neovariables <- neovariables %>% strsplit(",") %>% unlist
 }
-## 16S analysis.
+## Probe QC
+if(!flagVariable(genes_of_interest)) genes_of_interest <- genes_of_interest %>% strsplit(",") %>% unlist
+if(!flagVariable(modules_filter_probes)) modules_filter_probes <- modules_filter_probes %>% strsplit(",") %>% unlist
+## 16S analysis
 if(is.null(method_16s_probe_selection) || method_16s_probe_selection == "") {
   method_16s_probe_selection <- "both"
 }

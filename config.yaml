@@ -54,6 +54,12 @@ data:
   # If left blank, will use all files matching \\.pkc$
   pkc_filename_pattern: Filename pattern goes here
 
+  # [Optional] Module containing the probes for the main analysis.
+  # This is usually the transcriptome module,
+  # e.g., Hs_R_NGS_WTA_v1.0
+  # If left blank, the first module in the modules loaded above will be considered the main one.
+  main_module: Hs_R_NGS_WTA_v1.0
+
   # [Required] Absolute path to the Microsoft Excel (.xlsx) file containing the phenodata/sample annotation.
   sample_annotation_file: Path/to/annotation/file/goes/here
 
@@ -61,6 +67,9 @@ data:
   # If not provided, the pipeline will use the first sheet in the Excel file.
   phenodata_sheet_name: Phenodata sheet name goes here
 
+  # [Required] Absolute path to the template RMD file used to generate reports.
+  rmd_template_file: 
+  
   # [Optional] Absolute path to the PowerPoint file to be used as a template in generating the output PowerPoint.
   # If not provided, the pipeline will use the default PowerPoint template. 
   # If you already have a PowerPoint generated from previous runs, you can enter that
@@ -225,7 +234,26 @@ experiment:
 
     # [Required] Probes to exclude from the analysis. Separate probes with commas (",").
     # If you want to keep all probes, input "None".
-    probes_exclude: None
+    # These probes will be removed AFTER the normalization step. 
+    probes_exclude: Microbial16S_10
+
+    # [Optional] Probes to specifically include the analysis. regardless of if they pass QC or not. 
+    # Separate probes with commas (",").
+    # If there are no probes you specifically want to include, input "None".
+    # Note that this will not prevent removal of segments with these probes.
+    # If segments that fail QC are the only segments that contain these probes, the probes will be excluded by default.
+    probes_include: None
+    
+    # [Optional] Probes/genes of interest to create a table of detection rates for.
+    # Separate with commas (",").
+    genes_of_interest: Microbial16S_01,Microbial16S_02,Microbial16S_03,Microbial16S_04,Microbial16S_05,Microbial16S_06,Microbial16S_07,Microbial16S_08
+    
+    # [Optional] Modules for which to filter probes. 
+    # Separate modules with commas (",").
+    # If not provided, will not perform filtering.
+    modules_filter_probes: Hs_R_NGS_WTA_v1.0
+    
+    # [Optional] Modules for which to aggregate probes to target level.
 
   # ----------------------------------------------------------------------
   #     Normalization settings
@@ -246,7 +274,7 @@ experiment:
     normalization_methods: bg_sub_q3,quant
 
     # [Required] The annotation of interest (e.g. Segment, Region).
-    ann_of_interest: Annotation of interest goes here
+    ann_of_interest: segment
 
   # ----------------------------------------------------------------------
   #     16S analysis
@@ -257,6 +285,18 @@ experiment:
     # Will probably be something like "BiS_pilot_1_RnD_v1.2" (basically the name of the appropriate PKC file
     # without the .pkc extension.)
     module_16s: Name of 16S module goes here.
+
+    # [Optional] Method to determine which probes to use in 16S analysis.
+    # "include": include ONLY the probes given in `probes_include` above.
+    # "exclude": include ANY probes NOT excluded by the probes given in `probes_exclude` above.
+    # "both": makes sure to include the probes given in `probes_include` and exclude the probes given in `probes_exclude`.
+    # If no value is given, it will default to "both".
+    method_16s_probe_selection: include
+
+    # [Optional] Normalization method to use for 16S analysis.
+    # Can be any of the normalization values given in the section above.
+    # If left blank, will default to bg_sub_q3.
+    normalization_16s:
 
     # [Optional] Percentile to serve as cutoff for 16S score (high vs low 16S).
     # Samples with values >= this percentile will be classified as "high 16S",
@@ -301,6 +341,18 @@ experiment:
   # ----------------------------------------------------------------------
   unsupervised:
 
+    # [Optional] Whether or not to perform UMAP dimension reduction.
+    # If not provided, will default to TRUE.
+    perform_UMAP:
+    
+    # [Optional] Whether or not to perform t-SNE dimension reduction.
+    # If not provided, will default to FALSE.
+    perform_tSNE:
+    
+    # [Optional] Whether or not to perform PCA dimension reduction.
+    # If not provided, will default to FALSE.
+    perform_PCA:
+    
     # [Optional] The column in the annotation to use as a primary grouping variable.
     # If provided, points on dimension reduction graphs (t-SNE, UMAP)
     # will be colored by group.
@@ -385,13 +437,13 @@ experiment:
     # You can skip a subsetting variable by inputting NA.
     subset_var_levels_manual: Subsetting variable levels go here
 
-    # [Optional] Cutoff, in number of standard deviations (SDs) away from the mean of the coefficient of variance,
+    # [Optional] Percentile cutoff, expressed as a decimal, of the coefficient of variance (CV)
     # to filter genes before running differential expression via linear mixed models.
-    # For example, if you enter "2", only genes with a coefficient of variance 2SD _higher_ than 
-    # the mean coefficient of variance will be kept for differential expression analysis.
+    # For example, if you enter 0.25, only genes with a CV >= the 25th percentile
+    # of genes by CV will be kept.
     # This speeds up the time it takes to fit the linear mixed models.
     # If left blank, all available genes will be used. 
-    cv_cutoff: 
+    cv_cutoff: 0.25
 
     # [Optional] Number of top differentially expressed genes to label on the volcano plots.
     # This number will be applied to either side of the plot, so if you enter 10,
@@ -532,6 +584,11 @@ experiment:
     # If left blank, the pipeline will skip the TCR analysis.
     module_tcr: Name of TCR module goes here.
 
+    # [Optional] Normalization method to use for TCR analysis.
+    # Can be any of the normalization values given in the section above.
+    # If left blank, will default to bg_sub_q3.
+    normalization_tcr:
+    
     # [Optional] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to
     # the variables you'd like to subset the data set by before running TCR analysis.
     # You can provide multiple variables, separated by commas (,).

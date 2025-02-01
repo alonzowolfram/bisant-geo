@@ -1,66 +1,112 @@
-## Source the setup.R file.
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Setup ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Source the setup.R file.
 source("src/setup.R")
 
-# Read in the NanoStringGeoMxSet object. 
-data_object <- readRDS(cl_args[4])
-# Read in the PowerPoint.
-pptx <- read_pptx(cl_args[5])
+# Read in the NanoStringGeoMxSet object.
+data_object_list <- readRDS(cl_args[5])
 
 # Access the PKC files, to ensure that expected PKCs have been loaded for this study.
 # This code was used in qc_segments.R, and
 # maybe in the future, we will have a way to remove this redundant code. Maybe by saving the modules
 # into the NanoStringGeoMxSet object?
-pkcs <- annotation(data_object)
-modules <- base::gsub(".pkc", "", pkcs)
+modules <- names(data_object_list)
+pkcs <- paste0(modules, ".pkc")
 pkc_summary <- data.frame(PKCs = pkcs, modules = modules)
 
-# Create the object to hold probe QC plots.
-plot_list_probe_qc <- list()
+# Set the probes to be included no matter what. 
+probes_include <- probes_include %>% str_split(",") %>% unlist()
 
-# Set probe QC flags.
-# Generally keep the qcCutoffs parameters unchanged. Set removeLocalOutliers to 
-# FALSE if you do not want to remove local outliers.
-data_object <- setBioProbeQCFlags(data_object, 
-                                  qcCutoffs = list(minProbeRatio = min_probe_ratio,
-                                                   percentFailGrubbs = percent_fail_grubbs), 
-                                  removeLocalOutliers = TRUE)
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Probe QC ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Create a list to hold the target data objects.
+target_data_object_list <- list()
+# Create a list to hold the probe QC table.
+qc_df_list <- list()
 
-probe_qc_results <- fData(data_object)[["QCFlags"]]
+# Loop over each module and calculate probe QC metrics.
+if(flagVariable(modules_filter_probes)) modules_filter_probes <- c("")
 
-# Define QC table for Probe QC
-qc_df <- data.frame(Passed = sum(rowSums(probe_qc_results[, -1]) == 0),
-                    Global = sum(probe_qc_results$GlobalGrubbsOutlier),
-                    Local = sum(rowSums(probe_qc_results[, -2:-1]) > 0
-                                & !probe_qc_results$GlobalGrubbsOutlier))
-# qc_df
-
-# Subset object to exclude all that did not pass Ratio & Global testing.
-probe_qc_passed <- 
-  subset(data_object, 
-         fData(data_object)[["QCFlags"]][,c("LowProbeRatio")] == FALSE &
-           fData(data_object)[["QCFlags"]][,c("GlobalGrubbsOutlier")] == FALSE)
-dim(probe_qc_passed)
-data_object <- probe_qc_passed 
-
-# Subset object to exclude manually selected probes.
-probes_exclude <- probes_exclude %>% str_split(",") %>% unlist()
-if(sum(probes_exclude == "None") < length(probes_exclude)) {
-  probe_qc_passed_2 <- 
-    subset(data_object, 
-           !(fData(data_object)[["TargetName"]] %in% probes_exclude))
-  dim(probe_qc_passed_2)
-  data_object <- probe_qc_passed_2
+for(module in names(data_object_list)) {
+  data_object <- data_object_list[[module]]
+  
+  # Set probe QC flags.
+  # Generally keep the qcCutoffs parameters unchanged. Set removeLocalOutliers to 
+  # FALSE if you do not want to remove local outliers.
+  data_object <- setBioProbeQCFlags(data_object, 
+                                    qcCutoffs = list(minProbeRatio = min_probe_ratio,
+                                                     percentFailGrubbs = percent_fail_grubbs), 
+                                    removeLocalOutliers = TRUE)
+  
+  probe_qc_results <- fData(data_object)[["QCFlags"]]
+  data_object_fData <- fData(data_object)
+  
+  # Define QC table for Probe QC
+  qc_df <- data.frame(Module = module,
+                      Passed = sum(rowSums(probe_qc_results[, -1]) == 0),
+                      Global = sum(probe_qc_results$GlobalGrubbsOutlier),
+                      Local = sum(rowSums(probe_qc_results[, -2:-1]) > 0
+                                  & !probe_qc_results$GlobalGrubbsOutlier))
+  qc_df_list[[module]] <- qc_df
+  
+  # If module is in modules_filter_probes, 
+  # subset object to exclude all that did not pass Ratio & Global testing.
+  # But keep all the ones we specifically want to include, including TCR and negative probes.
+  if(module %in% modules_filter_probes) {
+    negativeProbefData <- subset(fData(data_object), CodeClass == "Negative")
+    neg_probes <- unique(negativeProbefData$TargetName)
+    probe_qc_passed <- 
+      subset(data_object, 
+             (fData(data_object)[["QCFlags"]][,c("LowProbeRatio")] == FALSE & fData(data_object)[["QCFlags"]][,c("GlobalGrubbsOutlier")] == FALSE) | # Include probes that passed QC.
+               fData(data_object)$TargetName %in% c(probes_include, neg_probes) | # Include specified probes and negative probes.
+               base::grepl("TR[A/B/D/G][C/J/V]", fData(data_object)$TargetName) # Include TCR probes.
+      )
+    dim(probe_qc_passed)
+    data_object <- probe_qc_passed
+  }
+  
+  # 2024/11/15: manual probe exclusion has been moved to normalization.R.
+  # # Subset object to exclude manually selected probes.
+  # probes_exclude <- probes_exclude %>% str_split(",") %>% unlist()
+  # if(sum(probes_exclude == "None") < length(probes_exclude)) {
+  #   probe_qc_passed_2 <- 
+  #     subset(data_object, 
+  #            !(fData(data_object)[["TargetName"]] %in% probes_exclude))
+  #   dim(probe_qc_passed_2)
+  #   data_object <- probe_qc_passed_2
+  # }
+  
+  # Create gene-level count data. 
+  # Check how many unique targets the object has.
+  length(unique(featureData(data_object)[["TargetName"]]))
+  
+  # Collapse to targets.
+  target_data_object <- aggregateCounts(data_object)
+  dim(target_data_object)
+  # View the first few rows of the expression matrix.
+  exprs(target_data_object)[1:5, 1:2]
+  
+  # Save the updated data object back to the list.
+  target_data_object_list[[module]] <- target_data_object
+  
+  # Clean up.
+  rm(data_object, target_data_object)
+  gc()
 }
+# Merge the QC tables into one.
+qc_df <- do.call(rbind, qc_df_list)
 
-# Create gene-level count data. 
-# Check how many unique targets the object has.
-length(unique(featureData(data_object)[["TargetName"]]))
-
-# Collapse to targets.
-target_data_object <- aggregateCounts(data_object)
-dim(target_data_object)
-# View the first few rows of the expression matrix.
-exprs(target_data_object)[1:5, 1:2]
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Target QC ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Limit of quantification. 
 # The LOQ is calculated based on the distribution of negative control probes and is intended to approximate the quantifiable limit of gene expression per segment. 
@@ -71,8 +117,11 @@ cutoff <- loq_sd_cutoff
 min_loq <- min_loq
 
 # Calculate LOQ per module tested.
-loq <- data.frame(row.names = colnames(target_data_object))
 for(module in modules) {
+  target_data_object <- target_data_object_list[[module]]
+  
+  loq <- data.frame(row.names = colnames(target_data_object))
+  
   vars <- paste0(c("NegGeoMean_", "NegGeoSD_"),
                  module)
   if(all(vars[1:2] %in% colnames(pData(target_data_object)))) {
@@ -81,35 +130,89 @@ for(module in modules) {
            pData(target_data_object)[, vars[1]] * 
              pData(target_data_object)[, vars[2]] ^ cutoff)
   }
+  
+  pData(target_data_object)$LOQ <- loq
+  
+  # Add back to the list.
+  target_data_object_list[[module]] <- target_data_object
+  
+  # Clean up.
+  rm(target_data_object)
+  gc()
 }
-pData(target_data_object)$LOQ <- loq
 
 # Filter out either segments and/or genes with abnormally low signal. 
-loq_mat <- c()
+loq_mat_list <- list()
+goi_df_list <- list()
 for(module in modules) {
+  target_data_object <- target_data_object_list[[module]]
+  loq <- pData(target_data_object)$LOQ
+  
+  loq_mat <- c()
   ind <- fData(target_data_object)$Module == module
   Mat_i <- t(esApply(target_data_object[ind, ], MARGIN = 1,
                      FUN = function(x) {
                        x > loq[, module]
                      }))
   loq_mat <- rbind(loq_mat, Mat_i)
+  # Ensure ordering since this is stored outside of the geomxSet.
+  loq_mat <- loq_mat[fData(target_data_object)$TargetName, ]
+  
+  # Save to the list.
+  loq_mat_list[[module]] <- loq_mat
+  
+  # Save detection rate information to phenodata.
+  pData(target_data_object)$GenesDetected <- 
+    colSums(loq_mat, na.rm = TRUE)
+  pData(target_data_object)$GeneDetectionRate <-
+    pData(target_data_object)$GenesDetected / nrow(target_data_object)
+  
+  # Determine detection thresholds: 1%, 5%, 10%, 15%, >15%.
+  pData(target_data_object)$DetectionThreshold <- 
+    cut(pData(target_data_object)$GeneDetectionRate,
+        breaks = c(0, 0.01, 0.05, 0.1, 0.15, 1),
+        labels = c("<1%", "1-5%", "5-10%", "10-15%", ">15%"))
+  
+  # Gene detection rate. 
+  # Calculate detection rate:
+  fData(target_data_object)$DetectedSegments <- rowSums(loq_mat, na.rm = TRUE)
+  fData(target_data_object)$DetectionRate <-
+    fData(target_data_object)$DetectedSegments / nrow(pData(target_data_object))
+  
+  # Gene of interest detection table
+  if(!flagVariable(genes_of_interest)) {
+    goi_df <- data.frame(
+      Number = fData(target_data_object)[genes_of_interest, "DetectedSegments"],
+      DetectionRate = percent(fData(target_data_object)[genes_of_interest, "DetectionRate"]))
+    goi_df_list[[module]] <- goi_df
+  }
+
+  # Save the target_data_object back to the list.
+  target_data_object_list[[module]] <- target_data_object
+  
+  # Clean up.
+  rm(target_data_object)
+  if(exists("goi_df")) rm(goi_df)
+  gc()
 }
-# Ensure ordering since this is stored outside of the geomxSet.
-loq_mat <- loq_mat[fData(target_data_object)$TargetName, ]
+if(!flagVariable(genes_of_interest)) {
+  goi_df <- cbind(data.frame(Gene = genes_of_interest), do.call(cbind, goi_df_list))
+  colnames(goi_df)[2:ncol(goi_df)] <- as.vector(t(outer(modules, c("Number", "Detection rate"), paste, sep = " - ")))
+}
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+# For the remaining part, target QC will be performed only on the main (transcriptomic) module.
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Get the target_data_object for the main module.
+target_data_object <- target_data_object_list[[main_module]]
+
+# Create the object to hold probe QC plots.
+plot_list_probe_qc <- list()
 
 # Segment gene detection:
 # Filter out segments with exceptionally low signal ([small fraction of panel genes detected above LOQ] relative to [other segments in the study]).
-# Save detection rate information to phenodata.
-pData(target_data_object)$GenesDetected <- 
-  colSums(loq_mat, na.rm = TRUE)
-pData(target_data_object)$GeneDetectionRate <-
-  pData(target_data_object)$GenesDetected / nrow(target_data_object)
-
-# Determine detection thresholds: 1%, 5%, 10%, 15%, >15%.
-pData(target_data_object)$DetectionThreshold <- 
-  cut(pData(target_data_object)$GeneDetectionRate,
-      breaks = c(0, 0.01, 0.05, 0.1, 0.15, 1),
-      labels = c("<1%", "1-5%", "5-10%", "10-15%", ">15%"))
 
 # Stacked bar plot of different cut points (1%, 5%, 10%, 15%).
 plot_list_probe_qc[["gene_detection_rate_by_segment"]] <- ggplot(pData(target_data_object),
@@ -132,10 +235,10 @@ plot_list_probe_qc[["gene_detection_rate_by_segment"]] <- ggplot(pData(target_da
 kable(table(pData(target_data_object)$DetectionThreshold,
             pData(target_data_object)$segment))
 
-# Remove segments with <5% of genes detected.
+# Remove segments with <x% of genes detected.
+segments_keep <- pData(target_data_object)$GeneDetectionRate >= (gene_detection_rate/100) # We will later use this to subset the target data objects for the other modules.
 target_data_object <-
-  target_data_object[, pData(target_data_object)$GeneDetectionRate >= (gene_detection_rate/100)] # gene_detection_rate is given as a percentage, not a decimal, so we need to divide by 100 first.
-
+  target_data_object[, segments_keep] # gene_detection_rate is given as a percentage, not a decimal, so we need to divide by 100 first.
 dim(target_data_object)
 
 # Re-plot the Sankey diagram showing our current working dataset. This is now a dataset that no longer contains segments flagged by Segment QC or that have low gene detection rates.
@@ -170,21 +273,6 @@ dim(target_data_object)
 #     annotate(geom = "text", x = 4.19, y = 70, angle = 90, size = 5,
 #              hjust = 0.5, label = "100 segments")
 
-# Gene detection rate. 
-# Calculate detection rate:
-loq_mat <- loq_mat[, colnames(target_data_object)]
-fData(target_data_object)$DetectedSegments <- rowSums(loq_mat, na.rm = TRUE)
-fData(target_data_object)$DetectionRate <-
-  fData(target_data_object)$DetectedSegments / nrow(pData(target_data_object))
-
-# # Gene of interest detection table
-# goi <- c("PDCD1", "CD274", "IFNG", "CD8A", "CD68", "EPCAM",
-#          "KRT18", "NPHS1", "NPHS2", "CALB1", "CLDN8")
-# goi_df <- data.frame(
-#     Gene = goi,
-#     Number = fData(target_data_object)[goi, "DetectedSegments"],
-#     DetectionRate = percent(fData(target_data_object)[goi, "DetectionRate"]))
-
 # Gene filtering. 
 # Graph the total number of genes detected in different percentages of segments. Based on the visualization below, we can better understand global gene detection in our study and select how many low detected genes to filter out of the dataset. Gene filtering increases performance of downstream statistical tests and improves interpretation of true biological signal.
 # Plot detection rate:
@@ -195,7 +283,7 @@ plot_detect$Number <-
 plot_detect$Rate <- plot_detect$Number / nrow(fData(target_data_object))
 rownames(plot_detect) <- plot_detect$Freq
 
-plot_list_probe_qc[["percent_segments_by_gene_detection_cutoff"]] <-ggplot(plot_detect, aes(x = as.factor(Freq), y = Rate, fill = Rate)) +
+plot_list_probe_qc[["percent_segments_by_gene_detection_cutoff"]] <- ggplot(plot_detect, aes(x = as.factor(Freq), y = Rate, fill = Rate)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = formatC(Number, format = "d", big.mark = ",")),
             vjust = 1.6, color = "black", size = 4) +
@@ -209,65 +297,92 @@ plot_list_probe_qc[["percent_segments_by_gene_detection_cutoff"]] <-ggplot(plot_
   labs(x = "% of Segments",
        y = "Genes Detected, % of Panel > LOQ")
 
-# Subset to target genes detected in at least 10% of the samples.
-# Also manually include the negative control probe, for downstream use.
+# Subset to target genes detected in at least x% of the samples.
+# Also manually include the negative control probe.
 negativeProbefData <- subset(fData(target_data_object), CodeClass == "Negative")
 neg_probes <- unique(negativeProbefData$TargetName)
 target_data_object <- 
   target_data_object[fData(target_data_object)$DetectionRate >= (percent_of_segments/100) | # percent_of_segments is given as a percentage, not a decimal, so we need to divide by 100 first.
-                       fData(target_data_object)$TargetName %in% neg_probes, ]
+                       fData(target_data_object)$TargetName %in% neg_probes
+                       , ]
 dim(target_data_object)
 
 # # Retain only detected genes of interest.
 # goi <- goi[goi %in% rownames(target_data_object)]
 
-# Add everything to the PowerPoint. 
-# Add a section header.
-pptx <- pptx %>% 
-  officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("Probe QC"), 
-                   location = ph_location_label(ph_label = "Title 1"))
+# Add the main module data object back to the list.
+target_data_object_list[[main_module]] <- target_data_object
 
-# Graphing parameters.
-plot_width <- 6
-plot_height <- 6 
-units <- "in"
-res <- 300
-# Add the graphs.
-for(item in names(plot_list_probe_qc)) {
-  plot <- plot_list_probe_qc[[item]]
-  
-  # Save to EPS and PNG and then ...
-  eps_path <- paste0(output_dir_pubs, "qc-probes_", item, ".eps")
-  png_path <- paste0(output_dir_pubs, "qc-probes_", item, ".png")
-  saveEPS(plot, eps_path, width = plot_width, height = plot_height)
-  savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
-  
-  # Add to the PowerPoint. 
-  pptx <- pptx %>%
-    officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-    officer::ph_with(value = paste0("Probe QC"),
-                     location = ph_location_label(ph_label = "Title 1")) %>% 
-    officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-                     location = ph_location_label(ph_label = "Content Placeholder 2"),
-                     use_loc_size = FALSE)
+# Now subset the segments rest of the modules.
+for(module in names(target_data_object_list)) {
+  if(module == main_module) next
+  target_data_object_list[[module]] <- target_data_object_list[[module]][, segments_keep]
 }
-# # Add the summary table. 
-# qc_summary <- qc_summary %>% 
-#   dplyr::mutate(Metric = rownames(.)) %>% 
-#   dplyr::relocate(Metric, .before = 1)
-# pptx <- pptx %>% 
-#   officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-#   officer::ph_with(value = paste0("Probe QC summary"),
-#                    location = ph_location_label(ph_label = "Title 1")) %>% 
-#   officer::ph_with(value = qc_summary,
-#                    location = ph_location_label(ph_label = "Content Placeholder 2"))
-# print(pptx, ppt_output_path)
 
-## ---------------------------
-# Export to disk.
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## PowerPoint ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# # Add a section header.
+# pptx <- pptx %>% 
+#   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
+#   officer::ph_with(value = paste0("Probe QC"), 
+#                    location = ph_location_label(ph_label = "Title 1"))
+# 
+# # Graphing parameters.
+# plot_width <- 6
+# plot_height <- 6 
+# units <- "in"
+# res <- 300
+# # Add the graphs.
+# for(item in names(plot_list_probe_qc)) {
+#   plot <- plot_list_probe_qc[[item]]
+#   
+#   # Save to EPS and PNG and then ...
+#   eps_path <- paste0(output_dir_pubs, "qc-probes_", item, ".eps")
+#   png_path <- paste0(output_dir_pubs, "qc-probes_", item, ".png")
+#   saveEPS(plot, eps_path, width = plot_width, height = plot_height)
+#   savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
+#   
+#   # Add to the PowerPoint. 
+#   pptx <- pptx %>%
+#     officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
+#     officer::ph_with(value = paste0("Probe QC"),
+#                      location = ph_location_label(ph_label = "Title 1")) %>% 
+#     officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
+#                      location = ph_location_label(ph_label = "Content Placeholder 2"),
+#                      use_loc_size = FALSE)
+# }
+# # # Add the summary table. 
+# # qc_summary <- qc_summary %>% 
+# #   dplyr::mutate(Metric = rownames(.)) %>% 
+# #   dplyr::relocate(Metric, .before = 1)
+# # pptx <- pptx %>% 
+# #   officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
+# #   officer::ph_with(value = paste0("Probe QC summary"),
+# #                    location = ph_location_label(ph_label = "Title 1")) %>% 
+# #   officer::ph_with(value = qc_summary,
+# #                    location = ph_location_label(ph_label = "Content Placeholder 2"))
+# # print(pptx, ppt_output_path)
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Export to disk ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Save the QC-ed NanoStringGeoMxSet object.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-probes.rds"))
-# Output everything to the PowerPoint. 
-print(pptx, cl_args[5])
+saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-probes.rds"))
+# Save the raw probe QC data (fData(data_object)).
+# We can't write to a table because we have a data-frame-within-a-data-frame.
+saveRDS(data_object_fData, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-probes-raw.rds"))
+# Save the plots. 
+saveRDS(plot_list_probe_qc, paste0(output_dir_rdata, "qc-probes_plot_list.rds"))
+# Save the QC table.
+saveRDS(qc_df, paste0(output_dir_rdata, "qc-probes_table.rds"))
+# Save the gene-of-interest detection-rate table. 
+if(exists("goi_df")) saveRDS(goi_df, paste0(output_dir_rdata, "genes-of-interest_detection-rate_table.rds"))
+
+# Update latest module completed.
+updateLatestModule(output_dir_rdata, current_module)

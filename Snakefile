@@ -226,33 +226,36 @@ rule normalization:
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds"
     params:
+        workflow_system = WORKFLOW_SYSTEM,
         script = "src/normalization.R",
         output_path = OUTPUT_PATH,
         current_module = "normalization",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/normalization.out",
         err = OUTPUT_PATH + "logs/normalization.err" 
     shell:
-        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}"
 
 rule qc_probes:
     input:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments.rds"
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes.rds",
+        R_file_raw_qc_dat = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes-raw.rds",
+        R_file_probe_qc_plot_list = OUTPUT_PATH + "Rdata/qc-probes_plot_list.rds",
+        R_file_probe_qc_table = OUTPUT_PATH + "Rdata/qc-probes_table.rds"
     params:
+        workflow_system = WORKFLOW_SYSTEM,
         script = "src/qc_probes.R",
         output_path = OUTPUT_PATH,
         current_module = "qc_probes",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/qc-probes.out",
         err = OUTPUT_PATH + "logs/qc-probes.err" 
     shell:
-        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}"
 
 rule qc_segments:
     input:
