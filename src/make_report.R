@@ -51,6 +51,8 @@ plot_list_16s_file <- paste0(output_dir_rdata, "16S-analysis_raw-plots-list.rds"
 # Unsupervised analysis
 plot_list_unsupervised_clustering_grid_file <- paste0(output_dir_rdata, "plot-list_unsupervised-clustering-grids.rds")
 plot_list_cv_heatmap_file <- paste0(output_dir_rdata, "plot-list_cv_heatmaps.rds")
+# Differential expression analysis
+plot_list_diff_exprs_grid_file <- paste0(output_dir_rdata, "LMM-DEG_volcano-plot_grids.rds")
 
 # Render.
 rmarkdown::render(rmd_template_file,
@@ -65,6 +67,7 @@ rmarkdown::render(rmd_template_file,
                               plot_list_normalization_file = plot_list_normalization_file,
                               plot_list_16s_file = plot_list_16s_file,
                               plot_list_unsupervised_clustering_grid_file = plot_list_unsupervised_clustering_grid_file,
-                              plot_list_cv_heatmap_file = plot_list_cv_heatmap_file
+                              plot_list_cv_heatmap_file = plot_list_cv_heatmap_file,
+                              plot_list_diff_exprs_grid_file = plot_list_diff_exprs_grid_file
                               )
                   )

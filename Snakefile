@@ -173,18 +173,20 @@ rule differential_expression_analysis:
         previous_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_differential-expression.rds",
+        R_file_differential_expression_plot_list = OUTPUT_PATH + "Rdata/LMM-DEG_volcano-plots.rds",
+        R_file_differential_expression_plot_grid_list = OUTPUT_PATH + "Rdata/LMM-DEG_volcano-plot_grids.rds",
         DE_genes_table = OUTPUT_PATH + "tabular/LMM-differential-expression_results.csv"
     params:
+        workflow_system = WORKFLOW_SYSTEM,
         script = "src/differential_expression_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "differential_expression_analysis",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/differential-expression-analysis.out",
         err = OUTPUT_PATH + "logs/differential-expression-analysis.err" 
     shell:
-        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}"
 
 rule unsupervised_analysis:
     input:

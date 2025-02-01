@@ -11,6 +11,9 @@ params:
   goi_detection_rate_table_file: ''
   plot_list_normalization_file: ''
   plot_list_16s_file: ''
+  plot_list_unsupervised_clustering_grid_file: ''
+  plot_list_cv_heatmap_file: ''
+  plot_list_diff_exprs_grid_file: ''
 ---
 
 ```{r setup, include=FALSE}
@@ -110,6 +113,48 @@ if(file.exists(params$plot_list_16s_file)) {
 }
 ```
 
+# Unsupervised analysis
+## Dimensionality reduction
+```{r}
+if(file.exists(params$plot_list_unsupervised_clustering_grid_file)) {
+  plot_list_unsupervised_clustering_grids <- readRDS(params$plot_list_unsupervised_clustering_grid_file)
+  for(item in plot_list_unsupervised_clustering_grids) {
+    print(item)
+  }
+}
+```
+
+## Heatmap of high-CV genes
+```{r}
+if(file.exists(params$plot_list_cv_heatmap_file)) {
+  plot_list_cv_heatmaps <- readRDS(params$plot_list_cv_heatmap_file)
+  for(item in plot_list_cv_heatmaps) {
+    print(item)
+  }
+}
+```
+
+# Differential expression analysis
+```{r}
+# # Recursive function to traverse and draw grobs
+# draw_grobs <- function(x) {
+#   if (is.list(x)) {
+#     # If x is a list, recursively apply draw_grobs to each element
+#     lapply(x, draw_grobs)
+#   } else if (inherits(x, "grob")) {
+#     # If x is a grob, draw it
+#     grid.draw(x)
+#   }
+# }
+
+if(file.exists(params$plot_list_diff_exprs_grid_file)) {
+  plot_list_diff_exprs_grids <- readRDS(params$plot_list_diff_exprs_grid_file)
+  # draw_grobs(plot_list_diff_exprs_grids)
+  for(item in plot_list_diff_exprs_grids) {
+    print(item)
+  }
+}
+```
 
 # Session info
 ```{r}

@@ -415,6 +415,7 @@ library(fgsea) # For GSEA.
 library(GeomxTools) # For NanoString GeoMx stuff. 
 library(GenomicRanges) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
 library(ggforce) # I have no idea.
+library(ggplotify) # Convert grobs (such as those created by grid) into ggplot objects, so we can display them in Rmd.
 library(ggpubr) # For annotate_figure(), as_ggplot().
 library(ggrepel) # For graphing. 
 library(grid) # For textGrob().

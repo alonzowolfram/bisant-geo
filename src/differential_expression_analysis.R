@@ -1,16 +1,17 @@
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Setup ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+message("Setting up for differential expression analysis.")
+
 ## Source the setup.R file.
 source("src/setup.R")
 
-###################################################################
-##
-## Setup 
-##
-###################################################################
-
 # Read in the NanoStringGeoMxSet object. 
-target_data_object <- readRDS(cl_args[4])
-# Read in the PowerPoint.
-pptx <- read_pptx(cl_args[5])
+target_data_object_list <- readRDS(cl_args[5])
+# We'll only need the main module for this one.
+target_data_object <- target_data_object_list[[main_module]]
 
 # Convert test variables and subset variables to factors.
 for(test_var in test_vars) {
@@ -30,25 +31,13 @@ colnames(param_combos)[1:3] <- c("Random slope", "Test variable", "Random interc
 negativeProbefData <- subset(fData(target_data_object), CodeClass == "Negative")
 neg_probes <- unique(negativeProbefData$TargetName)
 
-# Add to the PowerPoint. 
-# Add a section header.
-pptx <- pptx %>% 
-  officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("Differential expression analysis (linear mixed models)"), 
-                   location = ph_location_label(ph_label = "Title 1"))
-# Add the param combos table.
-pptx <- pptx %>%
-  officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("Models created in this run"),
-                   location = ph_location_label(ph_label = "Title 1")) %>% 
-  officer::ph_with(value = param_combos,
-                   location = ph_location_label(ph_label = "Content Placeholder 2"))
+message("Finished setup for differential expression analysis.")
 
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Differential expression analysis via LMM ----
 ##
-## Differential expression analysis via LMM
-##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Run LMM:
 # formula follows conventions defined by the lme4 package.
 # When running LMM, mixedModelDE seems to have issues with variable names with spaces etc., even if enclosed in backticks (``). 
@@ -64,8 +53,9 @@ results2 <- c()
 
 # Now we can loop over all the param combos and run LMM on each one.
 # Loop level 1: model.
+message("Performing differential expression analysis.")
 for(i in 1:nrow(param_combos)) {
-  print(paste0("Working on model #", i, "."))
+  message(paste0("Working on model #", i, "."))
   
   # Get the params for this experiment. 
   random_slope_i <- param_combos[i,1]
@@ -95,7 +85,7 @@ for(i in 1:nrow(param_combos)) {
   
   # loop level 2 (subset variable) << loop level 1 (model)
   for(subset_var in subset_vars) {
-    print(paste0("Working on subset variable ", subset_var, " for model #", i, "."))
+    message(paste0("Working on subset variable ", subset_var, " for model #", i, "."))
     
     # Check if the current subset_var is NA.
     if(subset_var == "NA" || is.na(subset_var)) {
@@ -109,7 +99,7 @@ for(i in 1:nrow(param_combos)) {
     
     # Check that the current subset_var is not the same as either test_var or random_intercept_var.
     if(test_var==subset_var || random_intercept_var==subset_var) {
-      print(paste0("The current subset variable, ", subset_var, " is the same as either your test (contrast) variable or random intercept variable. Skipping this subset variable - contrast/random intercept variable combination."))
+      message(paste0("The current subset variable, ", subset_var, " is the same as either your test (contrast) variable or random intercept variable. Skipping this subset variable - contrast/random intercept variable combination."))
       next
     }
       
@@ -118,7 +108,7 @@ for(i in 1:nrow(param_combos)) {
     
     # loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
     for(subset_var_level in subset_var_levels) {
-      print(paste0("Working on level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+      message(paste0("Working on level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
       
       # Get all the samples belonging to the current subset_var_level.
       ind <- pData(target_data_object)[[subset_var]] == subset_var_level
@@ -128,52 +118,51 @@ for(i in 1:nrow(param_combos)) {
         
       # loop level 4 (current normalization method) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
       for(norm_method in normalization_methods) {
-        print(paste0("Working on normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+        message(paste0("Working on normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
         # Error catching: https://stackoverflow.com/a/55937737/23532435
         skip_to_next <- FALSE
-        
-        # Create a log2 transform of the data for analysis.
-        assayDataElement(object = target_data_object, elt = "log_norm", validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
-          assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
-        # Add the log-transformed data to the data object as well under the appropriate normalizations.
-        assayDataElement(object = target_data_object, elt = paste0("log_", norm_method), validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
-          assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
         
         # # Set up the data. 
         # # Expresssion: rows are GENES and columns are SAMPLES. 
         # # Also, remove negative probes.
-        # exprs <- target_data_object@assayData$log_norm %>% .[!(rownames(.) %in% neg_probes),]
+        # exprs <- target_data_object@assayData[[paste0("log_", norm_method)]] %>% .[!(rownames(.) %in% neg_probes),]
         # metadata <- sData(target_data_object)
         
         # Set the random seed.
         set.seed(random_seed)
         # Calculate coefficient of variance for each gene.
         CV_dat <- assayDataApply(target_data_object,
-                                 elt = "log_norm", MARGIN = 1, calc_CV) %>% .[!is.na(.)]
-        # Keep only the genes with the highest CVs.
+                                 elt = paste0("log_", norm_method), MARGIN = 1, calc_CV) %>% .[!is.na(.)]
+        # Keep only the genes with the highest CVs
+        # 2024/12/16: and genes with mean expression (across samples) > 1.
+        # Genes that meet CV cutoff.
         mean_cv <- mean(CV_dat, na.rm = T)
         sd_cv <- sd(CV_dat, na.rm = T)
-        if(is.null(cv_cutoff) || cv_cutoff == "" || !is.finite(cv_cutoff)) {
-          print("cv_cutoff for genes either has not been provided or is not a numeric value. Using all genes for differential expression.")
+        if(is.null(cv_cutoff) || cv_cutoff == "" || !is.finite(cv_cutoff) || !(0 <= cv_cutoff & cv_cutoff <= 1)) {
+          message("cv_cutoff for genes either has not been provided or is not a numeric value in [0,1]. Using all genes for differential expression.")
           top_cv_genes <- CV_dat %>% names
         } else {
-          print("Using cv_cutoff of ", cv_cutoff, " for differential expression.")
-          top_cv_genes <- CV_dat %>% .[. > (mean_cv + cv_cutoff*sd_cv)] %>% names
+          message(paste0("Using cv_cutoff of ", cv_cutoff, " for differential expression."))
+          nth_percentile_cv <- quantile(CV_dat, probs = cv_cutoff)
+          top_cv_genes <- CV_dat %>% .[. > nth_percentile_cv] %>% names
+          # top_cv_genes <- CV_dat %>% .[. > (mean_cv + cv_cutoff*sd_cv)] %>% names
         }
+        # Genes that meet mean expression cutoff.
+        mean_exprs_cutoff <- 1
+        mean_exprs_cutoff_genes <- which(rowMeans(target_data_object@assayData[[paste0("log_", norm_method)]]) > mean_exprs_cutoff) %>% names
+        # Union of the two. 
+        # EDIT 2025/01/06: Should be intersection of the two.
+        genes_pass_cutoffs <- intersect(top_cv_genes, mean_exprs_cutoff_genes) # union(top_cv_genes, mean_exprs_cutoff_genes)
         
         # Generate the model.
-        tdo_sub <- subset(target_data_object, TargetName %in% top_cv_genes, ind)
+        tdo_sub <- subset(target_data_object, TargetName %in% genes_pass_cutoffs, ind)
         mixedOutmc <- tryCatch(mixedModelDE(tdo_sub, # Error handling needed because sometimes there might not be enough samples to perform DE.
-                                   elt = "log_norm",
+                                   elt = paste0("log_", norm_method),
                                    modelFormula = model_formula,
                                    groupVar = "TestVar",
                                    nCores = parallel::detectCores(),
                                    multiCore = TRUE),
                                error = function(e) {skip_to_next <<- TRUE})
-        # lmmres <- lmmSeq(model_formula,
-        #                  maindata = exprs[, ind], # ind
-        #                  metadata = metadata[ind, ], # ind
-        #                  progress = TRUE)
         if(skip_to_next) {
           warning(paste0("An error occurred when trying to perform differential expression for normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
           next
@@ -209,7 +198,7 @@ for(i in 1:nrow(param_combos)) {
     subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
     if(!is.null(subset_var_levels_manual_i)) {
       if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) {
-        print(paste0("Working on levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
+        message(paste0("Working on levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
         
         # Get all the samples belonging to the current subset_var_level.
         ind <- pData(target_data_object)[[subset_var]] %in% subset_var_levels_manual_i
@@ -219,52 +208,51 @@ for(i in 1:nrow(param_combos)) {
         
         # loop level 4 (current normalization method) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
         for(norm_method in normalization_methods) {
-          print(paste0("Working on normalization method ", norm_method, " for levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
+          message(paste0("Working on normalization method ", norm_method, " for levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
           # Error catching: https://stackoverflow.com/a/55937737/23532435
           skip_to_next <- FALSE
-          
-          # Create a log2 transform of the data for analysis.
-          assayDataElement(object = target_data_object, elt = "log_norm", validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
-            assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
-          # Add the log-transformed data to the data object as well under the appropriate normalizations.
-          assayDataElement(object = target_data_object, elt = paste0("log_", norm_method), validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
-            assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
           
           # # Set up the data. 
           # # Expresssion: rows are GENES and columns are SAMPLES. 
           # # Also, remove negative probes.
-          # exprs <- target_data_object@assayData$log_norm %>% .[!(rownames(.) %in% neg_probes),]
+          # exprs <- target_data_object@assayData[[paste0("log_", norm_method)]] %>% .[!(rownames(.) %in% neg_probes),]
           # metadata <- sData(target_data_object)
           
           # Set the random seed.
           set.seed(random_seed)
           # Calculate coefficient of variance for each gene.
           CV_dat <- assayDataApply(target_data_object,
-                                   elt = "log_norm", MARGIN = 1, calc_CV) %>% .[!is.na(.)]
-          # Keep only the genes with the highest CVs.
+                                   elt = paste0("log_", norm_method), MARGIN = 1, calc_CV) %>% .[!is.na(.)]
+          # Keep only the genes with the highest CVs
+          # 2024/12/16: and genes with mean expression (across samples) > 1.
+          # Genes that meet CV cutoff.
           mean_cv <- mean(CV_dat, na.rm = T)
           sd_cv <- sd(CV_dat, na.rm = T)
-          if(is.null(cv_cutoff) || cv_cutoff == "" || !is.finite(cv_cutoff)) {
-            print("cv_cutoff for genes either has not been provided or is not a numeric value. Using all genes for differential expression.")
+          if(is.null(cv_cutoff) || cv_cutoff == "" || !is.finite(cv_cutoff) || !(0 <= cv_cutoff & cv_cutoff <= 1)) {
+            message("cv_cutoff for genes either has not been provided or is not a numeric value in [0,1]. Using all genes for differential expression.")
             top_cv_genes <- CV_dat %>% names
           } else {
-            print("Using cv_cutoff of ", cv_cutoff, " for differential expression.")
-            top_cv_genes <- CV_dat %>% .[. > (mean_cv + cv_cutoff*sd_cv)] %>% names
+            message(paste0("Using cv_cutoff of ", cv_cutoff, " for differential expression."))
+            nth_percentile_cv <- quantile(CV_dat, probs = cv_cutoff)
+            top_cv_genes <- CV_dat %>% .[. > nth_percentile_cv] %>% names
+            # top_cv_genes <- CV_dat %>% .[. > (mean_cv + cv_cutoff*sd_cv)] %>% names
           }
+          # Genes that meet mean expression cutoff.
+          mean_exprs_cutoff <- 1
+          mean_exprs_cutoff_genes <- which(rowMeans(target_data_object@assayData[[paste0("log_", norm_method)]]) > mean_exprs_cutoff) %>% names
+          # Union of the two. 
+          # EDIT 2025/01/06: Should be intersection of the two.
+          genes_pass_cutoffs <- intersect(top_cv_genes, mean_exprs_cutoff_genes) # union(top_cv_genes, mean_exprs_cutoff_genes)
           
           # Generate the model.
-          tdo_sub <- subset(target_data_object, TargetName %in% top_cv_genes, ind)
+          tdo_sub <- subset(target_data_object, TargetName %in% genes_pass_cutoffs, ind)
           mixedOutmc <- tryCatch(mixedModelDE(tdo_sub, # Error handling needed because sometimes there might not be enough samples to perform DE.
-                                              elt = "log_norm",
+                                              elt = paste0("log_", norm_method),
                                               modelFormula = model_formula,
                                               groupVar = "TestVar",
                                               nCores = parallel::detectCores(),
                                               multiCore = TRUE),
                                  error = function(e) {skip_to_next <<- TRUE})
-          # lmmres <- lmmSeq(model_formula,
-          #                  maindata = exprs[, ind], # ind
-          #                  metadata = metadata[ind, ], # ind
-          #                  progress = TRUE)
           if(skip_to_next) {
             warning(paste0("An error occurred when trying to perform differential expression for normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
             next
@@ -309,19 +297,20 @@ for(i in 1:nrow(param_combos)) {
   if(sum(subset_vars=="All observations", na.rm = T) == 1) subset_vars <- NA
   
 } # End loop level 1: model.
+message("Differential expression analysis completed.")
 
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Volcano plots ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+message("Graphing differentially expressed genes.")
 
-###################################################################
+## ................................................
 ##
-## Volcano plots
+### Selection of genes for labels ----
 ##
-###################################################################
-
-## ----------------------------------------------------------------
-##
-## Selection of genes for labels
-##
-## ----------------------------------------------------------------
+## ................................................
 # Order genes for convenience:
 results2$invert_P <- (-log10(results2$`Pr(>|t|)`)) * sign(results2$Estimate)
 top_g_list <- list()
@@ -362,11 +351,11 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
 }
 results2 <- results2[, -1*ncol(results2)] # remove invert_P from matrix
 
-## ----------------------------------------------------------------
+## ................................................
 ##
-## Graphing the volcano plots
+### Graphing the volcano plots ----
 ##
-## ----------------------------------------------------------------
+## ................................................
 # Categorize results2 based on P-value & FDR for plotting
 results2$Color <- "NS or FC < 0.5"
 results2$Color[results2$`Pr(>|t|)` < 0.05] <- "P < 0.05"
@@ -470,11 +459,11 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
   }
 }
 
-## ----------------------------------------------------------------
+## ................................................
 ##
-## Arranging volcano plots into grids
+### Arranging volcano plots into grids ----
 ##
-## ----------------------------------------------------------------
+## ................................................
 plot_list_diff_exprs_grid <- list()
 for(subset_var in names(plot_list_diff_exprs)) {
   for(subset_var_level in names(plot_list_diff_exprs[[subset_var]])) {
@@ -544,8 +533,7 @@ for(subset_var in names(plot_list_diff_exprs)) {
         plot_grid2 <- grid.arrange(plot_grid, legend, ncol = 1, heights=c(10, 1))
         
         # Save to list.
-        plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[model_num]][[normalization_method]][["plot"]] <- plot_grid2
-        plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[model_num]][[normalization_method]][["nCol"]] <- nCol
+        plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[model_num]][[normalization_method]] <- ggplotify::as.ggplot(plot_grid2)
         
         rm(plot_grid2, p_list)
         gc()
@@ -554,61 +542,22 @@ for(subset_var in names(plot_list_diff_exprs)) {
   }
 }
 
-## ----------------------------------------------------------------
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Export to disk ----
 ##
-## Adding volcano plot (grids) into PowerPoint
-##
-## ----------------------------------------------------------------
-# Graphing parameters.
-plot_width <- 12
-plot_height <- 12 
-units <- "in"
-res <- 300
-# Add the graphs.
-for(subset_var in names(plot_list_diff_exprs_grid)) {
-  for(subset_var_level in names(plot_list_diff_exprs_grid[[subset_var]])) {
-    for(item in names(plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]])) {
-      for(normalization_method in names(plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[item]])) {
-        plot <- plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[item]][[normalization_method]][["plot"]] %>% ggpubr::as_ggplot()
-        nCol <- plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[item]][[normalization_method]][["nCol"]]
-        
-        # Set the scaling factors.
-        # It's the same for both width and height since the grids are squares.
-        scaling_factor <- ifelse(nCol > 1, (nCol / 2)^2, 1)  # Number of rows in current grid / 2 (base number)
-        
-        # Save to EPS and PNG and then ...
-        eps_path <- paste0(output_dir_pubs, 
-                           paste0("LMM-differential-expression_graph-", subset_var, "-", subset_var_level, "-", item, "-", normalization_method, ".eps") %>% regexPipes::gsub("\\/", "_"))
-        png_path <- paste0(output_dir_pubs, 
-                           paste0("LMM-differential-expression_graph-", subset_var, "-", subset_var_level, "-", item, "-", normalization_method, ".png") %>% regexPipes::gsub("\\/", "_"))
-        saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
-        savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * scaling_factor))
-        
-        # Add to the PowerPoint.
-        pptx <- pptx %>%
-          officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-          officer::ph_with(value = paste0("Differential expression"),
-                           location = ph_location_label(ph_label = "Title 1")) %>%
-          officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-                           location = ph_location_label(ph_label = "Content Placeholder 2"),
-                           use_loc_size = FALSE)
-        
-      }
-    }
-  }
-}
-
-###################################################################
-##
-## Write everything to disk.
-##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+message("Exporting differential expression analysis results.")
 
 # Export NanoStringGeoMxSet.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_differential-expression.rds"))
+saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_differential-expression.rds"))
 # Export graphs.
 saveRDS(plot_list_diff_exprs, paste0(output_dir_rdata, "LMM-DEG_volcano-plots.rds"))
+saveRDS(plot_list_diff_exprs_grid, paste0(output_dir_rdata, "LMM-DEG_volcano-plot_grids.rds"))
 # Export tables of DE genes to CSV.
 results2 %>% write.csv(paste0(output_dir_tabular, "LMM-differential-expression_results.csv")) 
-# Output everything to the PowerPoint. 
-print(pptx, cl_args[5])
+
+# Update latest module completed.
+updateLatestModule(output_dir_rdata, current_module)
+
+message("Differential expression analysis results successfully exported.")
