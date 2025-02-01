@@ -10,6 +10,7 @@ params:
   qc_probes_summary_file: ''
   goi_detection_rate_table_file: ''
   plot_list_normalization_file: ''
+  plot_list_16s_file: ''
 ---
 
 ```{r setup, include=FALSE}
@@ -94,6 +95,16 @@ if(file.exists(params$plot_list_qc_probes_file)) {
 if(file.exists(params$plot_list_normalization_file)) {
   plot_list_normalization <- readRDS(params$plot_list_normalization_file)
   for(item in plot_list_normalization) {
+    print(item)
+  }
+}
+```
+
+# 16S analysis
+```{r}
+if(file.exists(params$plot_list_16s_file)) {
+  plot_list_16s <- readRDS(params$plot_list_16s_file)
+  for(item in plot_list_16s) {
     print(item)
   }
 }

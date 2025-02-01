@@ -295,7 +295,7 @@ experiment:
 
     # [Optional] Normalization method to use for 16S analysis.
     # Can be any of the normalization values given in the section above.
-    # If left blank, will default to bg_sub_q3.
+    # If left blank, will default to background subtraction followed by background normalization.
     normalization_16s:
 
     # [Optional] Percentile to serve as cutoff for 16S score (high vs low 16S).

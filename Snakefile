@@ -209,16 +209,16 @@ rule analysis_16s:
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds"
     params:
+        workflow_system = WORKFLOW_SYSTEM,
         script = "src/16S_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "16S_analysis",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/16S-analysis.out",
         err = OUTPUT_PATH + "logs/16S-analysis.err" 
     shell:
-        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}"
 
 rule normalization:
     input:

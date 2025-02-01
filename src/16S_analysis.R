@@ -1,42 +1,65 @@
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
-## Setup 
+## Setup ----
 ##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ## Source the setup.R file.
 source("src/setup.R")
 
 # Read in the NanoStringGeoMxSet object.
-target_data_object <- readRDS(cl_args[4])
-# Read in the PowerPoint.
-pptx <- read_pptx(cl_args[5])
+target_data_object_list <- readRDS(cl_args[5])
+# We'll only need the 16S module for this one.
+if(!(is.null(module_16s) || module_16s == "")) {
+  target_data_object <- target_data_object_list[[module_16s]]
+} else {
+  target_data_object <- target_data_object_list[[main_module]]
+}
 
-###################################################################
+# Set the probes to be included/excluded. 
+probes_include <- probes_include %>% str_split(",") %>% unlist()
+probes_exclude <- probes_exclude %>% str_split(",") %>% unlist()
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## 16S analysis ----
 ##
-## 16S analysis
-##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16S PKC module is provided.
-  ## ----------------------------------------------------------------
+  
+  ## ................................................
   ##
-  ## Subsetting
+  ### Subsetting ----
   ##
-  ## ----------------------------------------------------------------
+  ## ................................................
   # Subset to include only the 16S probes.
   target_data_object_16s <- subset(target_data_object, Module %in% module_16s)
   
-  ## ----------------------------------------------------------------
-  ##
-  ## Normalization
-  ##
-  ## ----------------------------------------------------------------
+  # Get the names of the negative probes.
+  neg_probes <- fData(target_data_object_16s) %>% dplyr::filter(Negative==TRUE) %>% dplyr::select(TargetName) %>% unlist()
+  # Depending on the value given by `method_16s_probe_selection`,
+  # exclude or include probes as appropriate.
+  if(str_to_lower(method_16s_probe_selection) == "include") {
+    # Include only the probes given by probes_include (of course including the negative probes).
+    target_data_object_16s <- subset(target_data_object_16s, TargetName %in% c(probes_include, neg_probes))
+  } else {
+    # Exclude the probes given by probes_exclude and keep everything else.
+    target_data_object_16s <- subset(target_data_object_16s, !(TargetName %in% probes_exclude))
+  }
   
-  # Subtract background to account for signal:noise discrepancies
-  target_data_object_16s <- normalize(target_data_object_16s,
-                                   norm_method = "subtractBackground",
-                                   fromElt = "exprs",
-                                   toElt = "bgsub"
-  )
+  ## ................................................
+  ##
+  ### Normalization ----
+  ##
+  ## ................................................
+  
+  # # Subtract background to account for signal:noise discrepancies
+  # target_data_object_16s <- normalize(target_data_object_16s,
+  #                                  norm_method = "subtractBackground",
+  #                                  fromElt = "exprs",
+  #                                  toElt = "bgsub"
+  # )
+  # Already done in normalization module?
+  
   # Calculate background normalization factor
   pData(target_data_object_16s)$neg_normFactor <-
     pData(target_data_object_16s)[[paste0("NegGeoMean_", module_16s)]] /
@@ -44,20 +67,39 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
   
   # Normalize to background
   assayDataElement(target_data_object_16s, "neg_norm_bgsub") <-
-    sweep(assayDataElement(target_data_object_16s, "bgsub"), 2L,
+    sweep(assayDataElement(target_data_object_16s, "bg_sub"), 2L,
           pData(target_data_object_16s)$neg_normFactor,
           FUN = "/"
     )
   
-  ## ----------------------------------------------------------------
+  ## ................................................
   ##
-  ## 16S score
+  ### 16S score ----
   ##
-  ## ----------------------------------------------------------------
-  # To calculate the 16S score, we'll get the average 16S probe expression
+  ## ................................................
+  # The formula for the 16S rRNA score for a given sample: e^((1/n) * sum(ln(x_i)))
+  # Where n is the total number of probes,
+  # and x_i is the normalized bg-subtracted value for probe i.
+  bis_mat <- target_data_object_16s@assayData$neg_norm_bgsub %>% .[!(rownames(.) %in% neg_probes),] # Remove the negative probes.
+  # Samples in cols, probes in rows.
+  # Log transform.
+  bis_mat_ln <- log(bis_mat + 1)
+  # Sum across probes and divide by the number of probes to get average signal.
+  n_probes <- nrow(bis_mat)
+  mean_signal <- colSums(bis_mat_ln, na.rm = TRUE) / n_probes
+  # Exponentiate average signal to get the 16S score.
+  score_16s <- exp(mean_signal)
+  # Add the 16S score to the pData.
+  if(identical(sampleNames(target_data_object_16s), names(score_16s))) pData(target_data_object_16s)$Score16S <- score_16s
+  
+  ## ................................................
+  ##
+  ### 16S classification ----
+  ##
+  ## ................................................
+  # To determine 16S classification, we'll get the average 16S probe expression
   # for each sample. 
   # Samples will then be categorized as high or low 16S based on (a) user-defined quantile cutoff(s).
-  bis_mat <- target_data_object_16s@assayData$neg_norm_bgsub # Targets in rows, samples in columns.
   mean_16s <- colMeans(bis_mat)
   
   for(cutoff in percentile_16s_cutoff) {
@@ -68,17 +110,17 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
     pData(target_data_object)[[group_var_name]] <- group_16s
   }
   
-  ## ----------------------------------------------------------------
+  ## ................................................
   ##
-  ## 16S expression levels by group
+  ### 16S expression levels by group ----
   ##
-  ## ----------------------------------------------------------------
+  ## ................................................
   if(!is.null(exprs_16s_grouping_vars) & (sum(exprs_16s_grouping_vars == "") < length(exprs_16s_grouping_vars))) {
-    # Add a section header.
-    pptx <- pptx %>%
-      officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-      officer::ph_with(value = paste0("16S analysis"),
-                       location = ph_location_label(ph_label = "Title 1"))
+    # # Add a section header.
+    # pptx <- pptx %>%
+    #   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
+    #   officer::ph_with(value = paste0("16S analysis"),
+    #                    location = ph_location_label(ph_label = "Title 1"))
     
     # See if we need to do any subsetting prior to graphing.
     if(sum(is.na(exprs_16s_subset_vars)) == length(exprs_16s_subset_vars) || sum(exprs_16s_subset_vars=="NA", na.rm = T) == length(exprs_16s_subset_vars[!is.na(exprs_16s_subset_vars)]) || "NA" %in% exprs_16s_subset_vars || NA %in% exprs_16s_subset_vars) {
@@ -170,13 +212,13 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
       
     } # End exprs_16s_subset_vars for loop.
     
-    # Graphing parameters.
-    plot_width <- 20
-    plot_height <- 15
-    units <- "in"
-    res <- 300
-    scaling_factor <- 1
-    res_scaling_factor <- 1
+    # # Graphing parameters.
+    # plot_width <- 20
+    # plot_height <- 15
+    # units <- "in"
+    # res <- 300
+    # scaling_factor <- 1
+    # res_scaling_factor <- 1
     # Arrange the plots into a grid.
     for(subset_var in names(plot_list)) {
       for(subset_var_level in names(plot_list[[subset_var]])) {
@@ -192,25 +234,35 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
                                                            top = grid::textGrob(paste0("")))
         
         
-        # Save to EPS and PNG and then ...
-        eps_path <- paste0(output_dir_pubs, "16S_exprs_by-group.eps") #paste0(output_dir_pubs, "")
-        png_path <- paste0(output_dir_pubs, "16S_exprs_by-group.png") #paste0(output_dir_pubs, "")
-        plot <- plot_grid# %>% ggpubr::as_ggplot()
-        saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
-        savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * res_scaling_factor))
+        # # Save to EPS and PNG and then ...
+        # eps_path <- paste0(output_dir_pubs, "16S_exprs_by-group.eps") #paste0(output_dir_pubs, "")
+        # png_path <- paste0(output_dir_pubs, "16S_exprs_by-group.png") #paste0(output_dir_pubs, "")
+        # plot <- plot_grid# %>% ggpubr::as_ggplot()
+        # saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
+        # savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * res_scaling_factor))
         
-        # ... add to the PowerPoint.
-        pptx <- pptx %>%
-          officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-          officer::ph_with(value = paste0("16S analysis"),
-                           location = ph_location_label(ph_label = "Title 1")) %>%
-          officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-                           location = ph_location_label(ph_label = "Content Placeholder 2"),
-                           use_loc_size = FALSE)
+        # # ... add to the PowerPoint.
+        # pptx <- pptx %>%
+        #   officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
+        #   officer::ph_with(value = paste0("16S analysis"),
+        #                    location = ph_location_label(ph_label = "Title 1")) %>%
+        #   officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
+        #                    location = ph_location_label(ph_label = "Content Placeholder 2"),
+        #                    use_loc_size = FALSE)
         
       }
     }
     
+  }
+  
+  # Add the 16S scores to the other pDatas.
+  for(module in names(target_data_object_list)) {
+    if(module == module_16s) next
+    
+    # Get the columns that the 16s pData has that the other one doesn't.
+    missing_cols <- setdiff(colnames(pData(target_data_object)), colnames(pData(target_data_object_list[[module]])))
+    # Add them.
+    pData(target_data_object_list[[module]]) <- cbind(pData(target_data_object_list[[module]]), pData(target_data_object)[,missing_cols])
   }
   
 }
@@ -220,16 +272,20 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
 # (Otherwise, this will mess things up downstream.)
 if("Complete data set" %in% colnames(pData(target_data_object))) pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-`Complete data set`)
 
-###################################################################
+# Now save the 16S data object back to the list.
+target_data_object_list[[module_16s]] <- target_data_object
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Export to disk ----
 ##
-## Export to disk
-##
-###################################################################
-# Export PowerPoint file.
-print(pptx, cl_args[5])
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Export NanoStringGeoMxSet as RDS file.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_16S-analysis.rds"))
+saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_16S-analysis.rds"))
 # Export graphs.
 if(exists("plot_list")) saveRDS(plot_list, paste0(output_dir_rdata, "16S-analysis_raw-plots-list.rds"))
 # Export ANOVA results.
 if(exists("anova_list")) saveRDS(anova_list, paste0(output_dir_rdata, "16S-analysis_ANOVA-res-list.rds"))
+
+# Update latest module completed.
+updateLatestModule(output_dir_rdata, current_module)
