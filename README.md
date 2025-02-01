@@ -3,11 +3,11 @@
   <br>
   <!--<a href="http://www.amitmerchant.com/electron-markdownify"><img src="https://raw.githubusercontent.com/amitmerchant1990/electron-markdownify/master/app/img/markdownify.png" alt="Markdownify" width="200"></a>-->
   <br>
-  bisantine-geo
+  bisant-geo
   <br>
 </h1>
 
-(<b>B</b>ugs <b>i</b>n <b>S</b>pace <b>An</b>alysis <b>T</b>oolkit <b>In</b>tegrated for <b>E</b>fficiency) — a Snakemake pipeline for processing NanoString GeoMx data.
+(<b>B</b>ugs <b>i</b>n <b>S</b>pace <b>An</b>alysis <b>T</b>oolkit) — a Snakemake pipeline for processing NanoString GeoMx data.
 
 <!--
 <p align="center">
@@ -35,7 +35,7 @@
 
 ## About
 
-bisantine-geo is a Snakemake-powered pipeline that takes DCC files from a GeoMx experiment and performs quality control, normalization, basic unsupervised analysis, differential expression, and pathway analysis on your spatial transcriptomics data. 
+bisant-geo is a Snakemake-powered pipeline that takes DCC files from a GeoMx experiment and performs quality control, normalization, basic unsupervised analysis, differential expression, and pathway analysis on your spatial transcriptomics data. 
 
 ## Usage
 ### Installing software requirements
@@ -52,7 +52,7 @@ On the command line, navigate to the directory in which you want to download the
 cd path/to/directory/
 
 # Clone the repository.
-git clone https://github.com/alonzowolfram/bisantine-geo
+git clone https://github.com/alonzowolfram/bisant-geo
 ```
 > **Note:**
 > Replace `path/to/directory/` with the path to the target directory on your machine.
@@ -60,17 +60,17 @@ git clone https://github.com/alonzowolfram/bisantine-geo
 ### Configuration
 Now that you have the pipeline downloaded, you will need to configure the settings for your particular experiment. 
 
-All the settings you will need to edit are stored in one convenient file, `config.yaml`, located in the `bisantine-geo` folder you just downloaded. Open this file in your favorite text editor and edit the settings accordingly. See the comments above each setting for documentation. You can even store different configuration files in the `profiles` folder (or anywhere, really—it's just there for convenience) and call them with the `--configfiles` flag to the `snakemake` command when running the pipeline (see the section "Running the pipeline," below.)
+All the settings you will need to edit are stored in one convenient file, `config.yaml`, located in the `bisant-geo` folder you just downloaded. Open this file in your favorite text editor and edit the settings accordingly. See the comments above each setting for documentation. You can even store different configuration files in the `profiles` folder (or anywhere, really—it's just there for convenience) and call them with the `--configfiles` flag to the `snakemake` command when running the pipeline (see the section "Running the pipeline," below.)
 
 ### Setting up your conda environment
-Using the `environment.yaml` file in the `bisantine-geo/envs` folder, create a conda environment. See directions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) on how to set up a conda environment from a YAML file. 
+Using the `environment.yaml` file in the `bisant-geo/envs` folder, create a conda environment. See directions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) on how to set up a conda environment from a YAML file. 
 
 > **Note:**
 > If you're on a Mac with an x86_64 ISA, you might have to prefix your conda environment creation command with `CONDA_SUBDIR=osx-64`. <br />
 > For example, `CONDA_SUBDIR=osx-64 mamba env create -n geomx -f environment.yml`
 
 ### Running the pipeline
-Now that you've set up your conda environment and the configuration file for your run, you can run the pipeline. To run bisantine-geo, activate the conda environment you created above, then navigate into the `bisantine-geo` folder. From there, running Snakemake is quite simple:
+Now that you've set up your conda environment and the configuration file for your run, you can run the pipeline. To run bisant-geo, activate the conda environment you created above, then navigate into the `bisant-geo` folder. From there, running Snakemake is quite simple:
 
 ```bash
 NCORES=3
@@ -91,6 +91,27 @@ A tutorial with more details is forthcoming. Sometime. Maybe.
 After the pipeline is finished running, the folder containing the output files will be available in the `out` directory. See the `README.md` file in the `out` directory for an explanation of the outputs. 
 
 ## Changelog
+<b>2024/11/20</b> - v0.3.4-alpha:
+* Added filter to differential expression analysis: mean value > 1. 
+* Split expression into BIS and WTA.
+* Added option to keep specified probes even if they don't meet probe QC cutoffs. 
+* Removed marker identification from pipeline.
+* Created a Shiny web app for probe QC.
+* [In progress] Updated Snakefile so script files are no longer considered input. 
+* Moved manual probe removal from probe QC module to after normalization.
+* Output raw probe QC data: `NanoStringGeoMxSet_qc-probes-raw.rds`
+* Bug fix: Immune deconvolution module calls the groups it splits the observations into `Group` when the `grouping_var` has > 50 unique values (levels). Changed this to `ChunkingGroup` so it won't interfere if the `grouping_var` is also named `Group` in the original metadata. 
+* [In progress] Added QC before differential expression: filter out genes with mean expression < 1, so we don't get a linear algebra error. 
+* [In progress] Fixed background subtraction + background normalization method. 
+
+<b>2024/09/01</b> - v0.3.3-alpha:
+* Bug fixes: error handling for various cases in 16S analysis, marker identification, and TCR analysis. 
+
+<b>2024/08/01</b> - v0.3.2-alpha:
+* Added data set filtering capabilities; can now filter GeoMx object based on annotation (pData) variables.
+* Bug fixes: added grouping variable to graph title and file names for immune deconvolution; removed extra title slide from TCR section. 
+* Added ability to choose whether to remove NAs from graphs in immune deconvolution.
+
 <b>2024/07/25</b> - v0.3.1-alpha:
 * Added ability to create neo-variables based on two or more existing variables.
 * Added more functionality for grouping/subsetting data in downstream analysis modules (differential expression, marker identification, immune deconvolution).
@@ -125,8 +146,8 @@ After the pipeline is finished running, the folder containing the output files w
 
 ## Credits
 
-bisantine-geo is developed and maintained by the Digital Spatial Profiling team of the PRIME-TR platform at the University of Texas MD Anderson Cancer Center. Some of the code is adapted from the GeomxTools Bioconductor package vignette, found [here](https://bioconductor.org/packages/devel/workflows/vignettes/GeoMxWorkflows/inst/doc/GeomxTools_RNA-NGS_Analysis.html).
+bisant-geo is developed and maintained by the Digital Spatial Profiling team of the PRIME-TR platform at the University of Texas MD Anderson Cancer Center. Some of the code is adapted from the GeomxTools Bioconductor package vignette, found [here](https://bioconductor.org/packages/devel/workflows/vignettes/GeoMxWorkflows/inst/doc/GeomxTools_RNA-NGS_Analysis.html).
 
 ## License
 
-bisantine-geo is released under the GNU General Public License v3.0. For more information, see the `LICENSE` file. 
+bisant-geo is released under the GNU General Public License v3.0. For more information, see the `LICENSE` file. 
