@@ -34,15 +34,24 @@ latest_module <- readRDS(rds_path)
 message(paste0("Rendering HTML report using the template found at ", rmd_template_file, "."))
 # saveRDS(iris, paste0(output_dir_pubs, "test.rds"))
 # Set the paths.
+# QC - study summary 
 pkc_summary_file <- paste0(output_dir_rdata, "pkc_summary_table.rds")
 qc_segments_summary_file <- paste0(output_dir_rdata, "qc-segments_summary_table.rds")
 ntc_summary_file <- paste0(output_dir_rdata, "ntc_summary_table.rds")
+# QC - segments
 plot_list_qc_segments_file <- paste0(output_dir_rdata, "qc-segments_plot_list.rds")
+# QC - probes
 plot_list_qc_probes_file <- paste0(output_dir_rdata, "qc-probes_plot_list.rds")
 qc_probes_summary_file <- paste0(output_dir_rdata, "qc-probes_table.rds")
 goi_detection_rate_table_file <- paste0(output_dir_rdata, "genes-of-interest_detection-rate_table.rds")
+# Normalization
 plot_list_normalization_file <- paste0(output_dir_rdata, "normalization_plot_list.rds")
+# 16S analysis
 plot_list_16s_file <- paste0(output_dir_rdata, "16S-analysis_raw-plots-list.rds")
+# Unsupervised analysis
+plot_list_unsupervised_clustering_grid_file <- paste0(output_dir_rdata, "plot-list_unsupervised-clustering-grids.rds")
+plot_list_cv_heatmap_file <- paste0(output_dir_rdata, "plot-list_cv_heatmaps.rds")
+
 # Render.
 rmarkdown::render(rmd_template_file,
                   output_file=paste0(output_dir_pubs, "report.html"),
@@ -54,6 +63,8 @@ rmarkdown::render(rmd_template_file,
                               qc_probes_summary_file = qc_probes_summary_file,
                               goi_detection_rate_table_file = goi_detection_rate_table_file,
                               plot_list_normalization_file = plot_list_normalization_file,
-                              plot_list_16s_file = plot_list_16s_file
+                              plot_list_16s_file = plot_list_16s_file,
+                              plot_list_unsupervised_clustering_grid_file = plot_list_unsupervised_clustering_grid_file,
+                              plot_list_cv_heatmap_file = plot_list_cv_heatmap_file
                               )
                   )

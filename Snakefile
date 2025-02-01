@@ -190,18 +190,22 @@ rule unsupervised_analysis:
     input:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds"
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds",
+        R_file_unsupervised_clustering_plot_list = OUTPUT_PATH + "Rdata/plot-list_unsupervised-clustering.rds",
+        R_file_unsupervised_clustering_plot_grid_list = OUTPUT_PATH + "Rdata/plot-list_unsupervised-clustering-grids.rds",
+        R_file_unsupervised_clustering_cv_heatmap_list = OUTPUT_PATH + "Rdata/plot-list_cv_heatmaps.rds",
+        CV_file = OUTPUT_PATH + "tabular/CV_results_by-normalization-method.csv"
     params:
+        workflow_system = WORKFLOW_SYSTEM,
         script = "src/unsupervised_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "unsupervised_analysis",
-        ppt_file = OUTPUT_PATH + "pubs/GeoMx-analysis_PowerPoint-report.pptx",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/unsupervised-analysis.out",
         err = OUTPUT_PATH + "logs/unsupervised-analysis.err" 
     shell:
-        "Rscript {params.script} {params.config_path} {params.output_path} {params.current_module} {input.R_file} {params.ppt_file} 1> {log.out} 2> {log.err}"
+        "Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}"
 
 rule analysis_16s: 
     input:
