@@ -22,6 +22,10 @@ target_data_object_list <- readRDS(cl_args[5])
 plot_list_normalization <- list()
 
 for(module in names(target_data_object_list)) {
+  # Check if the combined module (WTA+TCR) exists.
+  # If it does, skip the individual WTA, TCR modules.
+  if((paste(c(main_module, module_tcr), collapse = ",") %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
+  
   target_data_object <- target_data_object_list[[module]]
   plot_list_normalization[[module]] <- list()
   
@@ -198,6 +202,23 @@ for(module in names(target_data_object_list)) {
   rm(target_data_object)
   gc()
 }
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Split combined WTA+TCR ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Extract unique modules from the WTA+TCR NanoStringGeoMxSet.
+modules <- fData(target_data_object_list[[paste(c(main_module, module_tcr), collapse = ",")]]) %>% .$Module %>% unique
+
+# Split the NanoStringGeoMxSet object by Module
+individual_module_list <- lapply(modules, function(mod) {
+  subset(target_data_object_list[[paste(c(main_module, module_tcr), collapse = ",")]], Module == mod)
+})
+names(individual_module_list) <- modules
+
+# Combine with `target_data_object_list`.
+target_data_object_list <- c(individual_module_list, target_data_object_list[names(target_data_object_list) != paste(c(main_module, module_tcr), collapse = ",")])
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                

@@ -45,11 +45,11 @@ if(is.null(phenodata_sheet_name) || phenodata_sheet_name=="") {
 
 ## ................................................
 ##
-### Data loading ----
+### Data loading: individual modules ----
 ##
 ## ................................................
 # Load the data to create a data object using the readNanoStringGeoMxSet function.
-# 2024/12/11: We will create a separate object for each PKC module.
+# 2024/12/11: We will create a separate object for each PKC module, then create a combined WTA+TCR module if TCR module is available.
 data_object_list <- list()
 for(pkc_file in pkc_files) {
   message(paste0("Working on PKC file ", pkc_file))
@@ -68,6 +68,35 @@ for(pkc_file in pkc_files) {
   # Save to the list.
   data_object_list[[module]] <- data_object
   
+  # Clean up.
+  rm(data_object)
+  gc()
+}
+
+## ................................................
+##
+### Data loading: WTA+TCR ----
+##
+## ................................................
+if(!flagVariable(module_tcr)) {
+  wta_tcr_pkc_modules <- c(main_module, module_tcr)
+  message(paste0("Working on combined WTA+TCR modules ", paste(wta_tcr_pkc_modules, collapse = ", ")))
+
+  # Create the data object (a NanoString GeoMx set) from the input files.
+  wta_tcr_pkc_files <- paste0(pkc_dir, "/", wta_tcr_pkc_modules, ".pkc")
+  data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
+                                        pkcFiles = wta_tcr_pkc_files,
+                                        phenoDataFile = sample_annotation_file,
+                                        phenoDataSheet = phenodata_sheet_name,
+                                        phenoDataDccColName = phenodata_dcc_col_name,
+                                        protocolDataColNames = protocol_data_col_names,
+                                        experimentDataColNames = experiment_data_col_names)
+  # Name the current module.
+  module <- c(main_module, module_tcr) %>% paste(collapse = ",")
+
+  # Save to the list.
+  data_object_list[[module]] <- data_object
+
   # Clean up.
   rm(data_object)
   gc()
