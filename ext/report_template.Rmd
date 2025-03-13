@@ -12,6 +12,7 @@ params:
   plot_list_normalization_file: ''
   plot_list_16s_file: ''
   plot_list_unsupervised_clustering_grid_file: ''
+  plot_list_16s_score_file: ''
   plot_list_cv_heatmap_file: ''
   plot_list_diff_exprs_grid_file: ''
 ---
@@ -115,10 +116,21 @@ if(file.exists(params$plot_list_16s_file)) {
 
 # Unsupervised analysis
 ## Dimensionality reduction
-```{r}
+```{r fig.width=12, fig.height=8}
 if(file.exists(params$plot_list_unsupervised_clustering_grid_file)) {
   plot_list_unsupervised_clustering_grids <- readRDS(params$plot_list_unsupervised_clustering_grid_file)
   for(item in plot_list_unsupervised_clustering_grids) {
+    print(item)
+  }
+}
+```
+
+## 16S score
+```{r}
+
+if(file.exists(params$plot_list_16s_score_file)) {
+  plot_list_16s_scores <- readRDS(params$plot_list_16s_score_file)
+  for(item in plot_list_16s_scores) {
     print(item)
   }
 }
