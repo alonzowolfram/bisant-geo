@@ -1,24 +1,26 @@
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
-## Setup 
+## Setup ----
 ##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ## Source the setup.R file.
 source("src/setup.R")
 
-# Read in the NanoStringGeoMxSet object.
-target_data_object <- readRDS(cl_args[4])
+# Read in the NanoStringGeoMxSet object. 
+target_data_object_list <- readRDS(cl_args[4])
+# We'll only need the TCR module for this one.
+target_data_object <- target_data_object_list[[module_tcr]]
 # Read in the PowerPoint.
 pptx <- read_pptx(cl_args[5])
 
 # Set the normalization method.
 normalization_method <- normalization_names[names(normalization_names)==normalization_methods[1]]
 
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## TCR analysis ----
 ##
-## TCR analysis
-##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Functions
 # Gini coefficient
 calculate_gini_coefficient <- function(x) {
@@ -52,19 +54,19 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
     officer::ph_with(value = paste0("TCR analysis"),
                      location = ph_location_label(ph_label = "Title 1"))
   
-  ## ----------------------------------------------------------------
+  ## ................................................
   ##
-  ## Subsetting
+  ### Subsetting ----
   ##
-  ## ----------------------------------------------------------------
+  ## ................................................
   # Subset TCR + WTA prior to normalization.
   target_data_object_tcr <- subset(target_data_object, Module %in% module_tcr)
   
-  ## ----------------------------------------------------------------
+  ## ................................................
   ##
-  ## Normalization
+  ### Normalization ----
   ##
-  ## ----------------------------------------------------------------
+  ## ................................................
   # Subtract background
   target_data_object_tcr <- normalize(target_data_object_tcr,
                                           norm_method = "subtractBackground",
@@ -72,7 +74,7 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
                                           toElt = "bgsub"
   )
   
-  # Q3 normalization
+  # 90th percentile normalization
   target_data_object_tcr <- normalize(target_data_object_tcr,
                                           norm_method = "quant",
                                           desiredQuantile = 0.9,
@@ -80,11 +82,11 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
                                           toElt = "q_norm_bgsub"
   )
   
-  ## ----------------------------------------------------------------
-  ##
-  ## Analysis
-  ##
-  ## ----------------------------------------------------------------
+  ### ................................................
+  ###
+  ### Analysis ----
+  ###
+  ### ................................................
   # Get TCR probes
   tcr_probes <- fData(target_data_object_tcr)$TargetName[base::grepl("TR[A/B/D/G][C/J/V]", fData(target_data_object_tcr)$TargetName)]
   if(length(tcr_probes) < 1) {
@@ -109,11 +111,11 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
     pData(target_data_object)$Simpson <- simpson
     pData(target_data_object)$InvSimpson <- invsimpson
     
-    ## ----------------------------------------------------------------
-    ##
-    ## Grouped analysis
-    ##
-    ## ----------------------------------------------------------------
+    #### ................................................
+    ####
+    #### Grouped analysis ----
+    ####
+    #### ................................................
     if(is.null(tcr_grouping_vars) || sum(tcr_grouping_vars != "") < 1) {
       pData(target_data_object)[["Full data set"]] <- "Full data set"
       tcr_grouping_vars <- c("Full data set") 
@@ -249,15 +251,15 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
 
 } # End if() the TCR module is provided.
 
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Export to disk ----
 ##
-## Export to disk
-##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Export PowerPoint file.
 print(pptx, cl_args[5])
 # Export NanoStringGeoMxSet as RDS file.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_TCR-analysis.rds"))
+saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_TCR-analysis.rds"))
 # Export the raw plots as RDS file.
 if(exists("plot_list")) plot_list %>% saveRDS(paste0(output_dir_rdata, "TCR-analysis_plots-list.rds"))
 if(exists("plot_grid_list")) plot_grid_list %>% saveRDS(paste0(output_dir_rdata, "TCR-analysis_plot-grid-list.rds"))

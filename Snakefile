@@ -195,6 +195,7 @@ rule unsupervised_analysis:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_unsupervised-analysis.rds",
         R_file_unsupervised_clustering_plot_list = OUTPUT_PATH + "Rdata/plot-list_unsupervised-clustering.rds",
         R_file_unsupervised_clustering_plot_grid_list = OUTPUT_PATH + "Rdata/plot-list_unsupervised-clustering-grids.rds",
+        R_file_16s_score_plot_list = OUTPUT_PATH + "Rdata/plot-list_16s-score.rds",
         R_file_unsupervised_clustering_cv_heatmap_list = OUTPUT_PATH + "Rdata/plot-list_cv_heatmaps.rds",
         CV_file = OUTPUT_PATH + "tabular/CV_results_by-normalization-method.csv"
     params:

@@ -90,7 +90,17 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
   # Exponentiate average signal to get the 16S score.
   score_16s <- exp(mean_signal)
   # Add the 16S score to the pData.
-  if(identical(sampleNames(target_data_object_16s), names(score_16s))) pData(target_data_object_16s)$Score16S <- score_16s
+  if(identical(sampleNames(target_data_object_16s), names(score_16s)))  {
+    pData(target_data_object_16s)$Score16S <- score_16s
+    pData(target_data_object_list[[module_16s]])$Score16S <- score_16s
+  }
+  
+  # Add the 16S scores to the other pDatas.
+  for(module in names(target_data_object_list)) {
+    if(module == module_16s) next
+
+    pData(target_data_object_list[[module]])$Score16S <- score_16s
+  }
   
   ## ................................................
   ##
@@ -255,7 +265,7 @@ if(!(is.null(module_16s) || module_16s == "")) { # Only run the module if the 16
     
   }
   
-  # Add the 16S scores to the other pDatas.
+  # Add the 16S classifications to the other pDatas.
   for(module in names(target_data_object_list)) {
     if(module == module_16s) next
     

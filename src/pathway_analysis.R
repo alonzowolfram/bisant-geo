@@ -1,17 +1,22 @@
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Setup ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ## Source the setup.R file.
 source("src/setup.R")
 
-###################################################################
-##
-## Setup 
-##
-###################################################################
-
 # Read in the NanoStringGeoMxSet object. 
-target_data_object <- readRDS(cl_args[4])
+message("Reading in NanoStringGeoMxSet list object.")
+target_data_object_list <- readRDS(cl_args[4])
+# We'll only need the main module for this one.
+message("Extracting main module.")
+target_data_object <- target_data_object_list[[main_module]]
 # Read in the PowerPoint.
+message("Reading in PowerPoint.")
 pptx <- read_pptx(cl_args[5])
 # Read in the DE genes table.
+message("Reading in DE genes table.")
 results2 <- read.csv(cl_args[6], row.names = 1, check.names = FALSE)
 print(paste0("results2 dimensions: ", dim(results2)))
 
@@ -29,6 +34,7 @@ if(!is.null(pathway_table_file)) {
     msigdb_list <- set.default.pathways()
   } else {
     # Read in the file and check that it has at least one entry. 
+    message("Checking provided pathway file.")
     if(base::grepl("\\.csv$", pathway_table_file)) { pathway_table <- read.csv(pathway_table_file, header = F)}
     else if(base::grepl("\\.tsv$", pathway_table_file)) { pathway_table <- read.table(pathway_table_file, header = F, sep = "\t") }
     else if(base::grepl("\\.xls.*$", pathway_table_file)) { pathway_table <- read_excel(pathway_table_file, col_names = F)} 
@@ -57,17 +63,19 @@ pptx <- pptx %>%
   officer::ph_with(value = paste0("Pathway analysis (FGSEA)"), 
                    location = ph_location_label(ph_label = "Title 1"))
 
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Pathway analysis (FGSEA) ----
 ##
-## Run pathway analysis (FGSEA).
-##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Subset results2 table (data frame of differentially expressed genes).
+message(paste0("Subsetting results to include only those from the normalization method ", normalization_method, "."))
 results2_sub <- results2 %>% dplyr::filter(`Normalization method`==normalization_method)
 
 # Load the gene sets (from MSigDB).
 # https://rpubs.com/LiYumei/806213
+message("Loading gene sets.")
 gene_sets <- data.frame()
 for(i in 1:length(msigdb_list[["subcats"]])) {
   subcat <- msigdb_list[["subcats"]][i]
@@ -86,9 +94,11 @@ for(i in 1:length(msigdb_list[["subcats"]])) {
 }
 
 # Subset to include only the pathways of interest if individual_pathways is provided.
+message("Subsetting gene sets.")
 if(sum(!is.null(individual_pathways)) > 0 & sum(individual_pathways != "") > 0) gene_sets <- gene_sets %>% dplyr::filter(gs_name %in% individual_pathways)
 
 # Create an MSigDB pathway list.
+message("Creating MSigDB gene set list.")
 msigdbr_pathway_list <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
 
 # Loop through DE gene table and perform FGSEA.
@@ -96,6 +106,7 @@ msigdbr_pathway_list <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
 plot_list_pathway_analysis <- list()
 pathway_df <- data.frame()
 model_numbers <- results2_sub$`Model number` %>% unique
+message("Performing FGSEA.")
 for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
   
   subset_var_levels <- results2_sub %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
@@ -110,6 +121,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
       contrast_var <- results2_sub %>% dplyr::filter(`Model number`==model_number) %>% .$`Contrast variable` %>% .[1]
       
       for(contrast in contrasts) {
+        message(paste0("Subset variable ", subset_var, " | level ", subset_var_level, " | model number ", model_number, " | contrast ", contrast))
         # Subset. 
         results2_sub_sub <- results2_sub %>% dplyr::filter(
           `Subset variable`==subset_var &
@@ -124,12 +136,14 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         ranks <- ranks %>% .[order(.)]
         
         # Run FGSEA.
+        message("Running FGSEA.")
         fgseaRes <- fgsea(pathways = msigdbr_pathway_list, 
                           stats    = ranks,
                           minSize  = 1, # 15
                           maxSize  = Inf) # 500
         df_sub <- fgseaRes %>% dplyr::filter(is.finite(NES))
         # Make the pathway names more readable.
+        message("Cleaning FGSEA results.")
         df_sub$PathwayCleaned <- df_sub$pathway %>% 
           stringr::str_split("_") %>% 
           lapply(FUN = function(x) c(paste0(x[1], ":"), x[2:length(x)]) %>% paste(collapse=" ")) %>%  
@@ -139,6 +153,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
           unlist()
         
         # Add pathway ranking score (-log10(padj) * |NES|)
+        message("Adding pathway ranking scores.")
         df_sub$PathwayScore <- -log10(df_sub$padj) * abs(df_sub$NES)
         # Before calculating percentiles for pathway, cull pathway list down to its final form (i.e., what will actually be graphed.)
         # If individual_pathways is set, subset to include only the pathways of interest.
@@ -147,6 +162,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         if(!is.null(n_max_pathways) & n_max_pathways != "") if(nrow(df_sub) > n_max_pathways) df_sub <- df_sub %>% dplyr::top_n(n = n_max_pathways, wt = PathwayScore)
         
         # Add information about the model (model number, contrast variable, current contrast.)
+        message("Adding information about model.")
         df_sub$`Model number` <- model_number
         df_sub$`Contrast variable` <- contrast_var
         df_sub$Contrast <- contrast
@@ -156,6 +172,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         df_sub$percentile <- format(round(df_sub$percentile, 1), nsmall = 1)
         
         # Graph bar charts.
+        message("Graphing.")
         upper_limit <- ifelse(max(df_sub$NES) > 0, max(df_sub$NES) %>% ceiling(), max(df_sub$NES) %>% abs %>% ceiling())
         lower_limit <- ifelse(min(df_sub$NES) < 0, min(df_sub$NES) %>% floor(), min(df_sub$NES) %>% -. %>% floor())
         upper_limit_axis <- ifelse(max(df_sub$NES) < 0, 0, upper_limit)
@@ -218,6 +235,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         pathway_df <- rbind(pathway_df, df_sub %>% dplyr::select(-leadingEdge))
 
         # Graph enrichment plots.
+        message("Graphing enrichment plots.")
         for(pathway in names(msigdbr_pathway_list)) {
           plotEnrichment(msigdbr_pathway_list[[pathway]], ranks, gseaParam = 1, ticksSize = 0.2) +
             ggtitle(paste0(pathway, " | contrast: ", contrast, " | subset by ", subset_var, " | level: ", subset_var_level))
@@ -241,6 +259,7 @@ units <- "in"
 res <- 300
 
 plot_list_pathway_analysis_grid <- list()
+message("Arranging plots into grid.")
 for(sv in names(plot_list_pathway_analysis)) {
   for(svl in names(plot_list_pathway_analysis[[sv]])) {
     for(model_num in names(plot_list_pathway_analysis[[sv]][[svl]])) {
@@ -315,16 +334,17 @@ for(sv in names(plot_list_pathway_analysis)) {
   }
 }
 
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Export to disk ----
 ##
-## Export to disk.
-##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+message("Exporting to disk.")
 # Export PowerPoint file.
 print(pptx, cl_args[5])
 # Export NanoStringGeoMxSet as RDS file.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_pathway-analysis.rds"))
+saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_pathway-analysis.rds"))
 # Export FGSEA results as table.
 pathway_df %>% write.csv(paste0(output_dir_tabular, "pathway-analysis_results.csv"))
 # Export the raw plots as RDS file.

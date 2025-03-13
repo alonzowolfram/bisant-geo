@@ -459,10 +459,10 @@ experiment:
     # and the minimum absolute LFC will be set to 0.58.
     de_genes_cutoffs:
 
-    # # [Optional] [Currently not in use] User-supplied formula(e) for running linear mixed models.
+    # # [Optional] User-supplied formula(e) for running linear mixed models.
     # # You can provide multiple formulae, separated by commas (,).
     # # NOTE: providing a formula will override the random_slope, test_vars, random_intercept_vars, and random_slope_vars parameters.
-    # lmm_formulae:
+    lmm_formulae:
 
   # ----------------------------------------------------------------------
   #     Pathway analysis

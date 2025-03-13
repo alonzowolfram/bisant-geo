@@ -52,6 +52,84 @@ flagVariable <- function(x) {
   return(is.null(x) || sum(x=="") >= length(x))
 }
 
+## Function to recursively assign variables.
+assignVarsEnv <- function(yaml_list, env = .GlobalEnv) { # env = new.env()
+  assignRecursive <- function(lst, parent_keys = NULL) {
+    for (key in names(lst)) {
+      full_key <- paste(c(parent_keys, key), collapse = "_")
+      value <- lst[[key]]
+      
+      if (is.list(value)) {
+        assignRecursive(value, c(parent_keys, key))
+      } else {
+        assign(key, value, envir = env)
+      }
+    }
+  }
+  
+  assignRecursive(yaml_list)
+  # return(env)  # Return the environment so you can use it
+}
+
+# Function to validate and process config variables.
+validateProcessConfig <- function(config_var_metadata) { 
+  config_vars <- read.csv(config_var_metadata, stringsAsFactors = FALSE)
+  error_msg_list <- list()
+  
+  for (i in seq_len(nrow(config_vars))) {
+    var_name <- config_vars$variable[i]
+    required <- as.logical(config_vars$required[i])
+    default_value <- config_vars$default_value[i]
+    split_string <- as.logical(config_vars$split_string[i])
+    
+    # Debugging prints
+    message(paste("Processing:", var_name))
+    message(paste(" - Required:", required))
+    message(paste(" - Default Value (raw):", default_value))
+    message(paste(" - Exists in .GlobalEnv?", exists(var_name, envir = .GlobalEnv, inherits = FALSE)))
+    
+    # Convert default_value to the appropriate type
+    if (!is.na(default_value) && default_value != "") {
+      if (grepl("^\\d+$", default_value)) {  
+        # Integer check (only digits, no decimal)
+        default_value <- as.integer(default_value)
+      } else if (grepl("^\\d+\\.\\d+$", default_value)) {  
+        # Decimal check (digits + decimal point)
+        default_value <- as.numeric(default_value)
+      }
+    }
+    
+    message(paste(" - Default Value (converted):", default_value, "Type:", typeof(default_value)))
+    
+    if (exists(var_name, envir = .GlobalEnv, inherits = FALSE)) { 
+      value <- get(var_name, envir = .GlobalEnv)
+      message(paste(" - Current Value:", value))
+      
+      if (required && flagVariable(value)) {
+        error_msg_list[[var_name]] <- paste("Input missing for", var_name)
+      }
+      
+      if (!required && flagVariable(value) && default_value != "") {
+        assign(var_name, default_value, envir = .GlobalEnv)
+        message(paste(" - Assigned default:", var_name, "=", get(var_name, envir = .GlobalEnv)))
+      }
+      
+      if (!flagVariable(value) && split_string) {
+        assign(var_name, strsplit(value, ",")[[1]] %>% trimws(), envir = .GlobalEnv)
+        message(paste(" - Split and assigned:", get(var_name, envir = .GlobalEnv)))
+      }
+      
+    } else {
+      if (!required && default_value != "") {
+        assign(var_name, default_value, envir = .GlobalEnv)
+        message(paste(" - Assigned default:", var_name, "=", get(var_name, envir = .GlobalEnv)))
+      }
+    }
+  }
+  
+  return(error_msg_list)
+}
+
 ## Function to generate QC histograms.
 QCHistogram <- function(assay_data = NULL,
                         annotation = NULL,
@@ -71,6 +149,69 @@ QCHistogram <- function(assay_data = NULL,
       scale_x_continuous(trans = scale_trans)
   }
   plt
+}
+
+## Function to extract first fixed effect from a model formula.
+extractFirstFixedEffect <- function(model_formula) {
+  # Convert formula to character and extract terms
+  terms <- all.vars(model_formula)
+  
+  # Find the index of the first random effect (terms with "|")
+  random_effect_idx <- which(base::grepl("\\|", attr(terms(model_formula), "term.labels")))
+  
+  # If there's a random effect, take only fixed effects
+  if (length(random_effect_idx) > 0) {
+    fixed_effects <- attr(terms(model_formula), "term.labels")[1:(random_effect_idx[1] - 1)]
+  } else {
+    fixed_effects <- attr(terms(model_formula), "term.labels")
+  }
+  
+  # Return the first fixed effect
+  if (length(fixed_effects) > 0) {
+    return(fixed_effects[1])
+  } else {
+    stop("No fixed effects found in the model formula.")
+  }
+}
+
+## Function to extract all variables from a model formula.
+extractModelComponents <- function(model_formula) {
+  # Extract the terms from the formula
+  term_labels <- attr(terms(model_formula), "term.labels")
+  
+  # Identify random effect terms (contain "|")
+  random_terms <- term_labels[base::grepl("\\|", term_labels)]
+  
+  # Extract fixed effects (everything that is not a random effect)
+  fixed_effects <- setdiff(term_labels, random_terms)
+  
+  # Initialize vectors for random intercepts and slopes
+  random_intercepts <- c()
+  random_slopes <- c()
+  
+  # Process random effect terms
+  for (rand_term in random_terms) {
+    # Split by "|" to separate the grouping factor
+    split_term <- strsplit(rand_term, "\\|")[[1]]
+    effect_part <- trimws(split_term[1])  # Random effect terms
+    grouping_var <- trimws(split_term[2]) # Grouping factor
+    
+    # Check if it's a random intercept or slope
+    if (effect_part == "1") {
+      random_intercepts <- c(random_intercepts, grouping_var)
+    } else {
+      slopes <- unlist(strsplit(effect_part, "\\+"))
+      slopes <- trimws(slopes)  # Clean up spaces
+      random_slopes <- c(random_slopes, paste(slopes, "by", grouping_var))
+    }
+  }
+  
+  # Return as a named list
+  return(list(
+    fixed_effects = fixed_effects,
+    random_intercepts = unique(random_intercepts),
+    random_slopes = unique(random_slopes)
+  ))
 }
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -169,6 +310,7 @@ lmm <- experiment$lmm
 random_slope <- lmm$random_slope
 test_vars <- lmm$test_vars
 random_intercept_vars <- lmm$random_intercept_vars
+lmm_formulae <- lmm$lmm_formulae
 # random_slope_vars <- lmm$random_slope_vars
 subset_vars <- lmm$subset_vars
 subset_var_levels_manual <- lmm$subset_var_levels_manual
@@ -321,6 +463,7 @@ if(is.null(subset_var_levels_manual) || subset_var_levels_manual == "") {
     names(subset_var_levels_manual) <- subset_vars
   }
 }
+if(!flagVariable(lmm_formulae)) lmm_formulae <- lmm_formulae %>% strsplit(",") %>% unlist()
 if(is.null(n_top_genes) || n_top_genes == "" || !is.integer(n_top_genes)) {
   n_top_genes <- 15
 }

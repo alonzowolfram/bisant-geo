@@ -1,3 +1,17 @@
+#' Export RDS file containing name of latest completed module:
+#' 
+#' @param output_path Directory to which Rds file should be exported
+#' @param module The name of the current module that was just completed
+#' @return A Boolean
+#' @export
+updateLatestModule <- function(output_path, module) {
+  file_name <- "latest_rule.Rds"
+  latest_rule <- module
+  saveRDS(latest_rule, paste0(output_path, file_name))
+  
+  return(TRUE)
+}
+
 #' Calculate coefficient of variation.
 #' 
 #' @param x A vector.

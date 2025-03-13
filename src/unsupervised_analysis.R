@@ -101,6 +101,10 @@ for(norm_method in names(target_data_object@assayData)) {
     dim_red_list[[paste0("PCA_", norm_method)]] <- pData(target_data_object)[, pca_col_names]
   }
   
+  # For column renaming and removing later.
+  n_reduction_types = perform_UMAP + perform_tSNE + perform_PCA
+  n_cols_remove = 2 * n_reduction_types
+  
   # Create a separate graph for each compartment variable.
   for(compartment_var in compartment_vars) {
     print(paste0("Compartment variable: ", compartment_var))
@@ -222,23 +226,23 @@ for(norm_method in names(target_data_object@assayData)) {
                 panel.grid.major = element_blank())
       }
     }
-  
+    
     # # If it was a composite variable, remove CompartmentVar before resetting the variable names.
     # if(ncol(pData(target_data_object)) > (length(orig_var_names) + 4)) { # + 4 to account for the t-SNE and UMAP cols.
     #   pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-CompartmentVar1)
     # }
-    n_reduction_types = perform_UMAP + perform_tSNE + perform_PCA
     # Reset the variable names.
-    colnames(pData(target_data_object)) <- c(orig_var_names, paste0("DimensionReduction", 1:(2*n_reduction_types)))
-    # Remove the last n columns (dimension reduction results)
-    # where n = 2 * (perform_UMAP + perform_tSNE + perform_PCA)
-    n_cols_remove = 2 * n_reduction_types
-    pData(target_data_object) <- pData(target_data_object) %>% .[,1:(ncol(.)-n_cols_remove)]
+    colnames(pData(target_data_object))[1:(ncol(pData(target_data_object))-n_cols_remove)] <- c(orig_var_names)
 
     message(paste0("Success: compartment variable: ", compartment_var))
-  }
+  } # End compartment variable loop.
+  
+  # Remove the last n columns (dimension reduction results)
+  # where n = 2 * (perform_UMAP + perform_tSNE + perform_PCA)
+  pData(target_data_object) <- pData(target_data_object) %>% .[,1:(ncol(.)-n_cols_remove)]
+  
   message(paste0("Success: normalization method: ", norm_method))
-}
+} # End normalization method loop.
 
 # Create the dimension reduction table and add to pData.
 dim_red_df <- do.call(cbind, dim_red_list)
@@ -309,6 +313,51 @@ target_data_object_list[[main_module]] <- target_data_object
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
+## 16S scores ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Choose the dimension reductions to work with. 
+dim_red_types <- c()
+if(perform_UMAP) dim_red_types <- c(dim_red_types, "UMAP")
+if(perform_tSNE) dim_red_types <- c(dim_red_types, "tSNE")
+if(perform_PCA) dim_red_types <- c(dim_red_types, "PCA")
+
+# Create a list to hold 16S score plots.
+plot_list_16s_score <- list()
+
+message("Creating graph of 16S scores.")
+for(dim_red_type in dim_red_types) {
+  
+  # Map 16S scores onto dimension-reduction plot.
+  for(norm_method in normalization_methods) {
+    if(norm_method %in% c("exprs", "bg_sub") | base::grepl("log_", norm_method)) next # Skip over raw data, background-subtracted-only data, and log-transformed data.
+    
+    for(compartment_var in compartment_vars) {
+      # Create the data frame.
+      dim_red_col_names <- paste0(dim_red_type, 1:2, "_", norm_method)
+      dat <- cbind(dim_red_list[[paste0(dim_red_type, "_", norm_method)]], 
+        pData(target_data_object)[, c("Score16S", compartment_var)])
+      
+      # Create the graph.
+      plot <- dat %>% 
+        ggplot(aes(x = !!as.name(dim_red_col_names[1]), y = !!as.name(dim_red_col_names[2]))) + 
+        geom_point(aes(size = Score16S, color = !!as.name(compartment_var))) +
+        labs(title = paste0(dim_red_type, " | ", norm_method, " | ", "Compartment: ", compartment_var),
+             color = paste0(compartment_var)) +
+        theme_bw() +
+        theme(panel.grid.minor = element_blank(),
+              panel.grid.major = element_blank())
+      print(plot)
+      
+      plot_list_16s_score[[paste0(dim_red_type, "_", norm_method, "_", compartment_var)]] <- plot
+      
+    } # End compartment variable loop.
+  } # End normalization methods loop.
+} # End dimension reductions loop.
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
 ## Heatmap of high-CV genes ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -363,6 +412,7 @@ saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_un
 # Save the graphs to RDS.
 saveRDS(plot_list_unsupervised_clustering, paste0(output_dir_rdata, "plot-list_unsupervised-clustering.rds"))
 saveRDS(plot_list_unsupervised_clustering_grid, paste0(output_dir_rdata, "plot-list_unsupervised-clustering-grids.rds"))
+saveRDS(plot_list_16s_score, paste0(output_dir_rdata, "plot-list_16s-score.rds"))
 saveRDS(plot_list_heatmap, paste0(output_dir_rdata, "plot-list_cv_heatmaps.rds"))
 # Save the CV results to CSV.
 write.table(cv_res, paste0(output_dir_tabular, "CV_results_by-normalization-method.csv"), sep = ",")

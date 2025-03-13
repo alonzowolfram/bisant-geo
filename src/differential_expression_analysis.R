@@ -21,9 +21,9 @@ for(subset_var in subset_vars) {
   if(!is.null(subset_var) && !is.na(subset_var) && subset_var != "NA") pData(target_data_object)[[subset_var]] <- pData(target_data_object)[[subset_var]] %>% as.factor
 }
 
-# Create the table of LMM parameter combinations.
-param_combos <- cbind(random_slope, test_vars, random_intercept_vars) %>% as.data.frame %>% dplyr::mutate(`Model number` = 1:nrow(.)) # , random_slope_vars
-colnames(param_combos)[1:3] <- c("Random slope", "Test variable", "Random intercept variable") # , "Random slope variable"
+# # Create the table of LMM parameter combinations.
+# param_combos <- cbind(random_slope, test_vars, random_intercept_vars, random_slope_vars) %>% as.data.frame %>% dplyr::mutate(`Model number` = 1:nrow(.)) # , random_slope_vars
+# colnames(param_combos)[1:4] <- c("Random slope", "Test variable", "Random intercept variable", "Random slope variable") # , "Random slope variable"
 
 # Get the negative probes. This code was used in qc_probes.R, and
 # maybe in the future, we will have a way to remove this redundant code. Maybe by saving the negative probes
@@ -41,262 +41,100 @@ message("Finished setup for differential expression analysis.")
 # Run LMM:
 # formula follows conventions defined by the lme4 package.
 # When running LMM, mixedModelDE seems to have issues with variable names with spaces etc., even if enclosed in backticks (``). 
-# So we're going to rename the variables of interest to something without spaces and other special characters.
-# But first, we'll have to save the original variable names so every time we rename the variables in the for() loop,.
-# we can reset them afterwards.
-orig_var_names <- colnames(pData(target_data_object))
-results2 <- c()
-
-# Loop levels (outermost to innermost):
-# 1) Model (param_combos)
-# 2) Subset variable (subset_vars)
 
 # Now we can loop over all the param combos and run LMM on each one.
-# Loop level 1: model.
 message("Performing differential expression analysis.")
-for(i in 1:nrow(param_combos)) {
-  message(paste0("Working on model #", i, "."))
+
+for (lmm_formula in lmm_formulae) {
+  message(glue::glue("Working on model {lmm_formula}.") )
   
-  # Get the params for this experiment. 
-  random_slope_i <- param_combos[i,1]
-  test_var <- param_combos[i,2]
-  random_intercept_var <- param_combos[i,3]
-  # random_slope_vars <- param_combos[i,4]
+  # Create the model formula.
+  model_formula <- as.formula(lmm_formula)
+  # Extract the grouping variable (by convention, it will be the first fixed effect in the model.)
+  groupVar <- extractFirstFixedEffect(model_formula)
   
-  # Reset the variable names.
-  colnames(pData(target_data_object)) <- orig_var_names
+  # Handle missing subset variables
+  if (all(is.na(subset_vars)) || all(subset_vars == "NA", na.rm = TRUE)) {
+    pData(target_data_object)$`All observations` <- factor("DummyLevel")
+    subset_vars <- "All observations"
+  }
   
-  # Rename the test variable (test_var) and the random intercept variable (random_intercept_var).
-  pData(target_data_object) <- pData(target_data_object) %>%
-    dplyr::rename(TestVar = !!as.name(test_var), RandomInterceptVar = !!as.name(random_intercept_var))
-  
-  # control switch 1 (subset variables exist or not) << loop level 1 (model).
-  if(sum(is.na(subset_vars)) == length(subset_vars) || sum(subset_vars=="NA", na.rm = T) == length(subset_vars[!is.na(subset_vars)])) {
-    # control switch 1a: no subset variables << loop level 1 (model).
+  for (subset_var in subset_vars) {
+    message(glue::glue("Working on subset variable {subset_var} for model {lmm_formula}.") )
     
-    # Since there are no subset variables, we will add a column that will act as a dummy subset variable
-    # and change subset_vars to be the name of this dummy subset variable.
-    # This will allow us to use one loop for either case (controls switch 1a or 1b).
-    pData(target_data_object)[["All observations"]] <- "DummyLevel"
-    pData(target_data_object)[["All observations"]] <- as.factor(pData(target_data_object)[["All observations"]])
-    subset_vars <- c("All observations")
-    
-  } # End control switch 1a (no subset variables) << loop level 1 (model).
-  
-  # loop level 2 (subset variable) << loop level 1 (model)
-  for(subset_var in subset_vars) {
-    message(paste0("Working on subset variable ", subset_var, " for model #", i, "."))
-    
-    # Check if the current subset_var is NA.
-    if(subset_var == "NA" || is.na(subset_var)) {
-      # Add a column that will act as a dummy subset variable
-      # and change subset_vars to be the name of this dummy subset variable.
-      # This will allow us to use one loop for either case.
-      pData(target_data_object)[["All observations"]] <- "DummyLevel"
-      pData(target_data_object)[["All observations"]] <- as.factor(pData(target_data_object)[["All observations"]])
+    if (subset_var %in% c("NA", NA)) {
+      pData(target_data_object)$`All observations` <- factor("DummyLevel")
       subset_var <- "All observations"
     }
     
-    # Check that the current subset_var is not the same as either test_var or random_intercept_var.
-    if(test_var==subset_var || random_intercept_var==subset_var) {
-      message(paste0("The current subset variable, ", subset_var, " is the same as either your test (contrast) variable or random intercept variable. Skipping this subset variable - contrast/random intercept variable combination."))
+    model_vars <- extractModelComponents(model_formula) %>% unlist
+    if (subset_var %in% model_vars) {
+      message(glue::glue("Skipping subset variable {subset_var} due to overlap with one or more fixed-effect or random variables in the model formula."))
       next
     }
-      
-    # Get the levels of the current subset_var.
-    subset_var_levels <- pData(target_data_object)[[subset_var]] %>% as.factor %>% levels # as.factor needed because it might be a character vector.
     
-    # loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
-    for(subset_var_level in subset_var_levels) {
-      message(paste0("Working on level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
+    subset_levels <- levels(factor(pData(target_data_object)[[subset_var]]))
+    
+    for (subset_level in subset_levels) {
+      message(glue::glue("Working on level {subset_level} of {subset_var} for model {lmm_formula}.") )
       
-      # Get all the samples belonging to the current subset_var_level.
-      ind <- pData(target_data_object)[[subset_var]] == subset_var_level
+      ind <- pData(target_data_object)[[subset_var]] == subset_level
       
-      # Set the model formula based on whether we have a random slope or not. 
-      model_formula <- ifelse(random_slope_i %in% c("no", "FALSE"), "~ TestVar + (1 | RandomInterceptVar)", "~ TestVar + (1 + TestVar | RandomInterceptVar)") %>% as.formula
-        
-      # loop level 4 (current normalization method) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
-      for(norm_method in normalization_methods) {
-        message(paste0("Working on normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
-        # Error catching: https://stackoverflow.com/a/55937737/23532435
+      for (norm_method in normalization_methods) {
+        message(glue::glue("Working on normalization {norm_method} for level {subset_level} of {subset_var} for model {lmm_formula}.") )
         skip_to_next <- FALSE
         
-        # # Set up the data. 
-        # # Expresssion: rows are GENES and columns are SAMPLES. 
-        # # Also, remove negative probes.
-        # exprs <- target_data_object@assayData[[paste0("log_", norm_method)]] %>% .[!(rownames(.) %in% neg_probes),]
-        # metadata <- sData(target_data_object)
-        
-        # Set the random seed.
         set.seed(random_seed)
-        # Calculate coefficient of variance for each gene.
-        CV_dat <- assayDataApply(target_data_object,
-                                 elt = paste0("log_", norm_method), MARGIN = 1, calc_CV) %>% .[!is.na(.)]
-        # Keep only the genes with the highest CVs
-        # 2024/12/16: and genes with mean expression (across samples) > 1.
-        # Genes that meet CV cutoff.
-        mean_cv <- mean(CV_dat, na.rm = T)
-        sd_cv <- sd(CV_dat, na.rm = T)
-        if(is.null(cv_cutoff) || cv_cutoff == "" || !is.finite(cv_cutoff) || !(0 <= cv_cutoff & cv_cutoff <= 1)) {
-          message("cv_cutoff for genes either has not been provided or is not a numeric value in [0,1]. Using all genes for differential expression.")
-          top_cv_genes <- CV_dat %>% names
+        CV_dat <- assayDataApply(target_data_object, elt = paste0("log_", norm_method), MARGIN = 1, calc_CV) %>% na.omit()
+        
+        if (is.null(cv_cutoff) || !is.finite(cv_cutoff) || !(0 <= cv_cutoff & cv_cutoff <= 1)) {
+          top_cv_genes <- names(CV_dat)
         } else {
-          message(paste0("Using cv_cutoff of ", cv_cutoff, " for differential expression."))
-          nth_percentile_cv <- quantile(CV_dat, probs = cv_cutoff)
-          top_cv_genes <- CV_dat %>% .[. > nth_percentile_cv] %>% names
-          # top_cv_genes <- CV_dat %>% .[. > (mean_cv + cv_cutoff*sd_cv)] %>% names
+          top_cv_genes <- names(CV_dat[CV_dat > quantile(CV_dat, probs = cv_cutoff)])
         }
-        # Genes that meet mean expression cutoff.
-        mean_exprs_cutoff <- 1
-        mean_exprs_cutoff_genes <- which(rowMeans(target_data_object@assayData[[paste0("log_", norm_method)]]) > mean_exprs_cutoff) %>% names
-        # Union of the two. 
-        # EDIT 2025/01/06: Should be intersection of the two.
-        genes_pass_cutoffs <- intersect(top_cv_genes, mean_exprs_cutoff_genes) # union(top_cv_genes, mean_exprs_cutoff_genes)
         
-        # Generate the model.
+        mean_exprs_cutoff_genes <- rowMeans(target_data_object@assayData[[paste0("log_", norm_method)]]) > 1
+        genes_pass_cutoffs <- intersect(top_cv_genes, names(mean_exprs_cutoff_genes[mean_exprs_cutoff_genes]))
+        
         tdo_sub <- subset(target_data_object, TargetName %in% genes_pass_cutoffs, ind)
-        mixedOutmc <- tryCatch(mixedModelDE(tdo_sub, # Error handling needed because sometimes there might not be enough samples to perform DE.
-                                   elt = paste0("log_", norm_method),
-                                   modelFormula = model_formula,
-                                   groupVar = "TestVar",
-                                   nCores = parallel::detectCores(),
-                                   multiCore = TRUE),
-                               error = function(e) {skip_to_next <<- TRUE})
-        if(skip_to_next) {
-          warning(paste0("An error occurred when trying to perform differential expression for normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
-          next
-        }
         
-        # Format results as data.frame.
-        r_test <- do.call(rbind, mixedOutmc["lsmeans", ])
-        tests <- rownames(r_test)
-        r_test <- as.data.frame(r_test)
-        r_test$Contrast <- tests
-        
-        # Use lapply in case you have multiple levels of your test factor to
-        # correctly associate gene name with its row in the results table.
-        r_test$Gene <- 
-          unlist(lapply(colnames(mixedOutmc),
-                        rep, nrow(mixedOutmc["lsmeans", ][[1]])))
-        r_test$`Subset variable` <- subset_var
-        r_test$`Subset level` <- subset_var_level
-        r_test$`Normalization method` <- normalization_names[names(normalization_names)==norm_method]
-        r_test$FDR <- p.adjust(r_test$`Pr(>|t|)`, method = "fdr")
-        r_test <- r_test[, c("Gene", "Subset variable", "Subset level", "Normalization method", "Contrast", "Estimate", 
-                             "Pr(>|t|)", "FDR")]
-        r_test$`Contrast variable` <- test_var
-        r_test$`Model number` <- i
-        r_test <- r_test %>% dplyr::relocate(`Contrast variable`, .before = Contrast)
-        results2 <- rbind(results2, r_test)
-        
-      } # End loop level 4: normalization method. 
-      
-    } # End loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model).
-    
-    # Now check if we have any manual subset levels.
-    subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
-    if(!is.null(subset_var_levels_manual_i)) {
-      if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) {
-        message(paste0("Working on levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
-        
-        # Get all the samples belonging to the current subset_var_level.
-        ind <- pData(target_data_object)[[subset_var]] %in% subset_var_levels_manual_i
-        
-        # Set the model formula based on whether we have a random slope or not. 
-        model_formula <- ifelse(random_slope_i %in% c("no", "FALSE"), "~ TestVar + (1 | RandomInterceptVar)", "~ TestVar + (1 + TestVar | RandomInterceptVar)") %>% as.formula
-        
-        # loop level 4 (current normalization method) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
-        for(norm_method in normalization_methods) {
-          message(paste0("Working on normalization method ", norm_method, " for levels ", paste(subset_var_levels_manual_i, collapse = ", "), " for subset variable ", subset_var, " for model #", i, "."))
-          # Error catching: https://stackoverflow.com/a/55937737/23532435
-          skip_to_next <- FALSE
-          
-          # # Set up the data. 
-          # # Expresssion: rows are GENES and columns are SAMPLES. 
-          # # Also, remove negative probes.
-          # exprs <- target_data_object@assayData[[paste0("log_", norm_method)]] %>% .[!(rownames(.) %in% neg_probes),]
-          # metadata <- sData(target_data_object)
-          
-          # Set the random seed.
-          set.seed(random_seed)
-          # Calculate coefficient of variance for each gene.
-          CV_dat <- assayDataApply(target_data_object,
-                                   elt = paste0("log_", norm_method), MARGIN = 1, calc_CV) %>% .[!is.na(.)]
-          # Keep only the genes with the highest CVs
-          # 2024/12/16: and genes with mean expression (across samples) > 1.
-          # Genes that meet CV cutoff.
-          mean_cv <- mean(CV_dat, na.rm = T)
-          sd_cv <- sd(CV_dat, na.rm = T)
-          if(is.null(cv_cutoff) || cv_cutoff == "" || !is.finite(cv_cutoff) || !(0 <= cv_cutoff & cv_cutoff <= 1)) {
-            message("cv_cutoff for genes either has not been provided or is not a numeric value in [0,1]. Using all genes for differential expression.")
-            top_cv_genes <- CV_dat %>% names
-          } else {
-            message(paste0("Using cv_cutoff of ", cv_cutoff, " for differential expression."))
-            nth_percentile_cv <- quantile(CV_dat, probs = cv_cutoff)
-            top_cv_genes <- CV_dat %>% .[. > nth_percentile_cv] %>% names
-            # top_cv_genes <- CV_dat %>% .[. > (mean_cv + cv_cutoff*sd_cv)] %>% names
+        mixedOutmc <- tryCatch(
+          mixedModelDE(tdo_sub, 
+                       elt = paste0("log_", norm_method), 
+                       modelFormula = model_formula, 
+                       groupVar = "TestVar", 
+                       nCores = parallel::detectCores(), multiCore = TRUE),
+          error = function(e) {
+            warning(glue::glue("Error in model {lmm_formula} - {norm_method} - {subset_level} - {subset_var}: {e$message}"))
+            skip_to_next <<- TRUE
           }
-          # Genes that meet mean expression cutoff.
-          mean_exprs_cutoff <- 1
-          mean_exprs_cutoff_genes <- which(rowMeans(target_data_object@assayData[[paste0("log_", norm_method)]]) > mean_exprs_cutoff) %>% names
-          # Union of the two. 
-          # EDIT 2025/01/06: Should be intersection of the two.
-          genes_pass_cutoffs <- intersect(top_cv_genes, mean_exprs_cutoff_genes) # union(top_cv_genes, mean_exprs_cutoff_genes)
-          
-          # Generate the model.
-          tdo_sub <- subset(target_data_object, TargetName %in% genes_pass_cutoffs, ind)
-          mixedOutmc <- tryCatch(mixedModelDE(tdo_sub, # Error handling needed because sometimes there might not be enough samples to perform DE.
-                                              elt = paste0("log_", norm_method),
-                                              modelFormula = model_formula,
-                                              groupVar = "TestVar",
-                                              nCores = parallel::detectCores(),
-                                              multiCore = TRUE),
-                                 error = function(e) {skip_to_next <<- TRUE})
-          if(skip_to_next) {
-            warning(paste0("An error occurred when trying to perform differential expression for normalization method ", norm_method, " for level ", subset_var_level, " for subset variable ", subset_var, " for model #", i, "."))
-            next
-          }
-          
-          # Format results as data.frame.
-          r_test <- do.call(rbind, mixedOutmc["lsmeans", ])
-          tests <- rownames(r_test)
-          r_test <- as.data.frame(r_test)
-          r_test$Contrast <- tests
-          
-          # Use lapply in case you have multiple levels of your test factor to
-          # correctly associate gene name with its row in the results table.
-          r_test$Gene <- 
-            unlist(lapply(colnames(mixedOutmc),
-                          rep, nrow(mixedOutmc["lsmeans", ][[1]])))
-          r_test$`Subset variable` <- subset_var
-          r_test$`Subset level` <- paste(subset_var_levels_manual_i, collapse = ",")
-          r_test$`Normalization method` <- normalization_names[names(normalization_names)==norm_method]
-          r_test$FDR <- p.adjust(r_test$`Pr(>|t|)`, method = "fdr")
-          r_test <- r_test[, c("Gene", "Subset variable", "Subset level", "Normalization method", "Contrast", "Estimate", 
-                               "Pr(>|t|)", "FDR")]
-          r_test$`Contrast variable` <- test_var
-          r_test$`Model number` <- i
-          r_test <- r_test %>% dplyr::relocate(`Contrast variable`, .before = Contrast)
-          results2 <- rbind(results2, r_test)
-          
-        } # End loop level 4: normalization method. 
+        )
+        
+        if (skip_to_next) next
+        
+        r_test <- do.call(rbind, mixedOutmc["lsmeans", ]) %>% as.data.frame()
+        r_test <- r_test %>% mutate(
+          Gene = rep(colnames(mixedOutmc), each = nrow(mixedOutmc[["lsmeans"]][[1]])),
+          `Subset variable` = subset_var,
+          `Subset level` = subset_level,
+          `Normalization method` = normalization_names[names(normalization_names) == norm_method],
+          FDR = p.adjust(`Pr(>|t|)`, method = "fdr"),
+          `Contrast variable` = test_var,
+          `Model number` = i
+        ) %>% relocate(`Contrast variable`, .before = Contrast)
+        
+        results2 <- bind_rows(results2, r_test)
       }
-    } # End if there are manual subset levels.
-    
-  } # End loop level 2 (subset variable) << loop level 1 (model).
+    }
+  }
   
-  # Reset the variable names. 
-  # First check if there's an additional column added if there are no subset variables (see control switch 1a.)
-  # If there is, remove it. 
-  if("All observations" %in% colnames(pData(target_data_object))) pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-`All observations`)
-  # Then reset the variable names. 
-  colnames(pData(target_data_object)) <- orig_var_names 
+  if ("All observations" %in% colnames(pData(target_data_object))) {
+    pData(target_data_object) <- dplyr::select(pData(target_data_object), -`All observations`)
+  }
   
-  # If we changed subset_vars to "All observations", change it back to NA.
-  if(sum(subset_vars=="All observations", na.rm = T) == 1) subset_vars <- NA
-  
-} # End loop level 1: model.
+  # colnames(pData(target_data_object)) <- orig_var_names
+  if (any(subset_vars == "All observations")) subset_vars <- NA
+}
 message("Differential expression analysis completed.")
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

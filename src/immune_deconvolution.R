@@ -1,13 +1,15 @@
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
-## Setup 
+## Setup ----
 ##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ## Source the setup.R file.
 source("src/setup.R")
 
-# Read in the NanoStringGeoMxSet object.
-target_data_object <- readRDS(cl_args[4])
+# Read in the NanoStringGeoMxSet object. 
+target_data_object_list <- readRDS(cl_args[4])
+# We'll only need the main module for this one.
+target_data_object <- target_data_object_list[[main_module]]
 # Read in the PowerPoint.
 pptx <- read_pptx(cl_args[5])
 
@@ -32,16 +34,16 @@ pptx <- pptx %>%
   officer::ph_with(value = paste0("Immune deconvolution"),
                    location = ph_location_label(ph_label = "Title 1"))
 
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Immune deconvolution ----
 ##
-## Immune deconvolution
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+## ................................................
 ##
-###################################################################
-## ----------------------------------------------------------------
+### Calculation ----
 ##
-## Calculation
-##
-## ----------------------------------------------------------------
+## ................................................
 # Subset the target data object to include only the transcriptome probes.
 target_data_object_exprs <- subset(target_data_object, Module %in% modules_exprs)
 # Extract the expression matrix.
@@ -138,11 +140,12 @@ for(method in imm_decon_methods) {
   }
 }
 
-## ----------------------------------------------------------------
+
+## ................................................
 ##
-## Visualization
+### Visualization ----
 ##
-## ----------------------------------------------------------------
+## ................................................
 # https://omnideconv.org/immunedeconv/articles/detailed_example.html
 # Parameters.
 plot_width <- 12
@@ -211,7 +214,7 @@ for(method in names(imm_decon_res_list)) {
         unique_values <- unique(df3[[grouping_var]])
         group <- (1:length(unique_values) %/% unique_values_max) + 1
         names(group) <- unique_values
-        df3$Group <- group[df3[[grouping_var]]]
+        df3$ChunkingGroup <- group[df3[[grouping_var]]]
         
         # Make sure we have enough colors.
         n_colors <- df3$cell_type %>% unique %>% length
@@ -223,9 +226,9 @@ for(method in names(imm_decon_res_list)) {
           # https://stackoverflow.com/questions/40361800/r-ggplot-stacked-geom-rect
           # ^ for stacked bar charts using geom_rect().
           # See also https://stackoverflow.com/questions/28956442/automatically-resize-bars-in-ggplot-for-uniformity-across-several-graphs-r
-          for(group in unique(df3$Group)) {
+          for(group in unique(df3$ChunkingGroup)) {
             plot <- df3 %>% 
-              dplyr::filter(Group==group) %>% 
+              dplyr::filter(ChunkingGroup==group) %>% 
               ggplot(aes(x = !!as.name(grouping_var), y = fraction, fill = cell_type)) + 
               geom_bar(stat = "identity") + scale_fill_manual(values = mycolors) + # , guide = FALSE
               scale_color_manual(values = mycolors) + # , guide = FALSE
@@ -252,7 +255,7 @@ for(method in names(imm_decon_res_list)) {
             savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
             
             # Save to PPT if there won't be too many graphs.
-            if(length(unique(df3$Group)) <= 7) {
+            if(length(unique(df3$ChunkingGroup)) <= 7) {
               pptx <- pptx %>%
                 officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
                 officer::ph_with(value = paste0("Immune deconvolution"),
@@ -269,9 +272,9 @@ for(method in names(imm_decon_res_list)) {
         
         # For CIBERSORT (when installed), MCPcounter, xCell, Abis, and Estimate, create a dot plot to show between-sample (within-cell-type) comparisons.
         if(method %in% c("cibersort", "mcp_counter", "xcell", "abis", "estimate")) {
-          for(group in unique(df3$Group)) {
+          for(group in unique(df3$ChunkingGroup)) {
             plot <- df3 %>% 
-              dplyr::filter(Group==group) %>% 
+              dplyr::filter(ChunkingGroup==group) %>% 
               ggplot(aes(x = !!as.name(grouping_var), y = score, color = cell_type)) +
               geom_point(size = 4) +
               facet_wrap(~cell_type, scales = "free_x", ncol = 3) +
@@ -298,7 +301,7 @@ for(method in names(imm_decon_res_list)) {
             savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
             
             # Save to PPT if there won't be too many graphs.
-            if(length(unique(df3$Group)) <= 5) {
+            if(length(unique(df3$ChunkingGroup)) <= 5) {
               pptx <- pptx %>%
                 officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
                 officer::ph_with(value = paste0("Immune deconvolution"),
@@ -325,16 +328,17 @@ for(method in names(imm_decon_res_list)) {
 rm(pData_tmp)
 gc()
 
-###################################################################
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## Export to disk ----
 ##
-## Export to disk
-##
-###################################################################
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Export PowerPoint file.
 print(pptx, cl_args[5])
 # Export NanoStringGeoMxSet as RDS file.
-saveRDS(target_data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_immune-deconvolution.rds"))
+saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_immune-deconvolution.rds"))
 # Export deconvolution results as RDS file. 
 saveRDS(imm_decon_res_list, paste0(output_dir_rdata, "immune-deconvolution_results.rds"))
 # Export deconvolution results as Microsoft Excel file. 
