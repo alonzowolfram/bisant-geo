@@ -24,7 +24,7 @@ plot_list_normalization <- list()
 for(module in names(target_data_object_list)) {
   # Check if the combined module (WTA+TCR) exists.
   # If it does, skip the individual WTA, TCR modules.
-  if((paste(c(main_module, module_tcr), collapse = ",") %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
+  if((combined_module %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
   
   target_data_object <- target_data_object_list[[module]]
   plot_list_normalization[[module]] <- list()
@@ -36,13 +36,19 @@ for(module in names(target_data_object_list)) {
   neg_probes <- unique(negativeProbefData$TargetName)
   # Graph Q3 value vs negGeoMean of Negatives.
   ann_of_interest <- ann_of_interest
+  if(length(neg_probes) > 1) {
+    neg_probe_exprs <- t(exprs(target_data_object)[neg_probes, ])
+  } else {
+    neg_probe_exprs <- exprs(target_data_object)[neg_probes, ]
+  }
+  
   stat_data <- 
     data.frame(row.names = colnames(exprs(target_data_object)),
                Segment = colnames(exprs(target_data_object)),
                Annotation = pData(target_data_object)[, ann_of_interest],
                Q3 = unlist(apply(exprs(target_data_object), 2,
                                  quantile, 0.75, na.rm = TRUE)),
-               NegProbe = exprs(target_data_object)[neg_probes, ]) # t() because otherwise the dimensions are wrong. EDIT 2024/12/12: NO.
+               NegProbe = neg_probe_exprs) # t() because otherwise the dimensions are wrong. EDIT 2024/12/12: NO. EDIT 2025/03/14: t() when length(neg_probes) > 1, no t otherwise.
   
   stat_data_m_list <- list()
   plot_list_normalization[[module]][["Q3_norm"]] <- list()
@@ -185,6 +191,10 @@ for(module in names(target_data_object_list)) {
 
 ### Log-transformation ----
 for(module in names(target_data_object_list)) {
+  # Check if the combined module (WTA+TCR) exists.
+  # If it does, skip the individual WTA, TCR modules.
+  if((combined_module %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
+  
   target_data_object <- target_data_object_list[[module]]
   
   for(norm_method in names(target_data_object@assayData)) {
@@ -208,80 +218,19 @@ for(module in names(target_data_object_list)) {
 ## Split combined WTA+TCR ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# Extract unique modules from the WTA+TCR NanoStringGeoMxSet.
-modules <- fData(target_data_object_list[[paste(c(main_module, module_tcr), collapse = ",")]]) %>% .$Module %>% unique
-
-# Split the NanoStringGeoMxSet object by Module
-individual_module_list <- lapply(modules, function(mod) {
-  subset(target_data_object_list[[paste(c(main_module, module_tcr), collapse = ",")]], Module == mod)
-})
-names(individual_module_list) <- modules
-
-# Combine with `target_data_object_list`.
-target_data_object_list <- c(individual_module_list, target_data_object_list[names(target_data_object_list) != paste(c(main_module, module_tcr), collapse = ",")])
-
-## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-##                                                                
-## PowerPoint ----
-##
-## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# 
-# # Add a section header.
-# pptx <- pptx %>% 
-#   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-#   officer::ph_with(value = paste0("Normalization"), 
-#                    location = ph_location_label(ph_label = "Title 1"))
-# 
-# # Graphing parameters.
-# plot_width_q3 <- 12
-# plot_height_q3 <- 12
-# plot_width <- 6
-# plot_height <- 6
-# units <- "in"
-# res <- 300
-# # Add the graphs.
-# for(module in names(target_data_object_list)) {
-#   for(item in names(plot_list_normalization[[module]])) {
-#     if(item=="Q3_norm") {
-#       for(item2 in names(plot_list_normalization[[module]][[item]])) {
-#         plot <- plot_list_normalization[[module]][[item]][[item2]]
-#         
-#         # Save to EPS and PNG and then ...
-#         eps_path <- paste0(output_dir_pubs, "normalization_", item, "-", item2, ".eps")
-#         png_path <- paste0(output_dir_pubs, "normalization_", item, "-", item2, ".png")
-#         saveEPS(plot, eps_path, width = plot_width_q3, height = plot_height_q3)
-#         savePNG(plot, png_path, width = plot_width_q3, height = plot_height_q3, units = units, res = res)
-#         
-#         # Add to the PowerPoint. 
-#         pptx <- pptx %>%
-#           officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-#           officer::ph_with(value = paste0("Normalization"),
-#                            location = ph_location_label(ph_label = "Title 1")) %>% 
-#           officer::ph_with(value = external_img(png_path, width = plot_width_q3, height = plot_height_q3, unit = units),
-#                            location = ph_location_label(ph_label = "Content Placeholder 2"),
-#                            use_loc_size = FALSE)
-#         
-#       } 
-#     } else {
-#       plot <- plot_list_normalization[[module]][[item]]
-#       
-#       # Save to EPS and PNG and then ...
-#       eps_path <- paste0(output_dir_pubs, "normalization_", item, ".eps")
-#       png_path <- paste0(output_dir_pubs, "normalization_", item, ".png")
-#       saveEPS(plot, eps_path, width = plot_width, height = plot_height)
-#       savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
-#       
-#       # Add to the PowerPoint. 
-#       pptx <- pptx %>%
-#         officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-#         officer::ph_with(value = paste0("Normalization"),
-#                          location = ph_location_label(ph_label = "Title 1")) %>% 
-#         officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-#                          location = ph_location_label(ph_label = "Content Placeholder 2"),
-#                          use_loc_size = FALSE)
-#     }
-#   }
-# }
+if(combined_module %in% names(target_data_object_list)) {
+  # Extract unique modules from the WTA+TCR NanoStringGeoMxSet.
+  modules <- fData(target_data_object_list[[paste(c(main_module, module_tcr), collapse = ",")]]) %>% .$Module %>% unique
+  
+  # Split the NanoStringGeoMxSet object by Module
+  individual_module_list <- lapply(modules, function(mod) {
+    subset(target_data_object_list[[paste(c(main_module, module_tcr), collapse = ",")]], Module == mod)
+  })
+  names(individual_module_list) <- modules
+  
+  # Combine with `target_data_object_list`.
+  target_data_object_list <- c(individual_module_list, target_data_object_list[names(target_data_object_list) != paste(c(main_module, module_tcr), collapse = ",")])
+}
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                

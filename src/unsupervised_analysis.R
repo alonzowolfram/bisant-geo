@@ -326,35 +326,38 @@ if(perform_PCA) dim_red_types <- c(dim_red_types, "PCA")
 # Create a list to hold 16S score plots.
 plot_list_16s_score <- list()
 
-message("Creating graph of 16S scores.")
-for(dim_red_type in dim_red_types) {
-  
-  # Map 16S scores onto dimension-reduction plot.
-  for(norm_method in normalization_methods) {
-    if(norm_method %in% c("exprs", "bg_sub") | base::grepl("log_", norm_method)) next # Skip over raw data, background-subtracted-only data, and log-transformed data.
+# Only graph 16S scores if 16S module is set.
+if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) {
+  message("Creating graph of 16S scores.")
+  for(dim_red_type in dim_red_types) {
     
-    for(compartment_var in compartment_vars) {
-      # Create the data frame.
-      dim_red_col_names <- paste0(dim_red_type, 1:2, "_", norm_method)
-      dat <- cbind(dim_red_list[[paste0(dim_red_type, "_", norm_method)]], 
-        pData(target_data_object)[, c("Score16S", compartment_var)])
+    # Map 16S scores onto dimension-reduction plot.
+    for(norm_method in normalization_methods) {
+      if(norm_method %in% c("exprs", "bg_sub") | base::grepl("log_", norm_method)) next # Skip over raw data, background-subtracted-only data, and log-transformed data.
       
-      # Create the graph.
-      plot <- dat %>% 
-        ggplot(aes(x = !!as.name(dim_red_col_names[1]), y = !!as.name(dim_red_col_names[2]))) + 
-        geom_point(aes(size = Score16S, color = !!as.name(compartment_var))) +
-        labs(title = paste0(dim_red_type, " | ", norm_method, " | ", "Compartment: ", compartment_var),
-             color = paste0(compartment_var)) +
-        theme_bw() +
-        theme(panel.grid.minor = element_blank(),
-              panel.grid.major = element_blank())
-      print(plot)
-      
-      plot_list_16s_score[[paste0(dim_red_type, "_", norm_method, "_", compartment_var)]] <- plot
-      
-    } # End compartment variable loop.
-  } # End normalization methods loop.
-} # End dimension reductions loop.
+      for(compartment_var in compartment_vars) {
+        # Create the data frame.
+        dim_red_col_names <- paste0(dim_red_type, 1:2, "_", norm_method)
+        dat <- cbind(dim_red_list[[paste0(dim_red_type, "_", norm_method)]], 
+                     pData(target_data_object)[, c("Score16S", compartment_var)])
+        
+        # Create the graph.
+        plot <- dat %>% 
+          ggplot(aes(x = !!as.name(dim_red_col_names[1]), y = !!as.name(dim_red_col_names[2]))) + 
+          geom_point(aes(size = Score16S, color = !!as.name(compartment_var))) +
+          labs(title = paste0(dim_red_type, " | ", norm_method, " | ", "Compartment: ", compartment_var),
+               color = paste0(compartment_var)) +
+          theme_bw() +
+          theme(panel.grid.minor = element_blank(),
+                panel.grid.major = element_blank())
+        print(plot)
+        
+        plot_list_16s_score[[paste0(dim_red_type, "_", norm_method, "_", compartment_var)]] <- plot
+        
+      } # End compartment variable loop.
+    } # End normalization methods loop.
+  } # End dimension reductions loop.
+}
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                

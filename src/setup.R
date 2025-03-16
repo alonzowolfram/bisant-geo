@@ -638,5 +638,9 @@ rdata_folder <- ifelse(workflow_system=="Nextflow", "", "Rdata/")
 ## Miscellaneous settings ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Normalization names
 normalization_names <- c("raw", "Q3-normalized", "background-normalized", "background-subtracted", "background-subtracted + Q3-normalized", "background-subtracted + P90-normalized", "background-subtracted + background-normalized", "quantile-normalized")
 names(normalization_names) <- c("exprs", "q3_norm", "neg_norm", "bg_sub", "bg_sub_q3", "bg_sub_p90", "bg_sub_neg", "quant")
+
+# Name of the combined module (WTA+TCR)
+combined_module <- ifelse(!flagVariable(module_tcr), c(main_module, module_tcr) %>% paste(collapse = ","), "") 

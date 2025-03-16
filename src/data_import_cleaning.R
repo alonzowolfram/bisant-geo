@@ -78,28 +78,29 @@ for(pkc_file in pkc_files) {
 ### Data loading: WTA+TCR ----
 ##
 ## ................................................
-if(!flagVariable(module_tcr)) {
+if(!flagVariable(combined_module)) {
   wta_tcr_pkc_modules <- c(main_module, module_tcr)
   message(paste0("Working on combined WTA+TCR modules ", paste(wta_tcr_pkc_modules, collapse = ", ")))
 
   # Create the data object (a NanoString GeoMx set) from the input files.
   wta_tcr_pkc_files <- paste0(pkc_dir, "/", wta_tcr_pkc_modules, ".pkc")
-  data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
-                                        pkcFiles = wta_tcr_pkc_files,
-                                        phenoDataFile = sample_annotation_file,
-                                        phenoDataSheet = phenodata_sheet_name,
-                                        phenoDataDccColName = phenodata_dcc_col_name,
-                                        protocolDataColNames = protocol_data_col_names,
-                                        experimentDataColNames = experiment_data_col_names)
-  # Name the current module.
-  module <- c(main_module, module_tcr) %>% paste(collapse = ",")
-
-  # Save to the list.
-  data_object_list[[module]] <- data_object
-
-  # Clean up.
-  rm(data_object)
-  gc()
+  # Check that all of the requisite PKC files exist.
+  if(!all(file.exists(wta_tcr_pkc_files))) { warning("One or more of the WTA and/or TCR PKC files is missing. Combined WTA+TCR object will not be created (but separate objects will still be generated.)") } else {
+    data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
+                                          pkcFiles = wta_tcr_pkc_files,
+                                          phenoDataFile = sample_annotation_file,
+                                          phenoDataSheet = phenodata_sheet_name,
+                                          phenoDataDccColName = phenodata_dcc_col_name,
+                                          protocolDataColNames = protocol_data_col_names,
+                                          experimentDataColNames = experiment_data_col_names)
+    
+    # Save to the list.
+    data_object_list[[combined_module]] <- data_object
+    
+    # Clean up.
+    rm(data_object)
+    gc()
+  }
 }
 
 # For each separate data object: clean and filter the data, and generate neovariables.
