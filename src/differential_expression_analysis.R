@@ -45,6 +45,8 @@ message("Finished setup for differential expression analysis.")
 # Now we can loop over all the param combos and run LMM on each one.
 message("Performing differential expression analysis.")
 
+results2 <- data.frame()
+model_number <- 1
 for (lmm_formula in lmm_formulae) {
   message(glue::glue("Working on model {lmm_formula}.") )
   
@@ -98,11 +100,12 @@ for (lmm_formula in lmm_formulae) {
         
         tdo_sub <- subset(target_data_object, TargetName %in% genes_pass_cutoffs, ind)
         
+        # Fit the model.
         mixedOutmc <- tryCatch(
           mixedModelDE(tdo_sub, 
                        elt = paste0("log_", norm_method), 
                        modelFormula = model_formula, 
-                       groupVar = "TestVar", 
+                       groupVar = groupVar, 
                        nCores = parallel::detectCores(), multiCore = TRUE),
           error = function(e) {
             warning(glue::glue("Error in model {lmm_formula} - {norm_method} - {subset_level} - {subset_var}: {e$message}"))
@@ -112,16 +115,22 @@ for (lmm_formula in lmm_formulae) {
         
         if (skip_to_next) next
         
-        r_test <- do.call(rbind, mixedOutmc["lsmeans", ]) %>% as.data.frame()
-        r_test <- r_test %>% mutate(
-          Gene = rep(colnames(mixedOutmc), each = nrow(mixedOutmc[["lsmeans"]][[1]])),
-          `Subset variable` = subset_var,
-          `Subset level` = subset_level,
-          `Normalization method` = normalization_names[names(normalization_names) == norm_method],
-          FDR = p.adjust(`Pr(>|t|)`, method = "fdr"),
-          `Contrast variable` = test_var,
-          `Model number` = i
-        ) %>% relocate(`Contrast variable`, .before = Contrast)
+        r_test <- do.call(rbind, mixedOutmc["lsmeans", ]) %>% 
+          as.data.frame() %>% 
+          tibble::rownames_to_column(var = "Contrast") %>% 
+          mutate(
+            Contrast = Contrast %>% regexPipes::gsub("\\.[[:digit:]]+$", "") %>% regexPipes::gsub("\\.{3}", " \\- "),
+            Gene = colnames(mixedOutmc),
+            `Subset variable` = subset_var,
+            `Subset level` = subset_level,
+            `Normalization method` = normalization_names[names(normalization_names) == norm_method],
+            FDR = p.adjust(`Pr(>|t|)`, method = "fdr"),
+            `Contrast variable` = groupVar,
+            `Model` = as.character(lmm_formula)
+            # ,`Model number` = i
+        ) %>% 
+          relocate(`Contrast variable`, .before = Contrast) %>%
+          relocate(Gene, .before = Estimate)
         
         results2 <- bind_rows(results2, r_test)
       }
@@ -153,24 +162,25 @@ message("Graphing differentially expressed genes.")
 results2$invert_P <- (-log10(results2$`Pr(>|t|)`)) * sign(results2$Estimate)
 top_g_list <- list()
 
-model_numbers <- results2$`Model number` %>% unique
+models <- results2$`Model` %>% unique
+model_number <- 1
 for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
   
   subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
   for(subset_var_level in subset_var_levels) {
     
-    for(model_number in model_numbers) {
+    for(model in models) {
       
       contrasts <- results2 %>% dplyr::filter(`Subset variable`==subset_var & 
                                                 `Subset level`==subset_var_level & 
-                                                `Model number`==model_number) %>% .$Contrast %>% unique
+                                                `Model`==as.character(model)) %>% .$Contrast %>% unique
       for(contrast in contrasts) {
         
         for(normalization_method in unique(results2$`Normalization method`)) {
           top_g <- c()
           ind <- results2$`Subset variable`==subset_var & 
             results2$`Subset level`==subset_var_level & 
-            results2$`Model number`==model_number & 
+            results2$`Model`==as.character(model) & 
             results2$Contrast==contrast & 
             results2$`Normalization method`==normalization_method
           
@@ -184,6 +194,10 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
           
         }
       }
+      
+      # Increment `model_number`
+      model_number <- model_number + 1
+      
     }
   }
 }
@@ -202,10 +216,10 @@ results2$Color[results2$FDR < 0.05] <- "FDR < 0.05"
 results2$Color[results2$FDR < 0.001] <- "FDR < 0.001"
 results2$Color[abs(results2$Estimate) < 0.5] <- "NS or FC < 0.5"
 results2$Color <- factor(results2$Color,
-                         levels = c("NS or FC < 0.5", 
+                         levels = c("NS or FC < 0.5",
                                     "P < 0.05",
                                     "FDR < 0.25",
-                                    "FDR < 0.05", 
+                                    "FDR < 0.05",
                                     "FDR < 0.001"))
 # Set the significance colors.
 signif_cols <- c("dodgerblue",
@@ -222,22 +236,22 @@ names(signif_cols) <- c("FDR < 0.001",
 # Graph results2
 # Initialize the list to hold the plots.
 plot_list_diff_exprs <- list()
-model_numbers <- results2$`Model number` %>% unique
+model_list <- list() # Hold all the model formulae so we can access them when arranging the plots into grids.
+models <- results2$`Model` %>% unique
+model_number <- 1
 for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
   
   subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
   for(subset_var_level in subset_var_levels) {
     
-    for(model_number in model_numbers) {
+    for(model in models) {
       
-      contrasts <- results2 %>% dplyr::filter(`Subset variable`==subset_var & `Subset level`==subset_var_level & `Model number`==model_number) %>% .$Contrast %>% unique
+      contrasts <- results2 %>% dplyr::filter(`Subset variable`==subset_var & `Subset level`==subset_var_level & `Model`==model) %>% .$Contrast %>% unique
       for(normalization_method in unique(results2$`Normalization method`)) {
         
         for(contrast in contrasts) {
           # Get the parameters for this experiment.
-          test_var <- param_combos %>% dplyr::filter(`Model number`==model_number) %>% dplyr::select(`Test variable`) %>% unlist %>% .[1]
-          random_slope_i <- param_combos %>% dplyr::filter(`Model number`==model_number) %>% dplyr::select(`Random slope`) %>% unlist %>% .[1]
-          random_slope_status <- ifelse(random_slope_i %in% c("no", "FALSE"), " | No random slope", " | With random slope")
+          test_var <- results2 %>% dplyr::filter(`Model`==model) %>% dplyr::select(`Contrast variable`) %>% unlist %>% .[1]
           test_var_lv_1 <- contrast %>% strsplit(" - ") %>% unlist %>% .[1] #pData(target_data_object)[[test_var]] %>% levels %>% .[1]
           test_var_lv_2 <- contrast %>% strsplit(" - ") %>% unlist %>% .[2] #pData(target_data_object)[[test_var]] %>% levels %>% .[2]
           if(subset_var=="NA" || is.na(subset_var) || subset_var=="All observations") {
@@ -263,7 +277,7 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
           results2_sub <- results2 %>% dplyr::filter(
             `Subset variable`==subset_var &
               `Subset level`==subset_var_level &
-              `Model number`==model_number &
+              `Model`==model &
               Contrast==contrast & 
               `Normalization method`==normalization_method
           )
@@ -293,6 +307,9 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
           
         }
       }
+      
+      model_list[[paste0("model_", model_number)]] <- as.character(model)
+      model_number <- model_number + 1
     }
   }
 }
@@ -347,11 +364,8 @@ for(subset_var in names(plot_list_diff_exprs)) {
         for(item in names(p_list)) {p_list[[item]] <- p_list[[item]] + theme(legend.position = "none")}
         
         # Get the model information (test/contrast variable, random slope status, etc.)
-        i <- model_num %>% regexPipes::gsub("model_", "")
-        random_slope_i <- param_combos[i,1]
-        test_var <- param_combos[i,2]
-        random_intercept_var <- param_combos[i,3]
-        random_slope_status <- ifelse(random_slope_i %in% c("no", "FALSE"), " | No random slope", " | With random slope")
+        model <- model_list[[model_num]] %>% as.character
+        test_var <- results2 %>% dplyr::filter(Model == model) %>% .$`Contrast variable` %>% unique %>% .[1]
         if(subset_var=="NA" || is.na(subset_var) || subset_var=="All observations") {
           subset_by <- ""
         } else {
@@ -363,7 +377,8 @@ for(subset_var in names(plot_list_diff_exprs)) {
         plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("Significance, -log10(P)", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = scaling_factor)),
                                                            bottom = grid::textGrob("", gp = grid::gpar(cex = scaling_factor)),
                                                            top = grid::textGrob(paste0("DE genes ", subset_by, 
-                                                                                       " \nTest (contrast) variable: ", test_var, random_slope_status,
+                                                                                       " \nTest (contrast) variable: ", test_var, 
+                                                                                       " | ", model,
                                                                                        " \nNormalization method: ", normalization_method), 
                                                                                 gp = grid::gpar(cex = scaling_factor)))
         
