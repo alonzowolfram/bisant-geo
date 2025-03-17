@@ -3,21 +3,14 @@
 ## Setup ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+message("Setting up for pathway analysis.")
+
 ## Source the setup.R file.
 source("src/setup.R")
 
-# Read in the NanoStringGeoMxSet object. 
-message("Reading in NanoStringGeoMxSet list object.")
-target_data_object_list <- readRDS(cl_args[4])
-# We'll only need the main module for this one.
-message("Extracting main module.")
-target_data_object <- target_data_object_list[[main_module]]
-# Read in the PowerPoint.
-message("Reading in PowerPoint.")
-pptx <- read_pptx(cl_args[5])
 # Read in the DE genes table.
 message("Reading in DE genes table.")
-results2 <- read.csv(cl_args[6], row.names = 1, check.names = FALSE)
+results2 <- read.csv(cl_args[5], row.names = 1, check.names = FALSE)
 print(paste0("results2 dimensions: ", dim(results2)))
 
 # If pathway_table_file is provided, check that it's a valid file.
@@ -57,18 +50,16 @@ nes_palette <- colorRampPalette(c("blue", "white", "red"))(100)
 # Set the normalization method.
 normalization_method <- normalization_names[names(normalization_names)==normalization_methods[1]]
 
-# Add section header to PPT.
-pptx <- pptx %>% 
-  officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("Pathway analysis (FGSEA)"), 
-                   location = ph_location_label(ph_label = "Title 1"))
-
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## Pathway analysis (FGSEA) ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+## ................................................
+##
+### Data preparation ----
+##
+## ................................................
 # Subset results2 table (data frame of differentially expressed genes).
 message(paste0("Subsetting results to include only those from the normalization method ", normalization_method, "."))
 results2_sub <- results2 %>% dplyr::filter(`Normalization method`==normalization_method)
@@ -101,32 +92,38 @@ if(sum(!is.null(individual_pathways)) > 0 & sum(individual_pathways != "") > 0) 
 message("Creating MSigDB gene set list.")
 msigdbr_pathway_list <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
 
+## ................................................
+##
+### Calculation and graphing ----
+##
+## ................................................
 # Loop through DE gene table and perform FGSEA.
 # https://bioconductor.org/packages/devel/bioc/vignettes/fgsea/inst/doc/fgsea-tutorial.html
 plot_list_pathway_analysis <- list()
 pathway_df <- data.frame()
-model_numbers <- results2_sub$`Model number` %>% unique
+models <- results2_sub$`Model` %>% unique
+model_number <- 1
+model_list <- list() # Hold all the model formulae so we can access them when arranging the plots into grids.
+
 message("Performing FGSEA.")
 for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
   
   subset_var_levels <- results2_sub %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
   for(subset_var_level in subset_var_levels) {
     
-    for(model_number in model_numbers) {
-      i <- model_number %>% regexPipes::gsub("model_", "")
-      
+    for(model in models) {
       # Get the contrasts.
-      contrasts <- results2_sub %>% dplyr::filter(`Subset variable`==subset_var & `Subset level`==subset_var_level & `Model number`==model_number) %>% .$Contrast %>% unique
+      contrasts <- results2_sub %>% dplyr::filter(`Subset variable`==subset_var & `Subset level`==subset_var_level & `Model`==model) %>% .$Contrast %>% unique
       # Get the contrast variable. 
-      contrast_var <- results2_sub %>% dplyr::filter(`Model number`==model_number) %>% .$`Contrast variable` %>% .[1]
+      contrast_var <- results2_sub %>% dplyr::filter(`Model`==model) %>% .$`Contrast variable` %>% .[1]
       
       for(contrast in contrasts) {
-        message(paste0("Subset variable ", subset_var, " | level ", subset_var_level, " | model number ", model_number, " | contrast ", contrast))
+        message(paste0("Subset variable ", subset_var, " | level ", subset_var_level, " | model ", model, " | contrast ", contrast))
         # Subset. 
         results2_sub_sub <- results2_sub %>% dplyr::filter(
           `Subset variable`==subset_var &
             `Subset level`==subset_var_level &
-            `Model number`==i &
+            `Model`==model &
             Contrast==contrast
         )
         
@@ -135,7 +132,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         names(ranks) <- results2_sub_sub$Gene
         ranks <- ranks %>% .[order(.)]
         
-        # Run FGSEA.
+        #### Calculation ----
         message("Running FGSEA.")
         fgseaRes <- fgsea(pathways = msigdbr_pathway_list, 
                           stats    = ranks,
@@ -154,6 +151,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         
         # Add pathway ranking score (-log10(padj) * |NES|)
         message("Adding pathway ranking scores.")
+        
         df_sub$PathwayScore <- -log10(df_sub$padj) * abs(df_sub$NES)
         # Before calculating percentiles for pathway, cull pathway list down to its final form (i.e., what will actually be graphed.)
         # If individual_pathways is set, subset to include only the pathways of interest.
@@ -163,16 +161,20 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         
         # Add information about the model (model number, contrast variable, current contrast.)
         message("Adding information about model.")
-        df_sub$`Model number` <- model_number
+        
+        df_sub$`Model` <- model
         df_sub$`Contrast variable` <- contrast_var
         df_sub$Contrast <- contrast
           
         # Add column indicating percentile (how high up the list a given pathway is.)
-        df_sub <- df_sub %>% dplyr::arrange(-PathwayScore) %>% dplyr::mutate(percentile = 100 - (1:nrow(.) / nrow(.) * 100))
+        df_sub <- df_sub %>% 
+          dplyr::arrange(-PathwayScore) %>% 
+          dplyr::mutate(percentile = 100 - (1:nrow(.) / nrow(.) * 100))
         df_sub$percentile <- format(round(df_sub$percentile, 1), nsmall = 1)
         
-        # Graph bar charts.
+        ### Graphing ----
         message("Graphing.")
+        
         upper_limit <- ifelse(max(df_sub$NES) > 0, max(df_sub$NES) %>% ceiling(), max(df_sub$NES) %>% abs %>% ceiling())
         lower_limit <- ifelse(min(df_sub$NES) < 0, min(df_sub$NES) %>% floor(), min(df_sub$NES) %>% -. %>% floor())
         upper_limit_axis <- ifelse(max(df_sub$NES) < 0, 0, upper_limit)
@@ -240,18 +242,25 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
           plotEnrichment(msigdbr_pathway_list[[pathway]], ranks, gseaParam = 1, ticksSize = 0.2) +
             ggtitle(paste0(pathway, " | contrast: ", contrast, " | subset by ", subset_var, " | level: ", subset_var_level))
           ggsave(filename = paste0(output_dir_pubs, 
-                                   paste0(pathway, "_", contrast, "_model-", i, "_subset-var", subset_var, "_level-", subset_var_level, ".png") %>% regexPipes::gsub("\\/", "_")), 
+                                   paste0(pathway, "_", contrast, "_model-", model_number, "_subset-var", subset_var, "_level-", subset_var_level, ".png") %>% regexPipes::gsub("\\/", "_")), 
                  height = 9, width = 10, units = "in")
 
         }
         
       } # End contrasts for loop.
-    } # End model_numbers for loop.
+      
+      model_list[[paste0("model_", model_number)]] <- as.character(model)
+      model_number <- model_number + 1
+      
+    } # End models for loop.
   } # End subset_var_levels for loop.
 } # End Subset variables for loop.
 
-# Arrange plots into grid
-# and add to PowerPoint.
+## ................................................
+##
+### Arranging plots into grids ----
+##
+## ................................................
 # Graphing parameters.
 plot_width <- 20
 plot_height <- 15
@@ -287,11 +296,11 @@ for(sv in names(plot_list_pathway_analysis)) {
       # Each plot will have a different scale, so we will not include a common legend.
       # for(item in names(p_list)) {p_list[[item]] <- p_list[[item]] + theme(legend.position = "none")}
 
-      # Get the model information (test/contrast variable, random slope status, etc.)
-      i <- model_num %>% regexPipes::gsub("model_", "")
+      # Get the model information (test/contrast variable, etc.)
+      model <- model_list[[model_num]]
       subset_var <- sv
       subset_var_level <- svl
-      test_var <- results2_sub %>% dplyr::filter(`Model number`==i) %>% .$`Contrast variable` %>% .[1]
+      test_var <- results2_sub %>% dplyr::filter(`Model`==model) %>% .$`Contrast variable` %>% .[1]
 
       if(subset_var=="DummySubsetVar") {
         subset_by <- ""
@@ -309,24 +318,6 @@ for(sv in names(plot_list_pathway_analysis)) {
                                                                                      "\nTest (contrast) variable: ", test_var,
                                                                                      "\nNormalization method: ", normalization_method)))
 
-      # Save to EPS and PNG and then ...
-      eps_path <- paste0(output_dir_pubs, 
-                         paste0("FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".eps") %>% regexPipes::gsub("\\/", "_")) #paste0(output_dir_pubs, "")
-      png_path <- paste0(output_dir_pubs, 
-                         paste0("FGSEA_bar-graphs_", filename_subset_by, "contrast-variable-", test_var, ".png") %>% regexPipes::gsub("\\/", "_")) #paste0(output_dir_pubs, "")
-      plot <- plot_grid# %>% ggpubr::as_ggplot()
-      saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
-      savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * res_scaling_factor))
-     
-      # ... add to the PowerPoint.
-      pptx <- pptx %>%
-        officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-        officer::ph_with(value = paste0("Pathway analysis"),
-                         location = ph_location_label(ph_label = "Title 1")) %>%
-        officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-                         location = ph_location_label(ph_label = "Content Placeholder 2"),
-                         use_loc_size = FALSE)
-
       # Save to list.
       plot_list_pathway_analysis_grid[[sv]][[svl]][[model_num]] <- plot_grid#2 %>% ggpubr::as_ggplot()
 
@@ -339,12 +330,8 @@ for(sv in names(plot_list_pathway_analysis)) {
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
 message("Exporting to disk.")
-# Export PowerPoint file.
-print(pptx, cl_args[5])
-# Export NanoStringGeoMxSet as RDS file.
-saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_pathway-analysis.rds"))
+
 # Export FGSEA results as table.
 pathway_df %>% write.csv(paste0(output_dir_tabular, "pathway-analysis_results.csv"))
 # Export the raw plots as RDS file.

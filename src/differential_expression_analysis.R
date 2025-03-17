@@ -47,7 +47,7 @@ message("Performing differential expression analysis.")
 
 results2 <- data.frame()
 model_number <- 1
-for (lmm_formula in lmm_formulae) {
+for (lmm_formula in lmm_formulae_de) {
   message(glue::glue("Working on model {lmm_formula}.") )
   
   # Create the model formula.
@@ -270,7 +270,7 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
           # Now that we manually create a grid, we can just include the appropriate top genes.
           top_genes <- top_g_list[[subset_var]][[subset_var_level]][[paste0("model_", model_number)]][[contrast]][[normalization_method]]
           
-          # Plot.
+          # Set up the data to plot.
           n <- length(contrasts)
           nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # Used for the font size of the volcano plot labels.
           
@@ -281,6 +281,7 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
               Contrast==contrast & 
               `Normalization method`==normalization_method
           )
+          # Make the ggplot.
           plot <- ggplot(results2_sub,
                          aes(x = Estimate, y = -log10(`Pr(>|t|)`),
                              color = Color, label = Gene)) +
