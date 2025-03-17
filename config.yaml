@@ -294,9 +294,8 @@ experiment:
     # If not provided, the value will default to 50 (50th percentile, a.k.a median)
     # You can provide multiple values, separated by a comma (",").
     # -----------------------------------------------------------------------------------------
-    # NOTE: IF YOU ENTER MULTIPLE VALUES, SURROUND THE ENTIRE STRING WITH QUOTATION MARKS ("").
-    # E.G.: IF YOU ONLY WANT TO USE THE 50TH PERCENTILE, JUST ENTER 50. 
-    # BUT IF YOU WANT TO USE THE 50TH, 66TH, AND 75TH PERCENTILE, ENTER "50,67,75"
+    # NOTE: YOU MUST SURROUND THE ENTIRE STRING WITH QUOTATION MARKS (""). 
+    # E.G., IF YOU WANT TO USE THE 50TH, 66TH, AND 75TH PERCENTILE, ENTER "50,67,75"
     # NOTE THE QUOTATION MARKS! 
     # THIS IS DUE TO THE WAY R READS IN YAML FILES--IF IT THINKS IT'S AN INTEGER BUT DOESN'T
     # CONFORM TO WHAT IT THINKS AN INTEGER SHOULD LOOK LIKE, IT WILL CONVERT IT TO NA!
@@ -309,7 +308,7 @@ experiment:
     # You can use these variables for downstream analysis, such as unsupervised analysis
     # or differential expression analysis - i.e., you can enter these variables in 
     # the parameters in following sections, if you so wish.
-    percentile_16s_cutoff: 50
+    percentile_16s_cutoff: "50"
 
     # [Optional] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to
     # the variables you'd like to subset the data set by before running 16S analysis.

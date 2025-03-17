@@ -116,6 +116,7 @@ if(!flagVariable(module_16s)) { # Only run the module if the 16S PKC module is p
     # Samples will then be categorized as high or low 16S based on (a) user-defined quantile cutoff(s).
     mean_16s <- colMeans(bis_mat)
     
+    percentile_16s_cutoff <- as.numeric(percentile_16s_cutoff)
     for(cutoff in percentile_16s_cutoff) {
       # Determine the classification.
       group_16s <- ifelse(mean_16s >= quantile(mean_16s, probs = (cutoff/100)), "16S high", "16S low")
