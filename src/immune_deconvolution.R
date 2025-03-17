@@ -137,94 +137,97 @@ for(method in imm_decon_methods) {
 ### Differential abundance ----
 ##
 ## ................................................
-# By "differential abundance," we mean _between-sample_ comparisons of immune-cell populations,
-# NOT between-cell-type comparisons.
-# Per https://omnideconv.org/immunedeconv/articles/immunedeconv.html,
-# the following methods allow between-sample comparisons:
-# MCP-counter, xCell, TIMER, ConsensusTME, ESTIMATE, ABIS, mMCP-counter, BASE, EPIC, quanTIseq, CIBERSORT abs., seqImmuCC
-between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq")
-model_number <- 1
-da_res_list <- list()
-for(formula in lmm_formulae_immune) {
-  message(paste("Working on model ", as.character(formula)))
-  da_res_list[[paste0("model_", model_number)]] <- list()
-  
-  # Strip anything before the `~`.
-  formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
-  # Extract variables from formula
-  formula_vars <- extractVariables(formula) # Input: string
-  # Extract first fixed effect from formula.
-  first_fixed_effect <- extractFirstFixedEffect(as.formula(formula)) # Input: formula
-  # Add the dependent variable.
-  formula <- paste0("score ", formula) %>% as.formula
-  
-  # Ensure Sample is included
-  formula_vars <- c("Sample", formula_vars)
-  
-  # Add the `Sample` column (created from rownames) to pData, then
-  # convert all selected columns (except Sample) to factors
-  # and subset to include only necessary variables.
-  # First identify which columns in pData_subset are data frames (e.g. LOQ)
-  df_cols <- sapply(pData(target_data_object), is.data.frame)
-  
-  # Convert only non-data-frame columns (except Sample) to factors
-  pData_subset <- pData(target_data_object) %>%
-    tibble::rownames_to_column(var = "Sample") %>% 
-    mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.))) %>% 
-    select(all_of(formula_vars))
-  
-  for(method in names(imm_decon_res_list)) {
-    message(paste("Working on method ", method))
-    da_res_list[[paste0("model_", model_number)]][[method]] <- list()
+if(!flagVariable(lmm_formulae_immune)) {
+  # By "differential abundance," we mean _between-sample_ comparisons of immune-cell populations,
+  # NOT between-cell-type comparisons.
+  # Per https://omnideconv.org/immunedeconv/articles/immunedeconv.html,
+  # the following methods allow between-sample comparisons:
+  # MCP-counter, xCell, TIMER, ConsensusTME, ESTIMATE, ABIS, mMCP-counter, BASE, EPIC, quanTIseq, CIBERSORT abs., seqImmuCC
+  between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq")
+  model_number <- 1
+  da_res_list <- list()
+  for(formula in lmm_formulae_immune) {
+    message(paste("Working on model ", as.character(formula)))
+    da_res_list[[paste0("model_", model_number)]] <- list()
     
-    # Check if the method can be used in between-sample comparisons.
-    if(!(method %in% between_sample_methods)) next
+    # Strip anything before the `~`.
+    formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
+    # Extract variables from formula
+    formula_vars <- extractVariables(formula) # Input: string
+    # Extract first fixed effect from formula.
+    first_fixed_effect <- extractFirstFixedEffect(as.formula(formula)) # Input: formula
+    # Add the dependent variable.
+    formula <- paste0("score ", formula) %>% as.formula
     
-    # Convert immune_data to long format
-    # and merge with `pdata_subset`.
-    immune_long <- imm_decon_res_list[[method]] %>%
-      pivot_longer(cols = -cell_type, names_to = "Sample", values_to = "score") %>%
-      left_join(pData_subset, by = "Sample")
+    # Ensure Sample is included
+    formula_vars <- c("Sample", formula_vars)
     
-    # Fit model.
-    for (cell in unique(immune_long$cell_type)) {
-      message(paste("Working on cell type", cell))
+    # Add the `Sample` column (created from rownames) to pData, then
+    # convert all selected columns (except Sample) to factors
+    # and subset to include only necessary variables.
+    # First identify which columns in pData_subset are data frames (e.g. LOQ)
+    df_cols <- sapply(pData(target_data_object), is.data.frame)
+    
+    # Convert only non-data-frame columns (except Sample) to factors
+    pData_subset <- pData(target_data_object) %>%
+      tibble::rownames_to_column(var = "Sample") %>% 
+      mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.))) %>% 
+      select(all_of(formula_vars))
+    
+    for(method in names(imm_decon_res_list)) {
+      message(paste("Working on method ", method))
+      da_res_list[[paste0("model_", model_number)]][[method]] <- list()
       
-      # Subset data for this cell type
-      cell_data <- immune_long %>%
-        dplyr::filter(cell_type == cell)
+      # Check if the method can be used in between-sample comparisons.
+      if(!(method %in% between_sample_methods)) next
       
-      # Fit the user-defined linear mixed model
-      model <- lmer(as.formula(formula), data = cell_data)
-      # Extract estimated marginal means (EMMs) for pairwise comparisons
-      # Create a dynamic formula for emmeans
-      emm_formula <- as.formula(paste0("~ ", first_fixed_effect))
-      emm <- emmeans(model, emm_formula)  # Replace 'Group' with your fixed effect variable
+      # Convert immune_data to long format
+      # and merge with `pdata_subset`.
+      immune_long <- imm_decon_res_list[[method]] %>%
+        pivot_longer(cols = -cell_type, names_to = "Sample", values_to = "score") %>%
+        left_join(pData_subset, by = "Sample")
       
-      # Perform all pairwise comparisons (Tukey-adjusted)
-      pairwise_results <- contrast(emm, method = "pairwise", adjust = "tukey") %>%
-        as.data.frame() %>%
-        mutate(CellType = cell)  # Add cell type info
+      # Fit model.
+      for (cell in unique(immune_long$cell_type)) {
+        message(paste("Working on cell type", cell))
+        
+        # Subset data for this cell type
+        cell_data <- immune_long %>%
+          dplyr::filter(cell_type == cell)
+        
+        # Fit the user-defined linear mixed model
+        model <- lmer(as.formula(formula), data = cell_data)
+        # Extract estimated marginal means (EMMs) for pairwise comparisons
+        # Create a dynamic formula for emmeans
+        emm_formula <- as.formula(paste0("~ ", first_fixed_effect))
+        emm <- emmeans(model, emm_formula)  # Replace 'Group' with your fixed effect variable
+        
+        # Perform all pairwise comparisons (Tukey-adjusted)
+        pairwise_results <- contrast(emm, method = "pairwise", adjust = "tukey") %>%
+          as.data.frame() %>%
+          mutate(CellType = cell)  # Add cell type info
+        
+        # Extract fixed effect results
+        base_value <- rownames(contrasts(pData_subset[[first_fixed_effect]]))[1] # Get the baseline value.
+        model_summary <- tidy(model, effects = "fixed") %>%
+          dplyr::filter(term != "(Intercept)") %>% # Filter out the intercept.
+          dplyr::mutate(cell_type = cell, fixed_effect = first_fixed_effect, method = method, formula = as.character(formula)[3]) %>%  # Add cell type column. baseline = base_value, 
+          dplyr::mutate(term = base::gsub(paste0("^", fixed_effect), "", term)) %>% # Clean up the fixed effect name.
+          relocate(fixed_effect, .before = term) # baseline, 
+        
+        # Store results
+        da_res_list[[paste0("model_", model_number)]][[method]][[cell]] <- model_summary
+      }
       
-      # Extract fixed effect results
-      base_value <- rownames(contrasts(pData_subset[[first_fixed_effect]]))[1] # Get the baseline value.
-      model_summary <- tidy(model, effects = "fixed") %>%
-        dplyr::filter(term != "(Intercept)") %>% # Filter out the intercept.
-        dplyr::mutate(cell_type = cell, fixed_effect = first_fixed_effect, method = method, formula = as.character(formula)[3]) %>%  # Add cell type column. baseline = base_value, 
-        dplyr::mutate(term = base::gsub(paste0("^", fixed_effect), "", term)) %>% # Clean up the fixed effect name.
-        relocate(fixed_effect, .before = term) # baseline, 
-      
-      # Store results
-      da_res_list[[paste0("model_", model_number)]][[method]][[cell]] <- model_summary
+      # Combine results into a data frame
+      results_df <- bind_rows(da_res_list[[paste0("model_", model_number)]][[method]])
     }
     
-    # Combine results into a data frame
-    results_df <- bind_rows(da_res_list[[paste0("model_", model_number)]][[method]])
+    model_number <- model_number + 1
   }
-  
-  model_number <- model_number + 1
+  da_res_df <- bind_rows(rlang::squash(da_res_list)) # `sqash` recursively flattens the list.
 }
-da_res_df <- bind_rows(rlang::squash(da_res_list)) # `sqash` recursively flattens the list.
+
 
 ## ................................................
 ##
@@ -375,7 +378,6 @@ for(method in names(imm_decon_res_list)) {
 rm(pData_tmp)
 gc()
 
-
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## Export to disk ----
@@ -388,7 +390,9 @@ saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_im
 saveRDS(imm_decon_res_list, paste0(output_dir_rdata, "immune-deconvolution_results.rds"))
 openxlsx::write.xlsx(imm_decon_res_list, file = paste0(output_dir_tabular, "immune-deconvolution_results_by-method.xlsx"))
 # Export differential abundance results as RDS file and Microsoft Excel file.
-saveRDS(da_res_df, paste0(output_dir_rdata, "immune-deconvolution_differential-abundance_results.rds"))
-openxlsx::write.xlsx(da_res_df, file = paste0(output_dir_tabular, "immune-deconvolution_differential-abundance_results.xlsx"))
+if(exists("da_res_df")) {
+  saveRDS(da_res_df, paste0(output_dir_rdata, "immune-deconvolution_differential-abundance_results.rds"))
+  openxlsx::write.xlsx(da_res_df, file = paste0(output_dir_tabular, "immune-deconvolution_differential-abundance_results.xlsx"))
+}
 # Export the raw plots as RDS file.
 plot_list %>% saveRDS(paste0(output_dir_rdata, "immune-deconvolution_plots-list.rds"))

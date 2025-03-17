@@ -22,7 +22,7 @@ set.default.pathways <- function() {
   return(list(cats = cats, subcats = subcats))
 }
 
-if(!is.null(pathway_table_file)) { 
+if(!flagVariable(pathway_table_file)) { 
   if(!file.exists(pathway_table_file)) {
     msigdb_list <- set.default.pathways()
   } else {
