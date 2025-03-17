@@ -7,11 +7,9 @@
 source("src/setup.R")
 
 # Read in the NanoStringGeoMxSet object. 
-target_data_object_list <- readRDS(cl_args[4])
+target_data_object_list <- readRDS(cl_args[5])
 # We'll only need the main module for this one.
 target_data_object <- target_data_object_list[[main_module]]
-# Read in the PowerPoint.
-pptx <- read_pptx(cl_args[5])
 
 # Set the normalization method.
 normalization_method <- normalization_names[names(normalization_names)==normalization_methods[1]]
@@ -26,13 +24,7 @@ data("safeTME.matches")
 # 
 # # Calculate TPM - this is necessary for CIBERSORT among others, not so much for xCell or MCP-counter.
 # # https://bioinformatics.stackexchange.com/questions/2567/how-can-i-calculate-gene-length-for-rpkm-calculation-from-counts-data
-# # But can we even calculate TPM for GeoMx data? Bc it's probe-based, so it wouldn't have the same assumptions that RNA-seq does ... 
-
-# Add a section header.
-pptx <- pptx %>%
-  officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-  officer::ph_with(value = paste0("Immune deconvolution"),
-                   location = ph_location_label(ph_label = "Title 1"))
+# # But can we even calculate TPM for GeoMx data? Bc it's probe-based, so it wouldn't have the same assumptions that RNA-seq does ...
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
@@ -45,7 +37,7 @@ pptx <- pptx %>%
 ##
 ## ................................................
 # Subset the target data object to include only the transcriptome probes.
-target_data_object_exprs <- subset(target_data_object, Module %in% modules_exprs)
+target_data_object_exprs <- subset(target_data_object, Module %in% main_module)
 # Extract the expression matrix.
 exprs_mat <- target_data_object_exprs@assayData[[normalization_methods[1]]]
 # If the species is mouse (Mus musculus), we can still run human methods on mouse data, but we just need to convert to their human orthologues.
@@ -140,6 +132,99 @@ for(method in imm_decon_methods) {
   }
 }
 
+## ................................................
+##
+### Differential abundance ----
+##
+## ................................................
+# By "differential abundance," we mean _between-sample_ comparisons of immune-cell populations,
+# NOT between-cell-type comparisons.
+# Per https://omnideconv.org/immunedeconv/articles/immunedeconv.html,
+# the following methods allow between-sample comparisons:
+# MCP-counter, xCell, TIMER, ConsensusTME, ESTIMATE, ABIS, mMCP-counter, BASE, EPIC, quanTIseq, CIBERSORT abs., seqImmuCC
+between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq")
+model_number <- 1
+da_res_list <- list()
+for(formula in lmm_formulae_immune) {
+  message(paste("Working on model ", as.character(formula)))
+  da_res_list[[paste0("model_", model_number)]] <- list()
+  
+  # Strip anything before the `~`.
+  formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
+  # Extract variables from formula
+  formula_vars <- extractVariables(formula) # Input: string
+  # Extract first fixed effect from formula.
+  first_fixed_effect <- extractFirstFixedEffect(as.formula(formula)) # Input: formula
+  # Add the dependent variable.
+  formula <- paste0("score ", formula) %>% as.formula
+  
+  # Ensure Sample is included
+  formula_vars <- c("Sample", formula_vars)
+  
+  # Add the `Sample` column (created from rownames) to pData, then
+  # convert all selected columns (except Sample) to factors
+  # and subset to include only necessary variables.
+  # First identify which columns in pData_subset are data frames (e.g. LOQ)
+  df_cols <- sapply(pData(target_data_object), is.data.frame)
+  
+  # Convert only non-data-frame columns (except Sample) to factors
+  pData_subset <- pData(target_data_object) %>%
+    tibble::rownames_to_column(var = "Sample") %>% 
+    mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.))) %>% 
+    select(all_of(formula_vars))
+  
+  for(method in names(imm_decon_res_list)) {
+    message(paste("Working on method ", method))
+    da_res_list[[paste0("model_", model_number)]][[method]] <- list()
+    
+    # Check if the method can be used in between-sample comparisons.
+    if(!(method %in% between_sample_methods)) next
+    
+    # Convert immune_data to long format
+    # and merge with `pdata_subset`.
+    immune_long <- imm_decon_res_list[[method]] %>%
+      pivot_longer(cols = -cell_type, names_to = "Sample", values_to = "score") %>%
+      left_join(pData_subset, by = "Sample")
+    
+    # Fit model.
+    for (cell in unique(immune_long$cell_type)) {
+      message(paste("Working on cell type", cell))
+      
+      # Subset data for this cell type
+      cell_data <- immune_long %>%
+        dplyr::filter(cell_type == cell)
+      
+      # Fit the user-defined linear mixed model
+      model <- lmer(as.formula(formula), data = cell_data)
+      # Extract estimated marginal means (EMMs) for pairwise comparisons
+      # Create a dynamic formula for emmeans
+      emm_formula <- as.formula(paste0("~ ", first_fixed_effect))
+      emm <- emmeans(model, emm_formula)  # Replace 'Group' with your fixed effect variable
+      
+      # Perform all pairwise comparisons (Tukey-adjusted)
+      pairwise_results <- contrast(emm, method = "pairwise", adjust = "tukey") %>%
+        as.data.frame() %>%
+        mutate(CellType = cell)  # Add cell type info
+      
+      # Extract fixed effect results
+      base_value <- rownames(contrasts(pData_subset[[first_fixed_effect]]))[1] # Get the baseline value.
+      model_summary <- tidy(model, effects = "fixed") %>%
+        dplyr::filter(term != "(Intercept)") %>% # Filter out the intercept.
+        dplyr::mutate(cell_type = cell, fixed_effect = first_fixed_effect, method = method, formula = as.character(formula)[3]) %>%  # Add cell type column. baseline = base_value, 
+        dplyr::mutate(term = base::gsub(paste0("^", fixed_effect), "", term)) %>% # Clean up the fixed effect name.
+        relocate(fixed_effect, .before = term) # baseline, 
+      
+      # Store results
+      da_res_list[[paste0("model_", model_number)]][[method]][[cell]] <- model_summary
+    }
+    
+    # Combine results into a data frame
+    results_df <- bind_rows(da_res_list[[paste0("model_", model_number)]][[method]])
+  }
+  
+  model_number <- model_number + 1
+}
+da_res_df <- bind_rows(rlang::squash(da_res_list)) # `sqash` recursively flattens the list.
 
 ## ................................................
 ##
@@ -147,11 +232,6 @@ for(method in imm_decon_methods) {
 ##
 ## ................................................
 # https://omnideconv.org/immunedeconv/articles/detailed_example.html
-# Parameters.
-plot_width <- 12
-plot_height <- 12 
-units <- "in"
-res <- 300
 # Rename the samples to reflect their segment and type.
 pData_tmp <- pData(target_data_object) %>% as.data.frame %>% tibble::rownames_to_column(var = "rownames")
 observation_identifiers <- intersect(observation_identifiers, colnames(pData_tmp)) # Make sure the observation identifiers are actually in the pData.
@@ -159,6 +239,7 @@ pData_tmp <- pData_tmp %>% tidyr::unite("All ROIs", c(observation_identifiers, r
 pData_tmp$`All ROIs` <- pData_tmp$`All ROIs` %>% regexPipes::gsub("\\.dcc", "")
 pData_tmp$`Complete dataset` <- "Complete dataset"
 plot_list <- list()
+if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"
 for(method in names(imm_decon_res_list)) {
   plot_list[[method]] <- list()
   df <- imm_decon_res_list[[method]]
@@ -166,8 +247,10 @@ for(method in names(imm_decon_res_list)) {
   # QuanTIseq, CIBERSORT (absolute), Epic, SpatialDecon - visualize as stacked bar charts.
   # MCP-counter - visualize as dot plot.
   
-  for(subset_var in imm_decon_subset_vars) {
-    if(is.na(subset_var) || subset_var == "NA") {
+  for(subset_var in imm_decon_subset_vars) { # You can't loop over a NULL variable, hence the line `if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"` above. 
+    plot_list[[method]][[subset_var]] <- list()
+    
+    if(flagVariable(subset_var)) {
       subset_tag <- "All ROIs"
       subset_var <- "Complete dataset"
     } else {
@@ -179,11 +262,14 @@ for(method in names(imm_decon_res_list)) {
     
     # loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
     for(subset_var_level in subset_var_levels) {
+      plot_list[[method]][[subset_var]][[subset_var_level]] <- list()
+      
       # Get all the samples belonging to the current subset_var_level.
       ind <- pData_tmp[[subset_var]] == subset_var_level
       pData_tmp_sub <- pData_tmp[ind,]
       
       for(grouping_var in imm_decon_grouping_vars) {
+        plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]] <- list()
         df2 <- df
         
         # Gather the dataframe for graphing.
@@ -227,6 +313,7 @@ for(method in names(imm_decon_res_list)) {
           # ^ for stacked bar charts using geom_rect().
           # See also https://stackoverflow.com/questions/28956442/automatically-resize-bars-in-ggplot-for-uniformity-across-several-graphs-r
           for(group in unique(df3$ChunkingGroup)) {
+            message(glue::glue("Creating graph for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
             plot <- df3 %>% 
               dplyr::filter(ChunkingGroup==group) %>% 
               ggplot(aes(x = !!as.name(grouping_var), y = fraction, fill = cell_type)) + 
@@ -244,35 +331,15 @@ for(method in names(imm_decon_res_list)) {
             if(length(unique_values) > 10) {
               plot <- plot + coord_flip()
             }
-            plot_list[[method]][[group]] <- plot
-            
-            # Save to EPS and PNG and then ...
-            eps_path <- paste0(output_dir_pubs, 
-                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_compartment-var-", grouping_var, "_group-", group, "_between-cell-type-comparison.eps") %>% regexPipes::gsub("\\/", "_"))
-            png_path <- paste0(output_dir_pubs, 
-                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_compartment-var-", grouping_var, "_group-", group, "_between-cell-type-comparison.png") %>% regexPipes::gsub("\\/", "_"))
-            saveEPS(plot, eps_path, width = plot_width, height = plot_height)
-            savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
-            
-            # Save to PPT if there won't be too many graphs.
-            if(length(unique(df3$ChunkingGroup)) <= 7) {
-              pptx <- pptx %>%
-                officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-                officer::ph_with(value = paste0("Immune deconvolution"),
-                                 location = ph_location_label(ph_label = "Title 1")) %>% 
-                officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-                                 location = ph_location_label(ph_label = "Content Placeholder 2"),
-                                 use_loc_size = FALSE) 
-            } else {
-              warning(paste0("The method ", method, " will generate an overwhelming number of graphs to place in a PowerPoint, so we're going to save the graphs to disk but not into the generated PowerPoint."))
-            }
-          }
+            plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]][[group]] <- plot
           
+          }
         }
         
         # For CIBERSORT (when installed), MCPcounter, xCell, Abis, and Estimate, create a dot plot to show between-sample (within-cell-type) comparisons.
         if(method %in% c("cibersort", "mcp_counter", "xcell", "abis", "estimate")) {
           for(group in unique(df3$ChunkingGroup)) {
+            message(glue::glue("Creating graph for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
             plot <- df3 %>% 
               dplyr::filter(ChunkingGroup==group) %>% 
               ggplot(aes(x = !!as.name(grouping_var), y = score, color = cell_type)) +
@@ -290,28 +357,8 @@ for(method in names(imm_decon_res_list)) {
                                   "\n compartmentalized by ", grouping_var,
                                   " | group ", group))
             
-            plot_list[[method]][[group]] <- plot
+            plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]][[group]] <- plot
             
-            # Save to EPS and PNG and then ...
-            eps_path <- paste0(output_dir_pubs, 
-                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_compartment-var-", grouping_var, "_group-", group, "_between-sample-comparison.eps") %>% regexPipes::gsub("\\/", "_"))
-            png_path <- paste0(output_dir_pubs, 
-                               paste0(method, "_subset-by-", subset_tag, "_subset-", subset_var_level, "_compartment-var-", grouping_var, "_group-", group, "_between-sample-comparison.png") %>% regexPipes::gsub("\\/", "_"))
-            saveEPS(plot, eps_path, width = plot_width, height = plot_height)
-            savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
-            
-            # Save to PPT if there won't be too many graphs.
-            if(length(unique(df3$ChunkingGroup)) <= 5) {
-              pptx <- pptx %>%
-                officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-                officer::ph_with(value = paste0("Immune deconvolution"),
-                                 location = ph_location_label(ph_label = "Title 1")) %>% 
-                officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-                                 location = ph_location_label(ph_label = "Content Placeholder 2"),
-                                 use_loc_size = FALSE) 
-            } else {
-              warning(paste0("The method ", method, " will generate an overwhelming number of graphs to place in a PowerPoint, so we're going to save the graphs to disk but not into the generated PowerPoint."))
-            }
           }
         }
         rm(df2)
@@ -335,13 +382,13 @@ gc()
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-# Export PowerPoint file.
-print(pptx, cl_args[5])
 # Export NanoStringGeoMxSet as RDS file.
 saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_immune-deconvolution.rds"))
-# Export deconvolution results as RDS file. 
+# Export deconvolution results as RDS file and Microsoft Excel file. 
 saveRDS(imm_decon_res_list, paste0(output_dir_rdata, "immune-deconvolution_results.rds"))
-# Export deconvolution results as Microsoft Excel file. 
 openxlsx::write.xlsx(imm_decon_res_list, file = paste0(output_dir_tabular, "immune-deconvolution_results_by-method.xlsx"))
+# Export differential abundance results as RDS file and Microsoft Excel file.
+saveRDS(da_res_df, paste0(output_dir_rdata, "immune-deconvolution_differential-abundance_results.rds"))
+openxlsx::write.xlsx(da_res_df, file = paste0(output_dir_tabular, "immune-deconvolution_differential-abundance_results.xlsx"))
 # Export the raw plots as RDS file.
 plot_list %>% saveRDS(paste0(output_dir_rdata, "immune-deconvolution_plots-list.rds"))
