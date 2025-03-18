@@ -15,10 +15,17 @@ params:
   plot_list_16s_score_file: ''
   plot_list_cv_heatmap_file: ''
   plot_list_diff_exprs_grid_file: ''
+  plot_list_pathway_analysis_grid_file: ''
+  plot_list_imm_decon_file: ''
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  echo = FALSE, # Hides code
+  warning = FALSE,
+  message = FALSE,
+  error = FALSE
+  )
 
 # Getting arguments from the command line:
 # https://stackoverflow.com/questions/49904943/run-rmarkdown-with-arguments-on-the-command-line/76567366#76567366
@@ -64,7 +71,7 @@ if(file.exists(params$ntc_summary_file)) {
 if(file.exists(params$plot_list_qc_segments_file)) {
   plot_list_qc_segments <- readRDS(params$plot_list_qc_segments_file)
   for(item in plot_list_qc_segments) {
-    print(item)
+    suppressMessages(capture.output(print(item)))
   }
 }
 ```
@@ -88,18 +95,18 @@ if(file.exists(params$goi_detection_rate_table_file)) {
 if(file.exists(params$plot_list_qc_probes_file)) {
   plot_list_qc_probes <- readRDS(params$plot_list_qc_probes_file)
   for(item in plot_list_qc_probes) {
-    print(item)
+    suppressMessages(capture.output(print(item)))
   }
 }
 
 ```
 
 # Normalization
-```{r}
+```{r fig.width=12, fig.height=8}
 if(file.exists(params$plot_list_normalization_file)) {
   plot_list_normalization <- readRDS(params$plot_list_normalization_file)
   for(item in plot_list_normalization) {
-    print(item)
+    suppressMessages(capture.output(print(item)))
   }
 }
 ```
@@ -109,18 +116,18 @@ if(file.exists(params$plot_list_normalization_file)) {
 if(file.exists(params$plot_list_16s_file)) {
   plot_list_16s <- readRDS(params$plot_list_16s_file)
   for(item in plot_list_16s) {
-    print(item)
+    suppressMessages(capture.output(print(item)))
   }
 }
 ```
 
 # Unsupervised analysis
 ## Dimensionality reduction
-```{r fig.width=12, fig.height=8}
+```{r fig.width=12, fig.height=12}
 if(file.exists(params$plot_list_unsupervised_clustering_grid_file)) {
   plot_list_unsupervised_clustering_grids <- readRDS(params$plot_list_unsupervised_clustering_grid_file)
   for(item in plot_list_unsupervised_clustering_grids) {
-    print(item)
+    suppressMessages(capture.output(print(item)))
   }
 }
 ```
@@ -131,23 +138,23 @@ if(file.exists(params$plot_list_unsupervised_clustering_grid_file)) {
 if(file.exists(params$plot_list_16s_score_file)) {
   plot_list_16s_scores <- readRDS(params$plot_list_16s_score_file)
   for(item in plot_list_16s_scores) {
-    print(item)
+    suppressMessages(capture.output(print(item)))
   }
 }
 ```
 
 ## Heatmap of high-CV genes
-```{r}
+```{r fig.width=12, fig.height=12}
 if(file.exists(params$plot_list_cv_heatmap_file)) {
   plot_list_cv_heatmaps <- readRDS(params$plot_list_cv_heatmap_file)
   for(item in plot_list_cv_heatmaps) {
-    print(item)
+    suppressMessages(capture.output(print(item)))
   }
 }
 ```
 
 # Differential expression analysis
-```{r}
+```{r fig.width=12, fig.height=12}
 # # Recursive function to traverse and draw grobs
 # draw_grobs <- function(x) {
 #   if (is.list(x)) {
@@ -163,9 +170,34 @@ if(file.exists(params$plot_list_diff_exprs_grid_file)) {
   plot_list_diff_exprs_grids <- readRDS(params$plot_list_diff_exprs_grid_file)
   # draw_grobs(plot_list_diff_exprs_grids)
   for(item in plot_list_diff_exprs_grids) {
-    print(item)
+    suppressMessages(capture.output(print(item)))
   }
 }
+```
+
+# Pathway analysis
+```{r fig.width=12, fig.height=12}
+if(file.exists(params$plot_list_pathway_analysis_grid_file)) {
+  plot_list_pathway_analysis_grids <- readRDS(params$plot_list_pathway_analysis_grid_file)
+  for(item in plot_list_pathway_analysis_grids) {
+    suppressMessages(capture.output(print(item)))
+  }
+}
+```
+
+# Immune deconvolution
+```{r fig.width=12, fig.height=12}
+if(file.exists(params$plot_list_imm_decon_file)) {
+  plot_list_imm_decon <- readRDS(params$plot_list_imm_decon_file)
+  for(item in plot_list_imm_decon) {
+    suppressMessages(capture.output(print(item)))
+  }
+}
+```
+
+# TCR analysis
+```{r}
+
 ```
 
 # Session info
