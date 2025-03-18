@@ -96,6 +96,8 @@ validateProcessConfig <- function(config_var_metadata) {
       } else if (grepl("^\\d+\\.\\d+$", default_value)) {  
         # Decimal check (digits + decimal point)
         default_value <- as.numeric(default_value)
+      } else if (default_value %in% c("TRUE", "FALSE")) {
+        default_value <- as.logical(default_value)
       }
     }
     
