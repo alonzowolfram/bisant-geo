@@ -269,6 +269,7 @@ library(grid) # For textGrob().
 library(gridExtra) # Not sure, but I'm using so many plot-related packages, why not just throw in another one.
 library(immunedeconv) # One-stop shop for immune deconvolution.
 library(knitr) # For tables.
+library(lme4) # Linear mixed models, used in differential expression and differential abundance analyses.
 library(msigdbr) # Connecting to MSigDB.
 library(NanoStringNCTools) # For NanoString stuff.
 library(officer) # For PowerPoint output.
