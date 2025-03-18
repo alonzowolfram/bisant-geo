@@ -384,8 +384,6 @@ gc()
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-# Export NanoStringGeoMxSet as RDS file.
-saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_immune-deconvolution.rds"))
 # Export deconvolution results as RDS file and Microsoft Excel file. 
 saveRDS(imm_decon_res_list, paste0(output_dir_rdata, "immune-deconvolution_results.rds"))
 openxlsx::write.xlsx(imm_decon_res_list, file = paste0(output_dir_tabular, "immune-deconvolution_results_by-method.xlsx"))
