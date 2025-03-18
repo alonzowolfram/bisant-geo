@@ -258,6 +258,7 @@ error_msg_list <- validateProcessConfig(config_metadata_path)
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 library(cowplot) # For plot_grid.
 library(e1071) # Required by CIBERSORT.
+library(emmeans) # Used for post-hoc pairwise comparisons after linear mixed modeling.
 library(fgsea) # For GSEA.
 library(GeomxTools) # For NanoString GeoMx stuff. 
 library(GenomicRanges) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
