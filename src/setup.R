@@ -256,6 +256,7 @@ error_msg_list <- validateProcessConfig(config_metadata_path)
 ## Required libraries and functions ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+library(broom.mixed) # For tidy() function to clean up LMM output.
 library(cowplot) # For plot_grid.
 library(e1071) # Required by CIBERSORT.
 library(emmeans) # Used for post-hoc pairwise comparisons after linear mixed modeling.
