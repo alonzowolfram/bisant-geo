@@ -13,6 +13,11 @@ target_data_object_list <- readRDS(cl_args[5])
 # We'll only need the main module for this one.
 target_data_object <- target_data_object_list[[main_module]]
 
+# Get the test variables.
+test_vars <- c()
+for(formula in lmm_formulae_de) {
+  test_vars <- union(test_vars, extractVariables(formula))
+}
 # Convert test variables and subset variables to factors.
 for(test_var in test_vars) {
   pData(target_data_object)[[test_var]] <- pData(target_data_object)[[test_var]] %>% as.factor
@@ -120,7 +125,7 @@ for (lmm_formula in lmm_formulae_de) {
           tibble::rownames_to_column(var = "Contrast") %>% 
           mutate(
             Contrast = Contrast %>% regexPipes::gsub("\\.[[:digit:]]+$", "") %>% regexPipes::gsub("\\.{3}", " \\- "),
-            Gene = colnames(mixedOutmc),
+            Gene = rep(colnames(mixedOutmc), each = n()/ncol(mixedOutmc)),
             `Subset variable` = subset_var,
             `Subset level` = subset_level,
             `Normalization method` = normalization_names[names(normalization_names) == norm_method],
@@ -403,13 +408,11 @@ for(subset_var in names(plot_list_diff_exprs)) {
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 message("Exporting differential expression analysis results.")
 
-# Export NanoStringGeoMxSet.
-saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_differential-expression.rds"))
+# Export tables of DE genes to CSV.
+results2 %>% write.csv(paste0(output_dir_tabular, "LMM-differential-expression_results.csv")) 
 # Export graphs.
 saveRDS(plot_list_diff_exprs, paste0(output_dir_rdata, "LMM-DEG_volcano-plots.rds"))
 saveRDS(plot_list_diff_exprs_grid, paste0(output_dir_rdata, "LMM-DEG_volcano-plot_grids.rds"))
-# Export tables of DE genes to CSV.
-results2 %>% write.csv(paste0(output_dir_tabular, "LMM-differential-expression_results.csv")) 
 
 # Update latest module completed.
 updateLatestModule(output_dir_rdata, current_module)
