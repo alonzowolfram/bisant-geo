@@ -24,12 +24,14 @@ if(workflow_system=="Nextflow") {
 # Automatically list files in each directory for use.
 dcc_files <- dir(dcc_dir, pattern = ".dcc$",
                  full.names = TRUE, recursive = TRUE)
-if(!is.null(pkc_filenames) && sum(pkc_filenames!="") < 0) {
-  pkc_files <- paste0(pkc_dir, "/", pkc_filenames %>% .[.!=""])
-} else {
-  pkc_files <- dir(pkc_dir, pattern = pkc_filename_pattern,
-                   full.names = TRUE, recursive = TRUE)
-}
+pkc_files <- dir(pkc_dir, pattern = pkc_filename_pattern,
+                 full.names = TRUE, recursive = TRUE)
+# if(!is.null(pkc_filenames) && sum(pkc_filenames!="") < 0) {
+#   pkc_files <- paste0(pkc_dir, "/", pkc_filenames %>% .[.!=""])
+# } else {
+#   pkc_files <- dir(pkc_dir, pattern = pkc_filename_pattern,
+#                    full.names = TRUE, recursive = TRUE)
+# }
 
 # Get the sheet name if it's not set.
 if(is.null(phenodata_sheet_name) || phenodata_sheet_name=="") {
