@@ -360,30 +360,9 @@ experiment:
   #     Linear mixed models and differential expression
   # ----------------------------------------------------------------------
   lmm:
-
-    # In this section there are four parameters for running linear mixed models (LMMs).
-    # You can specify multiple experiments, as follows:
-    # let's say you wanted to run two LMMs, 
-    # the first: uses a random slope, 
-    #   the test variable is named `Region` in the annotation, 
-    #   the random intercept is the column `Sample ID` in the annotation,
-    #   and the random slope is also `Region`;
-    # the second: does NOT use a random slope,
-    #   the test variable is named `Tissue Type` in the annotation,
-    #   and the random intercept is `Sample ID`.
-    # then you would fill out the four variables as follows:
-    #
-    # random_slope: yes,no
-    # test_vars: Region,Tissue Type
-    # random_intercept_vars: Sample ID,Sample ID
-    # random_slope_vars: Region,NA        
-    # 
-    # NOTE: the number of values passed to each variable
-    # must be the same across all the variables; otherwise,
-    # values will be recycled to match the length of the longest variable. 
     
-    # # [Required] User-supplied formula(e) for running linear mixed models.
-    # # You can provide multiple formulae, separated by commas (,).
+    # [Required] User-supplied formula(e) for running linear mixed models.
+    # You can provide multiple formulae, separated by commas (,).
     lmm_formulae_de:
 
     # [Optional] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to
