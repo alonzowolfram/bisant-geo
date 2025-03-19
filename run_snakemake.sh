@@ -1,1 +1,0 @@
-snakemake --configfiles config.yaml --cores 3 -R --until immune_deconvolution
