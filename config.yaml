@@ -549,6 +549,3 @@ experiment:
     # If left blank, no grouping will be performed.
     # Multiple variables can be provided, separated with commas (",").
     tcr_grouping_vars:
-    
-    # Test
-    snaggle_boo:
