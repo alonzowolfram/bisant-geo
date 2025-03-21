@@ -47,25 +47,62 @@ if(is.null(phenodata_sheet_name) || phenodata_sheet_name=="") {
 
 ## ................................................
 ##
+### Data loading: all modules ----
+##
+## ................................................
+# Create the data object (a NanoString GeoMx set) from the input files.
+# We have to do this because readNanoStringGeoMxSet() complains when we read in the TCR and BiS modules individually.
+# We'll split them into their individual modules in the next step.
+data_object_all <- readNanoStringGeoMxSet(dccFiles = dcc_files,
+                                      pkcFiles = pkc_files,
+                                      phenoDataFile = sample_annotation_file,
+                                      phenoDataSheet = phenodata_sheet_name,
+                                      phenoDataDccColName = phenodata_dcc_col_name,
+                                      protocolDataColNames = protocol_data_col_names,
+                                      experimentDataColNames = experiment_data_col_names)
+
+## ................................................
+##
 ### Data loading: individual modules ----
 ##
 ## ................................................
-# Load the data to create a data object using the readNanoStringGeoMxSet function.
-# 2024/12/11: We will create a separate object for each PKC module, then create a combined WTA+TCR module if TCR module is available.
+# Split `data_object_all` into individual modules.
 data_object_list <- list()
-for(pkc_file in pkc_files) {
-  message(paste0("Working on PKC file ", pkc_file))
+for(module in data_object_all@annotation %>% regexPipes::gsub("\\.\\D+$", "")) {
+  message(paste0("Working on PKC file ", module, ".pkc"))
   
-  # Create the data object (a NanoString GeoMx set) from the input files.
-  data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
-                                        pkcFiles = pkc_file, # Formerly pkc_files, now we only do 1 per object.
-                                        phenoDataFile = sample_annotation_file,
-                                        phenoDataSheet = phenodata_sheet_name,
-                                        phenoDataDccColName = phenodata_dcc_col_name,
-                                        protocolDataColNames = protocol_data_col_names,
-                                        experimentDataColNames = experiment_data_col_names)
-  # Get the name of the current module.
-  module <- annotation(data_object) %>% regexPipes::gsub("\\.\\D+$", "")
+  # Extract the necessary elements.
+  assay_data <- data_object_all@assayData$exprs # Matrix or environment containing the DCCs.
+  pheno_data <- data_object_all@phenoData # AnnotatedDataFrame containing pData. AnnotatedDataFrame() takes 3 arguments: data = data.frame, varMetadata = data.frame, dimLabels. varMetadata and dimLabels can be missing.
+  feature_data <- data_object_all@featureData@data # AnnotatedDataFrame containing fData.
+  experiment_data <- data_object_all@experimentData # MIAME (derived from MIAxE; general container for storing experimental metadata; virtual, cannot be instantiated directly)
+  annotation <- data_object_all@annotation # Character vector for the PKC file(s)
+  dim_labels <- data_object_all@dimLabels # Character vector of length 2: column names to use as labels for the features and samples respectively
+  signatures <- data_object_all@signatures # SignatureSet object
+  design <- data_object_all@design # [Optional] one-sided formula representing experimental design.
+  feature_type <- data_object_all@featureType # Character string indicating if features are "Probe" or "Target" level
+  analyte <- data_object_all@analyte # Character string indicating if features are "RNA" or "Protein"
+  protocol_data <- data_object_all@protocolData
+  # `assay_data`, `annotation` and `feature_data` need to be subset and `feature_data` repackaged into an AnnotatedDataFrame.
+  annotation <- paste0(module, ".pkc")
+  feature_data <- feature_data %>% dplyr::filter(Module == module)
+  assay_data <- assay_data %>% .[feature_data$RTS_ID,,drop=F]
+  
+  # Create the data object.
+  data_object <- NanoStringGeoMxSet(
+    assayData = assay_data,
+    phenoData = pheno_data,
+    featureData = AnnotatedDataFrame(data = feature_data, varMetadata = data_object_all@featureData@varMetadata, dimLabels = data_object_all@featureData@dimLabels, .__classVersion__ = data_object_all@featureData@.__classVersion__),
+    experimentData = experiment_data,
+    annotation = annotation,
+    dimLabels = dim_labels,
+    signatures = signatures,
+    design = design,
+    featureType = feature_type,
+    analyte = analyte,
+    protocolData = protocol_data,
+    check = FALSE # Needed to bypass checks for "valid" NanoStringGeoMxSet objects
+  )
   
   # Save to the list.
   data_object_list[[module]] <- data_object
