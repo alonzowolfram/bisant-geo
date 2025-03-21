@@ -248,7 +248,7 @@ current_module <- cl_args[3]
 ## Load the raw variables.
 config_env <- assignVarsEnv(config)
 ## Process the variables.
-config_metadata_path <- "config_variable_metadata.csv"
+config_metadata_path <- "config_variables.csv"
 error_msg_list <- validateProcessConfig(config_metadata_path)
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -291,7 +291,7 @@ library(stringi) # For string manipulation.
 library(umap) # For UMAPs.
 library(vegan) # For ecological diversity indices (Shannon, Simpson, etc.)
 # library(caret) # For nearZeroVar().
-install.packages(path_to_regexPipes, repos = NULL, type = "source")
+# install.packages(path_to_regexPipes, repos = NULL, type = "source")
 library(regexPipes) # For pipe-friendly version of base R's regex functions.
 # library(devtools)
 # devtools::install_github("jdstorey/qvalue") # Dependency for glmmSeq. https://github.com/StoreyLab/qvalue
