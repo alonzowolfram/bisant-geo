@@ -119,7 +119,7 @@ if(!flagVariable(module_16s)) { # Only run the module if the 16S PKC module is p
     percentile_16s_cutoff <- as.numeric(percentile_16s_cutoff)
     for(cutoff in percentile_16s_cutoff) {
       # Determine the classification.
-      group_16s <- ifelse(mean_16s >= quantile(mean_16s, probs = (cutoff/100)), "16S high", "16S low")
+      group_16s <- ifelse(mean_16s >= quantile(mean_16s, probs = (cutoff/100), na.rm = TRUE), "16S high", "16S low")
       # Add to the metadata of the original target_data_object.
       group_var_name <- paste0("Grouping16S_", cutoff)
       pData(target_data_object)[[group_var_name]] <- group_16s
