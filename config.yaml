@@ -28,14 +28,6 @@ project:
     # the pipeline will use the project name in building an output directory:
     # [{project_name}_][{run_name}_]{YEAR}-{MONTH}-{DAY}-{HOUR}-{MINUTE}
     run_name:
-
-  # ----------------------------------------------------------------------
-  #     Technical
-  # ----------------------------------------------------------------------
-  technical:
-
-    # [Required] Absolute path to the binary for the R package "regexPipes" (v. 0.0.1).
-    path_to_regexPipes:
   
 # =================================================================================================
 #     Inputs
@@ -116,6 +108,7 @@ experiment:
 
     # [Required] The column name in the sample annotation (given by {sample_annotation_file}) corresponding to
     # the DCC identifier.
+    # E.g., Sample_ID
     phenodata_dcc_col_name:
 
     # [Required] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to 
@@ -126,6 +119,7 @@ experiment:
 
     # [Required] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to 
     # the experiment data column names.
+    # E.g., panel
     experiment_data_col_names:
 
     # [Optional] Neo-variables, created by pasting together two or more existing variables in the sample annotation.

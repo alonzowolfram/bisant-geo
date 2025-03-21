@@ -1,7 +1,6 @@
 ﻿variable,required,default_value,split_string
 project_name,FALSE,,FALSE
 run_name,FALSE,,FALSE
-path_to_regexPipes,TRUE,,FALSE
 dcc_dir,TRUE,,FALSE
 pkc_dir,TRUE,,FALSE
 pkc_filename_pattern,FALSE,.pkc$,FALSE
