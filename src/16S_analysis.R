@@ -8,12 +8,6 @@ source("src/setup.R")
 
 # Read in the NanoStringGeoMxSet object.
 target_data_object_list <- readRDS(cl_args[5])
-# We'll only need the 16S module for this one.
-if(!flagVariable(module_16s)) {
-  target_data_object <- target_data_object_list[[module_16s]]
-} else {
-  target_data_object <- target_data_object_list[[main_module]]
-}
 
 # Set the probes to be included/excluded. 
 probes_include <- probes_include %>% str_split(",") %>% unlist()
@@ -24,7 +18,7 @@ probes_exclude <- probes_exclude %>% str_split(",") %>% unlist()
 ## 16S analysis ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-if(!flagVariable(module_16s)) { # Only run the module if the 16S PKC module is provided & it's in the target_data_object_list.
+if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) { # Only run the module if the 16S PKC module is provided & it's in the target_data_object_list.
   
   ## ................................................
   ##
