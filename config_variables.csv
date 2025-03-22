@@ -65,6 +65,6 @@ imm_decon_remove_na,FALSE,TRUE,FALSE
 lmm_formulae_immune,FALSE,,TRUE
 imm_decon_grouping_vars,FALSE,,TRUE
 module_tcr,FALSE,,TRUE
-normalization_tcr,FALSE,,FALSE
+normalization_tcr,FALSE,bg_sub_p90,FALSE
 tcr_subset_vars,FALSE,,TRUE
 tcr_grouping_vars,FALSE,,TRUE

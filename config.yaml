@@ -528,7 +528,7 @@ experiment:
 
     # [Optional] Normalization method to use for TCR analysis.
     # Can be any of the normalization values given in the section above.
-    # If left blank, will default to bg_sub_q3.
+    # If left blank, will default to bg_sub_p90 (90th percentile normalization of background-subtracted data).
     normalization_tcr:
     
     # [Optional] The column name(s) in the sample annotation (given by {sample_annotation_file}) corresponding to
