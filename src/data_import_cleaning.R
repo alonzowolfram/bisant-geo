@@ -66,6 +66,9 @@ data_object_all <- readNanoStringGeoMxSet(dccFiles = dcc_files,
 ### Data loading: individual modules ----
 ##
 ## ................................................
+# For the future: I guess we can split NanoStringGeoMxSet objects by Module pretty easily?
+# subset(target_data_object, Module %in% module_tcr)
+
 # Split `data_object_all` into individual modules.
 data_object_list <- list()
 for(module in data_object_all@annotation %>% regexPipes::gsub("\\.\\D+$", "")) {

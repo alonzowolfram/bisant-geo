@@ -6,21 +6,9 @@
 ## Source the setup.R file.
 source("src/setup.R")
 
-# Read in the NanoStringGeoMxSet object. 
-target_data_object_list <- readRDS(cl_args[4])
-# We'll only need the TCR module for this one.
-target_data_object <- target_data_object_list[[module_tcr]]
-# Read in the PowerPoint.
-pptx <- read_pptx(cl_args[5])
+# Read in the NanoStringGeoMxSet object.
+target_data_object_list <- readRDS(cl_args[5])
 
-# Set the normalization method.
-normalization_method <- normalization_names[names(normalization_names)==normalization_methods[1]]
-
-## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-##                                                                
-## TCR analysis ----
-##
-## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Functions
 # Gini coefficient
 calculate_gini_coefficient <- function(x) {
@@ -47,40 +35,14 @@ calculate_shannon_diversity <- function(x) {
   return(H)
 }
 
-if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TCR module is provided.
-  # Add a section header.
-  pptx <- pptx %>%
-    officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-    officer::ph_with(value = paste0("TCR analysis"),
-                     location = ph_location_label(ph_label = "Title 1"))
-  
-  ## ................................................
-  ##
-  ### Subsetting ----
-  ##
-  ## ................................................
-  # Subset TCR + WTA prior to normalization.
-  target_data_object_tcr <- subset(target_data_object, Module %in% module_tcr)
-  
-  ## ................................................
-  ##
-  ### Normalization ----
-  ##
-  ## ................................................
-  # Subtract background
-  target_data_object_tcr <- normalize(target_data_object_tcr,
-                                          norm_method = "subtractBackground",
-                                          fromElt = "exprs",
-                                          toElt = "bgsub"
-  )
-  
-  # 90th percentile normalization
-  target_data_object_tcr <- normalize(target_data_object_tcr,
-                                          norm_method = "quant",
-                                          desiredQuantile = 0.9,
-                                          fromElt = "bgsub",
-                                          toElt = "q_norm_bgsub"
-  )
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
+## TCR analysis ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) { # Only run the module if the TCR module is provided and the combined module is in the target data object list.
+  # Get the TCR object.
+  target_data_object <- target_data_object_list[[module_tcr]]
   
   ### ................................................
   ###
@@ -88,7 +50,7 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
   ###
   ### ................................................
   # Get TCR probes
-  tcr_probes <- fData(target_data_object_tcr)$TargetName[base::grepl("TR[A/B/D/G][C/J/V]", fData(target_data_object_tcr)$TargetName)]
+  tcr_probes <- fData(target_data_object)$TargetName[base::grepl("TR[A/B/D/G][C/J/V]", fData(target_data_object)$TargetName)]
   if(length(tcr_probes) < 1) {
     warning("There are no TCR probes in the QC-ed data set. No analysis will be performed.")
     plot_list <- list()
@@ -96,14 +58,14 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
     anova_list <- list()
   } else {
     # Calculate distribution (Gini coefficient).
-    gini <- apply(assayDataElement(target_data_object_tcr, elt = "bgsub")[tcr_probes, ], 2, calculate_gini_coefficient)
+    gini <- apply(assayDataElement(target_data_object, elt = normalization_tcr)[tcr_probes, ], 2, calculate_gini_coefficient)
     gini[!is.finite(gini)] <- NA
     pData(target_data_object)$Gini <- gini
     
     # Calculate diversity (Shannon, Simpson, and inverse Simpson).
-    shannon_h <- vegan::diversity(t(assayData(target_data_object_tcr)$bgsub[tcr_probes, ]), index = "shannon", MARGIN = 1)
-    simpson <- vegan::diversity(t(assayData(target_data_object_tcr)$bgsub[tcr_probes, ]), index = "simpson", MARGIN = 1)
-    invsimpson <- vegan::diversity(t(assayData(target_data_object_tcr)$bgsub[tcr_probes, ]), index = "invsimpson", MARGIN = 1)
+    shannon_h <- vegan::diversity(t(assayData(target_data_object)[[normalization_tcr]][tcr_probes, ]), index = "shannon", MARGIN = 1)
+    simpson <- vegan::diversity(t(assayData(target_data_object)[[normalization_tcr]][tcr_probes, ]), index = "simpson", MARGIN = 1)
+    invsimpson <- vegan::diversity(t(assayData(target_data_object)[[normalization_tcr]][tcr_probes, ]), index = "invsimpson", MARGIN = 1)
     shannon_h[!is.finite(shannon_h)] <- NA
     simpson[!is.finite(simpson)] <- NA
     invsimpson[!is.finite(invsimpson)] <- NA
@@ -193,12 +155,7 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
       plot_list[[var]][["Gini"]] <- plot_gini
     }
     
-    # Arrange graphs and add to PowerPoint.
-    # Graphing parameters.
-    plot_width <- 12
-    plot_height <- 12 
-    units <- "in"
-    res <- 300
+    # Arrange graphs.
     plot_grid_list <- list()
     for(var in names(plot_list)) {
       # Get the list of plots for variable `var`.
@@ -230,23 +187,23 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
       # Save to list.
       plot_grid_list[[var]] <- plot_grid
       
-      # Save to EPS and PNG and then ...
-      eps_path <- paste0(output_dir_pubs, 
-                         paste0("TCR-diversity-distribution_graphs_by-", var, ".eps") %>% regexPipes::gsub("\\/", "_"))
-      png_path <- paste0(output_dir_pubs, 
-                         paste0("TCR-diversity-distribution_graphs_by-", var, ".png") %>% regexPipes::gsub("\\/", "_"))
-      saveEPS(plot_grid, eps_path, width = (plot_width), height = (plot_height))
-      savePNG(plot_grid, png_path, width = (plot_width), height = (plot_height), units = units, res = (res))
-      
-      # Add to the PowerPoint.
-      pptx <- pptx %>%
-        officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-        officer::ph_with(value = paste0("TCR diversity and distribution"),
-                         location = ph_location_label(ph_label = "Title 1")) %>%
-        officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-                         location = ph_location_label(ph_label = "Content Placeholder 2"),
-                         use_loc_size = FALSE)
     } # End for() loop: grouping variables.
+    
+    ## ................................................
+    ##
+    ### Finalization ----
+    ##
+    ## ................................................
+    # Add the main module data object back to the list.
+    target_data_object_list[[module_tcr]] <- target_data_object
+    
+    # Now update the pData for the rest of the modules.
+    for(module_i in names(target_data_object_list)) {
+      if(module_i == module_tcr) next
+      diversity_cols <- setdiff(colnames(pData(target_data_object)), colnames(pData(target_data_object_list[[module_i]])))
+      pData(target_data_object_list[[module_i]]) <- cbind(pData(target_data_object_list[[module_i]]), pData(target_data_object)[,diversity_cols])
+    }
+    
   } # End if() there are TCR probes.
 
 } # End if() the TCR module is provided.
@@ -256,8 +213,6 @@ if(!(is.null(module_tcr) || module_tcr == "")) { # Only run the module if the TC
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# Export PowerPoint file.
-print(pptx, cl_args[5])
 # Export NanoStringGeoMxSet as RDS file.
 saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_TCR-analysis.rds"))
 # Export the raw plots as RDS file.

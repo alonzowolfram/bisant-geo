@@ -10,7 +10,7 @@ source("src/setup.R")
 target_data_object_list <- readRDS(cl_args[5])
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-##                                                                
+##
 ## Normalization ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -23,7 +23,7 @@ plot_list_normalization <- list()
 
 for(module in names(target_data_object_list)) {
   # Check if the combined module (WTA+TCR) exists.
-  # If it does, skip the individual WTA, TCR modules.
+  # If it does, skip the individual WTA, TCR modules (because the WTA and TCR modules have to be normalized together.)
   if((combined_module %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
   
   target_data_object <- target_data_object_list[[module]]
@@ -125,7 +125,7 @@ for(module in names(target_data_object_list)) {
                                                      fromElt = "bg_sub",
                                                      toElt = "bg_sub_q3")
   
-  # 90th-percentile normalization of background-subtracted data.
+  # 90th-percentile normalization of background-subtracted data (used in TCR analysis).
   target_data_object <- NanoStringNCTools::normalize(target_data_object,
                                                      norm_method = "quant",
                                                      desiredQuantile = .9,
@@ -229,7 +229,8 @@ if(combined_module %in% names(target_data_object_list)) {
   names(individual_module_list) <- modules
   
   # Combine with `target_data_object_list`.
-  target_data_object_list <- c(individual_module_list, target_data_object_list[names(target_data_object_list) != paste(c(main_module, module_tcr), collapse = ",")])
+  target_data_object_list <- c(individual_module_list, target_data_object_list[!(names(target_data_object_list) %in% c(combined_module, modules))])
+  # Removes the combined module and ensures that for the individual modules, only the normalized objects are saved.
 }
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
