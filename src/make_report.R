@@ -58,6 +58,8 @@ plot_list_diff_exprs_grid_file <- paste0(output_dir_rdata, "LMM-DEG_volcano-plot
 plot_list_pathway_analysis_grid_file <- paste0(output_dir_rdata, "pathway-analysis_grid-arranged-plots-list.rds")
 # Immune deconvolution
 plot_list_imm_decon_file <- paste0(output_dir_rdata, "immune-deconvolution_plots-list.rds")
+# TCR analysis
+plot_list_tcr_analysis_grid_file <- paste0(output_dir_rdata, "TCR-analysis_plot-grid-list.rds")
 
 # Render.
 rmarkdown::render(rmd_template_file,
@@ -77,6 +79,7 @@ rmarkdown::render(rmd_template_file,
                               plot_list_16s_score_file = plot_list_16s_score_file,
                               plot_list_diff_exprs_grid_file = plot_list_diff_exprs_grid_file,
                               plot_list_pathway_analysis_grid_file = plot_list_pathway_analysis_grid_file,
-                              plot_list_imm_decon_file = plot_list_imm_decon_file
+                              plot_list_imm_decon_file = plot_list_imm_decon_file,
+                              plot_list_tcr_analysis_grid_file = plot_list_tcr_analysis_grid_file
                               )
                   )

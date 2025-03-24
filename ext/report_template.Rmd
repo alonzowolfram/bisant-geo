@@ -17,6 +17,7 @@ params:
   plot_list_diff_exprs_grid_file: ''
   plot_list_pathway_analysis_grid_file: ''
   plot_list_imm_decon_file: ''
+  plot_list_tcr_analysis_grid_file: ''
 ---
 
 ```{r setup, include=FALSE}
@@ -134,7 +135,6 @@ if(file.exists(params$plot_list_unsupervised_clustering_grid_file)) {
 
 ## 16S score
 ```{r}
-
 if(file.exists(params$plot_list_16s_score_file)) {
   plot_list_16s_scores <- readRDS(params$plot_list_16s_score_file)
   for(item in plot_list_16s_scores) {
@@ -196,8 +196,13 @@ if(file.exists(params$plot_list_imm_decon_file)) {
 ```
 
 # TCR analysis
-```{r}
-
+```{r fig.width=12, fig.height=12}
+if(file.exists(params$plot_list_tcr_analysis_grid_file)) {
+  plot_list_tcr_analysis <- readRDS(params$plot_list_tcr_analysis_grid_file)
+  for(item in plot_list_tcr_analysis) {
+    suppressMessages(capture.output(print(item)))
+  }
+}
 ```
 
 # Session info
