@@ -113,6 +113,7 @@ for(module in names(target_data_object_list)) {
                                                      toElt = "neg_norm")
   
   # Background-subtraction correction (not used as a complete normalization method).
+  # Accounts for signal:noise discrepancies.
   target_data_object <- NanoStringNCTools::normalize(target_data_object ,
                                                      norm_method = "subtractBackground",
                                                      fromElt = "exprs",
