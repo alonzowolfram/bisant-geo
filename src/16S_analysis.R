@@ -26,7 +26,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
   ##
   ## ................................................
   # Subset to include only the 16S probes.
-  target_data_object_16s <- subset(target_data_object, Module %in% module_16s)
+  target_data_object_16s <- target_data_object_list[[module_16s]] # subset(target_data_object, Module %in% module_16s)
   
   # Stop if there are no 16S probes.
   if(!(all(dim(target_data_object_16s) > 0))) {
@@ -49,15 +49,6 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ### Normalization ----
     ##
     ## ................................................
-    
-    # # Subtract background to account for signal:noise discrepancies
-    # target_data_object_16s <- normalize(target_data_object_16s,
-    #                                  norm_method = "subtractBackground",
-    #                                  fromElt = "exprs",
-    #                                  toElt = "bgsub"
-    # )
-    # Already done in normalization module?
-    
     # Calculate background normalization factor
     pData(target_data_object_16s)$neg_normFactor <-
       pData(target_data_object_16s)[[paste0("NegGeoMean_", module_16s)]] /
@@ -69,6 +60,9 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
             pData(target_data_object_16s)$neg_normFactor,
             FUN = "/"
       )
+    
+    # Save to the target data object list.
+    target_data_object_list[[module_16s]] <- target_data_object_16s
     
     ## ................................................
     ##
@@ -87,17 +81,13 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     mean_signal <- colSums(bis_mat_ln, na.rm = TRUE) / n_probes
     # Exponentiate average signal to get the 16S score.
     score_16s <- exp(mean_signal)
-    # Add the 16S score to the pData.
-    if(identical(sampleNames(target_data_object_16s), names(score_16s)))  {
-      pData(target_data_object_16s)$Score16S <- score_16s
-      pData(target_data_object_list[[module_16s]])$Score16S <- score_16s
-    }
-    
-    # Add the 16S scores to the other pDatas.
+    # Add the 16S score to pData for all modules (including 16S).
     for(module in names(target_data_object_list)) {
-      if(module == module_16s) next
-      
-      pData(target_data_object_list[[module]])$Score16S <- score_16s
+      if(identical(sampleNames(target_data_object_list[[module]]), names(score_16s)))  {
+        pData(target_data_object_list[[module]])$Score16S <- score_16s
+      } else {
+        warning(glue::glue("The sampleNames for module {module} do not match the names of the 16S score vector. 16S scores will not be added to the pData for this module"))
+      }
     }
     
     ## ................................................
@@ -114,9 +104,12 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     for(cutoff in percentile_16s_cutoff) {
       # Determine the classification.
       group_16s <- ifelse(mean_16s >= quantile(mean_16s, probs = (cutoff/100), na.rm = TRUE), "16S high", "16S low")
-      # Add to the metadata of the original target_data_object.
+      # Add the 16S scores to pData for all modules (including 16S).
       group_var_name <- paste0("Grouping16S_", cutoff)
-      pData(target_data_object)[[group_var_name]] <- group_16s
+      
+      for(module in names(target_data_object_list)) {
+        pData(target_data_object_list[[module]])[[group_var_name]] <- group_16s
+      }
     }
     
     ## ................................................
@@ -125,20 +118,14 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ##
     ## ................................................
     if(!is.null(exprs_16s_grouping_vars) & (sum(exprs_16s_grouping_vars == "") < length(exprs_16s_grouping_vars))) {
-      # # Add a section header.
-      # pptx <- pptx %>%
-      #   officer::add_slide(layout = "Section Header", master = "Office Theme") %>%
-      #   officer::ph_with(value = paste0("16S analysis"),
-      #                    location = ph_location_label(ph_label = "Title 1"))
-      
       # See if we need to do any subsetting prior to graphing.
-      if(sum(is.na(exprs_16s_subset_vars)) == length(exprs_16s_subset_vars) || sum(exprs_16s_subset_vars=="NA", na.rm = T) == length(exprs_16s_subset_vars[!is.na(exprs_16s_subset_vars)]) || "NA" %in% exprs_16s_subset_vars || NA %in% exprs_16s_subset_vars) {
+      if(flagVariable(exprs_16s_subset_vars)) { # sum(is.na(exprs_16s_subset_vars)) == length(exprs_16s_subset_vars) || sum(exprs_16s_subset_vars=="NA", na.rm = T) == length(exprs_16s_subset_vars[!is.na(exprs_16s_subset_vars)]) || "NA" %in% exprs_16s_subset_vars || NA %in% exprs_16s_subset_vars
         # Since there are no subset variables, we will add a column that will act as a dummy subset variable
         # and change exprs_16s_subset_vars to be the name of this dummy subset variable.
         # This will allow us to use one loop for either case (controls switch 1a or 1b).
-        pData(target_data_object)[["Complete data set"]] <- "Dummy level"
-        pData(target_data_object)[["Complete data set"]] <- as.factor(pData(target_data_object)[["Complete data set"]])
-        exprs_16s_subset_vars[is.na(exprs_16s_subset_vars)] <- c("Complete data set")
+        pData(target_data_object_16s)[["Complete data set"]] <- "Dummy level"
+        pData(target_data_object_16s)[["Complete data set"]] <- as.factor(pData(target_data_object_16s)[["Complete data set"]])
+        exprs_16s_subset_vars <- c("Complete data set") # [is.na(exprs_16s_subset_vars)]
         
       } # End control switch 1a (no subset variables) << loop level 1 (model).
       
@@ -157,14 +144,14 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         }
         
         # Get the levels. 
-        subset_var_levels <- pData(target_data_object)[[subset_var]] %>% unique
+        subset_var_levels <- pData(target_data_object_16s)[[subset_var]] %>% unique
         
         # Loop over the levels and subset by each level.
         for(subset_var_level in subset_var_levels) {
           plot_list[[subset_var]][[subset_var_level]] <- list()
           anova_list[[subset_var]][[subset_var_level]] <- list()
           
-          pData_sub <- pData(target_data_object) %>% dplyr::filter(!!as.name(subset_var) == subset_var_level)
+          pData_sub <- pData(target_data_object_16s) %>% dplyr::filter(!!as.name(subset_var) == subset_var_level)
           mean_16s_sub <- mean_16s %>% .[names(.) %in% rownames(pData_sub)]
           
           for(grouping_var in exprs_16s_grouping_vars) {
@@ -221,13 +208,6 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         
       } # End exprs_16s_subset_vars for loop.
       
-      # # Graphing parameters.
-      # plot_width <- 20
-      # plot_height <- 15
-      # units <- "in"
-      # res <- 300
-      # scaling_factor <- 1
-      # res_scaling_factor <- 1
       # Arrange the plots into a grid.
       for(subset_var in names(plot_list)) {
         for(subset_var_level in names(plot_list[[subset_var]])) {
@@ -242,36 +222,9 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                                                              bottom = grid::textGrob("Grouping variable", gp = grid::gpar(cex = 1.3)),
                                                              top = grid::textGrob(paste0("")))
           
-          
-          # # Save to EPS and PNG and then ...
-          # eps_path <- paste0(output_dir_pubs, "16S_exprs_by-group.eps") #paste0(output_dir_pubs, "")
-          # png_path <- paste0(output_dir_pubs, "16S_exprs_by-group.png") #paste0(output_dir_pubs, "")
-          # plot <- plot_grid# %>% ggpubr::as_ggplot()
-          # saveEPS(plot, eps_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor))
-          # savePNG(plot, png_path, width = (plot_width * scaling_factor), height = (plot_height * scaling_factor), units = units, res = (res * res_scaling_factor))
-          
-          # # ... add to the PowerPoint.
-          # pptx <- pptx %>%
-          #   officer::add_slide(layout = "Title and Content", master = "Office Theme") %>%
-          #   officer::ph_with(value = paste0("16S analysis"),
-          #                    location = ph_location_label(ph_label = "Title 1")) %>%
-          #   officer::ph_with(value = external_img(png_path, width = plot_width, height = plot_height, unit = units),
-          #                    location = ph_location_label(ph_label = "Content Placeholder 2"),
-          #                    use_loc_size = FALSE)
-          
         }
       }
       
-    }
-    
-    # Add the 16S classifications to the other pDatas.
-    for(module in names(target_data_object_list)) {
-      if(module == module_16s) next
-      
-      # Get the columns that the 16s pData has that the other one doesn't.
-      missing_cols <- setdiff(colnames(pData(target_data_object)), colnames(pData(target_data_object_list[[module]])))
-      # Add them.
-      pData(target_data_object_list[[module]]) <- cbind(pData(target_data_object_list[[module]]), pData(target_data_object)[,missing_cols])
     }
     
   } # End check for 16S probes.
@@ -280,10 +233,9 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
 # Check if there's an additional column added if there are no subset variables.
 # If there is, remove it. 
 # (Otherwise, this will mess things up downstream.)
-if("Complete data set" %in% colnames(pData(target_data_object))) pData(target_data_object) <- pData(target_data_object) %>% dplyr::select(-`Complete data set`)
-
-# Now save the 16S data object back to the list.
-if(exists("target_data_object_16s") && all(dim(target_data_object_16s) > 0)) target_data_object_list[[module_16s]] <- target_data_object
+for(module in names(target_data_object_list)) {
+  if("Complete data set" %in% colnames(pData(target_data_object_list[[module]]))) pData(target_data_object_list[[module]]) <- pData(target_data_object_list[[module]]) %>% dplyr::select(-`Complete data set`)
+}
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
