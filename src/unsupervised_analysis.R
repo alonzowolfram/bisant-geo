@@ -122,32 +122,34 @@ for(norm_method in names(target_data_object@assayData)) {
         dplyr::rename(CompartmentVar1 = !!as.name(compartment_var_1), CompartmentVar2 = !!as.name(compartment_var_2))
       pData(target_data_object)$CompartmentVar1 <- pData(target_data_object)$CompartmentVar1 %>% as.character %>% as.factor
       pData(target_data_object)$CompartmentVar2 <- pData(target_data_object)$CompartmentVar2 %>% as.character %>% as.factor
-
-      # # Create a new column consisting of the component variables.
-      # for(i in 1:length(compartment_var_comps)) {
-      #   comp <- compartment_var_comps[i]
-      #   if(i==1) {
-      #     merged_col <- pData(target_data_object)[[comp]]
-      #   } else {
-      #     merged_col <- paste(merged_col, pData(target_data_object)[[comp]], sep = " | ")
-      #   }
-      # }
-      # pData(target_data_object)[["CompartmentVar1"]] <- merged_col %>% as.character %>% as.factor
-      # # But remember that we'll have to rename the columns to the original,
-      # # so we'll have to remove this new column at the end before we rename.
+      
+      # Get the number of levels of the compartment variables.
+      num_levels_1 <- length(unique(pData(target_data_object)$CompartmentVar1))
+      num_levels_2 <- length(unique(pData(target_data_object)$CompartmentVar2))
 
     } else {
       # No - so rename the (single) compartment variable as "CompartmentVar1".
       pData(target_data_object) <- pData(target_data_object) %>%
         dplyr::rename(CompartmentVar1 = !!as.name(compartment_var))
       pData(target_data_object)$CompartmentVar1 <- pData(target_data_object)$CompartmentVar1 %>% as.character %>% as.factor
+      
+      # Get the number of levels of the compartment variable.
+      num_levels_1 <- length(unique(pData(target_data_object)$CompartmentVar1))
+      num_levels_2 <- FALSE
     }
-
-    # UMAP
-    if(perform_UMAP) {
+    
+    # Loop through the three dimred types.
+    dim_reds <- c(perform_UMAP, perform_tSNE, perform_PCA)
+    names(dim_reds) <- c("UMAP", "t-SNE", "PCA")
+    
+    for(i in 1:length(dim_reds)) {
+      dim_red <- dim_reds[i]
+      if(!dim_red) next
+      
+      dim_red_name <- names(dim_red)
       if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
         # CompartmentVar2 exists.
-        plot_list_unsupervised_clustering[[norm_method]][["UMAP"]][[compartment_var]] <-
+        plot <-
           ggplot(pData(target_data_object),
                  aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
           geom_point(size = 3, aes(shape = CompartmentVar2)) +
@@ -159,7 +161,7 @@ for(norm_method in names(target_data_object@assayData)) {
                 panel.grid.major = element_blank())
       } else {
         # CompartmentVar2 doesn't exist.
-        plot_list_unsupervised_clustering[[norm_method]][["UMAP"]][[compartment_var]] <-
+        plot <-
           ggplot(pData(target_data_object),
                  aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
           geom_point(size = 3) +
@@ -169,63 +171,96 @@ for(norm_method in names(target_data_object@assayData)) {
           theme(panel.grid.minor = element_blank(),
                 panel.grid.major = element_blank())
       }
-    }
-    
-    # t-SNE
-    if(perform_tSNE) {
-      if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
-        plot_list_unsupervised_clustering[[norm_method]][["t-SNE"]][[compartment_var]] <-
-          # CompartmentVar2 exists.
-          ggplot(pData(target_data_object),
-                 aes(x = !!as.name(tsne_col_names[1]), y = !!as.name(tsne_col_names[2]), color = CompartmentVar1)) +
-          geom_point(size = 3, aes(shape = CompartmentVar2)) +
-          labs(title = paste0("Compartment: ", compartment_var),
-               color = paste0(compartment_var_1),
-               shape = paste0(compartment_var_2)) +
-          theme_bw() +
-          theme(panel.grid.minor = element_blank(),
-                panel.grid.major = element_blank())
-      } else {
-        plot_list_unsupervised_clustering[[norm_method]][["t-SNE"]][[compartment_var]] <-
-          # CompartmentVar2 doesn't exist.
-          ggplot(pData(target_data_object),
-                 aes(x = !!as.name(tsne_col_names[1]), y = !!as.name(tsne_col_names[2]), color = CompartmentVar1)) +
-          geom_point(size = 3) +
-          labs(title = paste0("Compartment: ", compartment_var),
-               color = paste0(compartment_var)) +
-          theme_bw() +
-          theme(panel.grid.minor = element_blank(),
-                panel.grid.major = element_blank())
+      # Conditionally hide legend
+      if ((num_levels_1 + num_levels_2) > 15) {
+        plot <- plot + theme(legend.position = "none") + labs(subtitle = "Legend hidden due to >15 categories")
       }
+      plot_list_unsupervised_clustering[[norm_method]][[dim_red_name]][[compartment_var]] <- plot
     }
-    
-    # PCA
-    if(perform_PCA) {
-      if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
-        plot_list_unsupervised_clustering[[norm_method]][["PCA"]][[compartment_var]] <-
-          # CompartmentVar2 exists.
-          ggplot(pData(target_data_object),
-                 aes(x = !!as.name(pca_col_names[1]), y = !!as.name(pca_col_names[2]), color = CompartmentVar1)) +
-          geom_point(size = 3, aes(shape = CompartmentVar2)) +
-          labs(title = paste0("Compartment: ", compartment_var),
-               color = paste0(compartment_var_1),
-               shape = paste0(compartment_var_2)) +
-          theme_bw() +
-          theme(panel.grid.minor = element_blank(),
-                panel.grid.major = element_blank())
-      } else {
-        plot_list_unsupervised_clustering[[norm_method]][["PCA"]][[compartment_var]] <-
-          # CompartmentVar2 doesn't exist.
-          ggplot(pData(target_data_object),
-                 aes(x = !!as.name(pca_col_names[1]), y = !!as.name(pca_col_names[2]), color = CompartmentVar1)) +
-          geom_point(size = 3) +
-          labs(title = paste0("Compartment: ", compartment_var),
-               color = paste0(compartment_var)) +
-          theme_bw() +
-          theme(panel.grid.minor = element_blank(),
-                panel.grid.major = element_blank())
-      }
-    }
+
+    # # UMAP
+    # if(perform_UMAP) {
+    #   if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
+    #     # CompartmentVar2 exists.
+    #     plot_list_unsupervised_clustering[[norm_method]][["UMAP"]][[compartment_var]] <-
+    #       ggplot(pData(target_data_object),
+    #              aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
+    #       geom_point(size = 3, aes(shape = CompartmentVar2)) +
+    #       labs(title = paste0("Compartment: ", compartment_var),
+    #            color = paste0(compartment_var_1),
+    #            shape = paste0(compartment_var_2)) +
+    #       theme_bw() +
+    #       theme(panel.grid.minor = element_blank(),
+    #             panel.grid.major = element_blank())
+    #   } else {
+    #     # CompartmentVar2 doesn't exist.
+    #     plot_list_unsupervised_clustering[[norm_method]][["UMAP"]][[compartment_var]] <-
+    #       ggplot(pData(target_data_object),
+    #              aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
+    #       geom_point(size = 3) +
+    #       labs(title = paste0("Compartment: ", compartment_var),
+    #            color = paste0(compartment_var)) +
+    #       theme_bw() +
+    #       theme(panel.grid.minor = element_blank(),
+    #             panel.grid.major = element_blank())
+    #   }
+    # }
+    # 
+    # # t-SNE
+    # if(perform_tSNE) {
+    #   if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
+    #     plot_list_unsupervised_clustering[[norm_method]][["t-SNE"]][[compartment_var]] <-
+    #       # CompartmentVar2 exists.
+    #       ggplot(pData(target_data_object),
+    #              aes(x = !!as.name(tsne_col_names[1]), y = !!as.name(tsne_col_names[2]), color = CompartmentVar1)) +
+    #       geom_point(size = 3, aes(shape = CompartmentVar2)) +
+    #       labs(title = paste0("Compartment: ", compartment_var),
+    #            color = paste0(compartment_var_1),
+    #            shape = paste0(compartment_var_2)) +
+    #       theme_bw() +
+    #       theme(panel.grid.minor = element_blank(),
+    #             panel.grid.major = element_blank())
+    #   } else {
+    #     plot_list_unsupervised_clustering[[norm_method]][["t-SNE"]][[compartment_var]] <-
+    #       # CompartmentVar2 doesn't exist.
+    #       ggplot(pData(target_data_object),
+    #              aes(x = !!as.name(tsne_col_names[1]), y = !!as.name(tsne_col_names[2]), color = CompartmentVar1)) +
+    #       geom_point(size = 3) +
+    #       labs(title = paste0("Compartment: ", compartment_var),
+    #            color = paste0(compartment_var)) +
+    #       theme_bw() +
+    #       theme(panel.grid.minor = element_blank(),
+    #             panel.grid.major = element_blank())
+    #   }
+    # }
+    # 
+    # # PCA
+    # if(perform_PCA) {
+    #   if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
+    #     plot_list_unsupervised_clustering[[norm_method]][["PCA"]][[compartment_var]] <-
+    #       # CompartmentVar2 exists.
+    #       ggplot(pData(target_data_object),
+    #              aes(x = !!as.name(pca_col_names[1]), y = !!as.name(pca_col_names[2]), color = CompartmentVar1)) +
+    #       geom_point(size = 3, aes(shape = CompartmentVar2)) +
+    #       labs(title = paste0("Compartment: ", compartment_var),
+    #            color = paste0(compartment_var_1),
+    #            shape = paste0(compartment_var_2)) +
+    #       theme_bw() +
+    #       theme(panel.grid.minor = element_blank(),
+    #             panel.grid.major = element_blank())
+    #   } else {
+    #     plot_list_unsupervised_clustering[[norm_method]][["PCA"]][[compartment_var]] <-
+    #       # CompartmentVar2 doesn't exist.
+    #       ggplot(pData(target_data_object),
+    #              aes(x = !!as.name(pca_col_names[1]), y = !!as.name(pca_col_names[2]), color = CompartmentVar1)) +
+    #       geom_point(size = 3) +
+    #       labs(title = paste0("Compartment: ", compartment_var),
+    #            color = paste0(compartment_var)) +
+    #       theme_bw() +
+    #       theme(panel.grid.minor = element_blank(),
+    #             panel.grid.major = element_blank())
+    #   }
+    # }
     
     # # If it was a composite variable, remove CompartmentVar before resetting the variable names.
     # if(ncol(pData(target_data_object)) > (length(orig_var_names) + 4)) { # + 4 to account for the t-SNE and UMAP cols.
@@ -247,31 +282,6 @@ for(norm_method in names(target_data_object@assayData)) {
 # Create the dimension reduction table and add to pData.
 dim_red_df <- do.call(cbind, dim_red_list)
 pData(target_data_object) <- cbind(pData(target_data_object), dim_red_df)
-
-# # Export individual plots to EPS/PNG.
-# plot_width = 8
-# plot_height = 6
-# units = "in"
-# res = 300
-# for(norm_method in names(plot_list_unsupervised_clustering)) {
-#   for(dim_red_method in names(plot_list_unsupervised_clustering[[norm_method]])) {
-#     for(compartment_var in names(plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]])) {
-#       plot <- plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]][[compartment_var]]
-# 
-#       # # Set the scaling factors.
-#       # # It's the same for both width and height since the grids are squares.
-#       # scaling_factor <- ifelse(nCol > 1, (nCol / 2)^2, 1)  # Number of rows in current grid / 2 (base number)
-# 
-#       # Save to EPS and PNG and then ...
-#       eps_path <- paste0(output_dir_pubs, 
-#                          paste0("unsupervised-analysis_", norm_method, "-", dim_red_method, "-", compartment_var, ".eps") %>% regexPipes::gsub("\\/", "_"))
-#       png_path <- paste0(output_dir_pubs, 
-#                          paste0("unsupervised-analysis_", norm_method, "-", dim_red_method, "-", compartment_var, ".png") %>% regexPipes::gsub("\\/", "_"))
-#       saveEPS(plot, eps_path, width = plot_width, height = plot_height)
-#       savePNG(plot, png_path, width = plot_width, height = plot_height, units = units, res = res)
-#     }
-#   }
-# }
 
 # Arrange plots into grid.
 plot_list_unsupervised_clustering_grid <- list()
@@ -296,7 +306,7 @@ for(norm_method in names(plot_list_unsupervised_clustering)) {
 
     # Arrange plots in p_list onto a grid.
     plot_grid <- do.call("grid.arrange", c(p_list, ncol=nCol))
-    plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("Significance, -log10(P)", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = scaling_factor)),
+    plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = scaling_factor)),
                                                        bottom = grid::textGrob("", gp = grid::gpar(cex = scaling_factor)),
                                                        top = grid::textGrob(paste0(dim_red_method, " | Normalization: ", normalization_names[names(normalization_names)==norm_method]),
                                                                             gp = grid::gpar(cex = scaling_factor)
@@ -386,9 +396,18 @@ for(norm_method in names(target_data_object@assayData)) {
   exprs_mat <- assayDataElement(target_data_object[GOI, ], elt = paste0("log_", norm_method))
   annot <- data.frame(pData(target_data_object)[, heatmap_ann_vars])
   rownames(annot) <- colnames(exprs_mat)
-  plot_list_heatmap[[norm_method]] <- pheatmap(exprs_mat,
+  # Rather than use `pheatmap`'s built-in clustering, we're going to cluster the samples ourselves.
+  # That way, we don't have to display the dendrograms on the heatmap.
+  col_dist <- dist(t(exprs_mat)) # Transpose to cluster columns
+  col_clust <- hclust(col_dist) # Cluster
+  col_order <- col_clust$order # Extract the column order
+  exprs_mat_ordered <- exprs_mat[, col_order] # Reorder matrix columns
+  
+  # Plot the heatmap without dendrograms.
+  plot_list_heatmap[[norm_method]] <- pheatmap(exprs_mat_ordered,
            scale = "row",
            show_rownames = FALSE, show_colnames = FALSE,
+           cluster_rows = FALSE, cluster_cols = FALSE,
            border_color = NA,
            clustering_method = "average",
            clustering_distance_rows = "correlation",
