@@ -148,7 +148,8 @@ if(file.exists(params$plot_list_16s_score_file)) {
 if(file.exists(params$plot_list_cv_heatmap_file)) {
   plot_list_cv_heatmaps <- readRDS(params$plot_list_cv_heatmap_file)
   for(item in plot_list_cv_heatmaps) {
-    suppressMessages(capture.output(print(item)))
+    grid::grid.newpage()
+    grid::grid.draw(item$gtable)  # pheatmap returns a list with a "gtable" component
   }
 }
 ```
