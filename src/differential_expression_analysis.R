@@ -172,6 +172,16 @@ model_number <- 1
 for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
   
   subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
+  # If subset_var_levels_manual is set, filter subset_var_levels to include only those values
+  subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
+  if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
+    if(sum(subset_var_levels_manual_i %in% subset_var_levels) < 1) {
+      warning(paste0("None of the manually provided levels for subset variable ", subset_var, " are present in that variable. All available levels of subset variable ", subset_var, " will be used"))
+    } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
+      subset_var_levels <- subset_var_levels %>% .[. %in% subset_var_levels_manual_i]
+    }
+  }
+  
   for(subset_var_level in subset_var_levels) {
     
     for(model in models) {
