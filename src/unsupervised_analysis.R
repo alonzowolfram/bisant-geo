@@ -136,6 +136,10 @@ for(norm_method in names(target_data_object@assayData)) {
       # Get the number of levels of the compartment variable.
       num_levels_1 <- length(unique(pData(target_data_object)$CompartmentVar1))
       num_levels_2 <- FALSE
+      
+      # We will still need a `compartment_var_1` and `compartment_var_2` for when we check if the label_var is equal to either of the compartment vars.
+      compartment_var_1 <- compartment_var
+      compartment_var_2 <- FALSE
     }
     
     # Loop through the three dimred types.
@@ -145,122 +149,92 @@ for(norm_method in names(target_data_object@assayData)) {
     for(i in 1:length(dim_reds)) {
       dim_red <- dim_reds[i]
       if(!dim_red) next
-      
       dim_red_name <- names(dim_red)
-      if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
-        # CompartmentVar2 exists.
-        plot <-
-          ggplot(pData(target_data_object),
-                 aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
-          geom_point(size = 3, aes(shape = CompartmentVar2)) +
-          labs(title = paste0("Compartment: ", compartment_var),
-               color = paste0(compartment_var_1),
-               shape = paste0(compartment_var_2)) +
-          theme_bw() +
-          theme(panel.grid.minor = element_blank(),
-                panel.grid.major = element_blank())
+      
+      # Base plot
+      plot <- ggplot(pData(target_data_object),
+                     aes(x = !!as.name(umap_col_names[1]), 
+                         y = !!as.name(umap_col_names[2]), 
+                         color = CompartmentVar1)) +
+        theme_bw() +
+        theme(panel.grid.minor = element_blank(),
+              panel.grid.major = element_blank())
+      
+      # Conditionally add shape aesthetic and shape label if CompartmentVar2 exists
+      if ("CompartmentVar2" %in% colnames(pData(target_data_object))) {
+        plot <- plot +
+          geom_point(data = pData(target_data_object), size = 3, aes(shape = CompartmentVar2)) +
+          labs(shape = paste0(compartment_var_2))
       } else {
-        # CompartmentVar2 doesn't exist.
-        plot <-
-          ggplot(pData(target_data_object),
-                 aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
-          geom_point(size = 3) +
-          labs(title = paste0("Compartment: ", compartment_var),
-               color = paste0(compartment_var)) +
-          theme_bw() +
-          theme(panel.grid.minor = element_blank(),
-                panel.grid.major = element_blank())
+        plot <- plot +
+          geom_point(size = 3)
       }
+      
       # Conditionally hide legend
       if ((num_levels_1 + num_levels_2) > 15) {
         plot <- plot + theme(legend.position = "none") + labs(subtitle = "Legend hidden due to >15 categories")
       }
-      plot_list_unsupervised_clustering[[norm_method]][[dim_red_name]][[compartment_var]] <- plot
-    }
-
-    # # UMAP
-    # if(perform_UMAP) {
-    #   if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
-    #     # CompartmentVar2 exists.
-    #     plot_list_unsupervised_clustering[[norm_method]][["UMAP"]][[compartment_var]] <-
-    #       ggplot(pData(target_data_object),
-    #              aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
-    #       geom_point(size = 3, aes(shape = CompartmentVar2)) +
-    #       labs(title = paste0("Compartment: ", compartment_var),
-    #            color = paste0(compartment_var_1),
-    #            shape = paste0(compartment_var_2)) +
-    #       theme_bw() +
-    #       theme(panel.grid.minor = element_blank(),
-    #             panel.grid.major = element_blank())
-    #   } else {
-    #     # CompartmentVar2 doesn't exist.
-    #     plot_list_unsupervised_clustering[[norm_method]][["UMAP"]][[compartment_var]] <-
-    #       ggplot(pData(target_data_object),
-    #              aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
-    #       geom_point(size = 3) +
-    #       labs(title = paste0("Compartment: ", compartment_var),
-    #            color = paste0(compartment_var)) +
-    #       theme_bw() +
-    #       theme(panel.grid.minor = element_blank(),
-    #             panel.grid.major = element_blank())
-    #   }
-    # }
-    # 
-    # # t-SNE
-    # if(perform_tSNE) {
-    #   if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
-    #     plot_list_unsupervised_clustering[[norm_method]][["t-SNE"]][[compartment_var]] <-
-    #       # CompartmentVar2 exists.
-    #       ggplot(pData(target_data_object),
-    #              aes(x = !!as.name(tsne_col_names[1]), y = !!as.name(tsne_col_names[2]), color = CompartmentVar1)) +
-    #       geom_point(size = 3, aes(shape = CompartmentVar2)) +
-    #       labs(title = paste0("Compartment: ", compartment_var),
-    #            color = paste0(compartment_var_1),
-    #            shape = paste0(compartment_var_2)) +
-    #       theme_bw() +
-    #       theme(panel.grid.minor = element_blank(),
-    #             panel.grid.major = element_blank())
-    #   } else {
-    #     plot_list_unsupervised_clustering[[norm_method]][["t-SNE"]][[compartment_var]] <-
-    #       # CompartmentVar2 doesn't exist.
-    #       ggplot(pData(target_data_object),
-    #              aes(x = !!as.name(tsne_col_names[1]), y = !!as.name(tsne_col_names[2]), color = CompartmentVar1)) +
-    #       geom_point(size = 3) +
-    #       labs(title = paste0("Compartment: ", compartment_var),
-    #            color = paste0(compartment_var)) +
-    #       theme_bw() +
-    #       theme(panel.grid.minor = element_blank(),
-    #             panel.grid.major = element_blank())
-    #   }
-    # }
-    # 
-    # # PCA
-    # if(perform_PCA) {
-    #   if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
-    #     plot_list_unsupervised_clustering[[norm_method]][["PCA"]][[compartment_var]] <-
-    #       # CompartmentVar2 exists.
-    #       ggplot(pData(target_data_object),
-    #              aes(x = !!as.name(pca_col_names[1]), y = !!as.name(pca_col_names[2]), color = CompartmentVar1)) +
-    #       geom_point(size = 3, aes(shape = CompartmentVar2)) +
-    #       labs(title = paste0("Compartment: ", compartment_var),
-    #            color = paste0(compartment_var_1),
-    #            shape = paste0(compartment_var_2)) +
-    #       theme_bw() +
-    #       theme(panel.grid.minor = element_blank(),
-    #             panel.grid.major = element_blank())
-    #   } else {
-    #     plot_list_unsupervised_clustering[[norm_method]][["PCA"]][[compartment_var]] <-
-    #       # CompartmentVar2 doesn't exist.
-    #       ggplot(pData(target_data_object),
-    #              aes(x = !!as.name(pca_col_names[1]), y = !!as.name(pca_col_names[2]), color = CompartmentVar1)) +
-    #       geom_point(size = 3) +
-    #       labs(title = paste0("Compartment: ", compartment_var),
-    #            color = paste0(compartment_var)) +
-    #       theme_bw() +
-    #       theme(panel.grid.minor = element_blank(),
-    #             panel.grid.major = element_blank())
-    #   }
-    # }
+      
+      # Conditionally add text labels to points
+      if(!flagVariable(label_vars)) {
+        for(label_var in label_vars) {
+          # Check if label_var is the same as either compartment_var_1 or compartment_var_2;
+          # if it is, we renamed compartment_var_1 "CompartmentVar1" and compartment_var_2 "CompartmentVar2",
+          # so we need to change what we set `label = ` to in `aes()`.
+          if(label_var==compartment_var_1) {
+            label_var_prime <- "CompartmentVar1"
+          } else if(label_var==compartment_var_2) {
+            label_var_prime <- "CompartmentVar2"
+          } else {
+            label_var_prime <- label_var
+          }
+          
+          plot_i <- plot + ggrepel::geom_text_repel(aes(label = !!as.name(label_var_prime))) + # , max.overlaps = sqrt(nrow(pData(target_data_object)))
+            labs(title = paste0("Compartment: ", compartment_var, " | Label: ", label_var),
+                 color = paste0(compartment_var))
+          
+          # Save plot to list
+          plot_list_unsupervised_clustering[[norm_method]][[dim_red_name]][[label_var]][[compartment_var]] <- plot_i
+          
+        } # End label_vars for loop
+        
+        # Add unlabeled plot as well
+        plot_list_unsupervised_clustering[[norm_method]][[dim_red_name]][["No_label"]][[compartment_var]] <- plot +
+          labs(title = paste0("Compartment: ", compartment_var),
+               color = paste0(compartment_var))
+        
+      } else {
+        plot_list_unsupervised_clustering[[norm_method]][[dim_red_name]][["No_label"]][[compartment_var]] <- plot +
+          labs(title = paste0("Compartment: ", compartment_var),
+               color = paste0(compartment_var))
+      }
+      
+      # if("CompartmentVar2" %in% colnames(pData(target_data_object))) {
+      #   # CompartmentVar2 exists.
+      #   plot <-
+      #     ggplot(pData(target_data_object),
+      #            aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
+      #     geom_point(size = 3, aes(shape = CompartmentVar2)) +
+      #     labs(title = paste0("Compartment: ", compartment_var),
+      #          color = paste0(compartment_var_1),
+      #          shape = paste0(compartment_var_2)) +
+      #     theme_bw() +
+      #     theme(panel.grid.minor = element_blank(),
+      #           panel.grid.major = element_blank())
+      # } else {
+      #   # CompartmentVar2 doesn't exist.
+      #   plot <-
+      #     ggplot(pData(target_data_object),
+      #            aes(x = !!as.name(umap_col_names[1]), y = !!as.name(umap_col_names[2]), color = CompartmentVar1)) +
+      #     geom_point(size = 3) +
+      #     labs(title = paste0("Compartment: ", compartment_var),
+      #          color = paste0(compartment_var)) +
+      #     theme_bw() +
+      #     theme(panel.grid.minor = element_blank(),
+      #           panel.grid.major = element_blank())
+      # }
+    
+    } # End dimension reduction types loop.
     
     # # If it was a composite variable, remove CompartmentVar before resetting the variable names.
     # if(ncol(pData(target_data_object)) > (length(orig_var_names) + 4)) { # + 4 to account for the t-SNE and UMAP cols.
@@ -291,32 +265,38 @@ for(norm_method in names(plot_list_unsupervised_clustering)) {
   plot_list_unsupervised_clustering_grid[[norm_method]] <- list()
   
   for(dim_red_method in names(plot_list_unsupervised_clustering[[norm_method]])) {
-    if(length(plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]]) < 1) next
     
-    message(paste0("Arranging plots for dimension reduction method ", dim_red_method, " for normalization method ", norm_method))
+    plot_list_unsupervised_clustering_grid[[norm_method]][[dim_red_method]] <- list()
     
-    p_list <- plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]]
-
-    n <- length(p_list)
-    nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
-
-    # Set the scaling factors for label and legend size.
-    sqrt_n_col <- sqrt(nCol)
-    scaling_factor <- ifelse(nCol > 1, (sqrt_n_col * nCol / 2), 1) # Number of rows in current grid / 2 (base number)
-
-    # Arrange plots in p_list onto a grid.
-    plot_grid <- do.call("grid.arrange", c(p_list, ncol=nCol))
-    plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = scaling_factor)),
-                                                       bottom = grid::textGrob("", gp = grid::gpar(cex = scaling_factor)),
-                                                       top = grid::textGrob(paste0(dim_red_method, " | Normalization: ", normalization_names[names(normalization_names)==norm_method]),
-                                                                            gp = grid::gpar(cex = scaling_factor)
-                                                                            )
-                                                       )
-
-    # Save to list.
-    plot_list_unsupervised_clustering_grid[[norm_method]][[dim_red_method]] <- plot_grid
-  }
-}
+    for(label_var in names(plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]])) {
+      if(length(plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]]) < 1) next
+      message(paste0("Arranging plots for dimension reduction method ", dim_red_method, " for normalization method ", norm_method, " for labeling variable ", label_var))
+      
+      p_list <- plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]][[label_var]]
+      
+      n <- length(p_list)
+      nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
+      
+      # Set the scaling factors for label and legend size.
+      sqrt_n_col <- sqrt(nCol)
+      scaling_factor <- ifelse(nCol > 1, (sqrt_n_col * nCol / 2), 1) # Number of rows in current grid / 2 (base number)
+      
+      # Arrange plots in p_list onto a grid.
+      plot_grid <- do.call("grid.arrange", c(p_list, ncol=nCol))
+      plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = scaling_factor)),
+                                                         bottom = grid::textGrob("", gp = grid::gpar(cex = scaling_factor)),
+                                                         top = grid::textGrob(paste0(dim_red_method, " | Normalization: ", normalization_names[names(normalization_names)==norm_method]),
+                                                                              gp = grid::gpar(cex = scaling_factor)
+                                                         )
+      )
+      
+      # Save to list.
+      plot_list_unsupervised_clustering_grid[[norm_method]][[dim_red_method]][[label_var]] <- plot_grid
+      
+    } # End label_var for loop
+    
+  } # End dim_red_method for loop
+} # End norm_method for loop
 
 # Add the module back to the list.
 target_data_object_list[[main_module]] <- target_data_object
