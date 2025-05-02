@@ -30,7 +30,7 @@ if(!flagVariable(pathway_table_file)) {
     message("Checking provided pathway file.")
     if(base::grepl("\\.csv$", pathway_table_file)) { pathway_table <- read.csv(pathway_table_file, header = F)}
     else if(base::grepl("\\.tsv$", pathway_table_file)) { pathway_table <- read.table(pathway_table_file, header = F, sep = "\t") }
-    else if(base::grepl("\\.xls.*$", pathway_table_file)) { pathway_table <- read_excel(pathway_table_file, col_names = F)} 
+    else if(base::grepl("\\.xls.*$", pathway_table_file)) { pathway_table <- read_excel(pathway_table_file, col_names = F, na = "NA")} 
     else {
       warning("The pathway table provided is not in CSV, TSV, or Excel format. Check the file extension. Using default pathways instead.")
       pathway_table <- NULL
@@ -147,7 +147,8 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
           unlist() %>% 
           stringr::str_split(": ") %>% 
           lapply(FUN = function(x) stringr::str_to_sentence(x) %>% paste(collapse=": ")) %>% 
-          unlist()
+          unlist() %>%
+          truncate_strings()
         
         # Add pathway ranking score (-log10(padj) * |NES|)
         message("Adding pathway ranking scores.")
@@ -156,12 +157,9 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         # Before calculating percentiles for pathway, cull pathway list down to its final form (i.e., what will actually be graphed.)
         # If individual_pathways is set, subset to include only the pathways of interest.
         if(!is.null(individual_pathways) & sum(individual_pathways=="") < length(individual_pathways)) df_sub <- df_sub %>% dplyr::filter(pathway %in% individual_pathways)
-        # If the number of pathways > limits for graphing, perform cutoff by PathwayScore.
-        if(!is.null(n_max_pathways) & n_max_pathways != "") if(nrow(df_sub) > n_max_pathways) df_sub <- df_sub %>% dplyr::top_n(n = n_max_pathways, wt = PathwayScore)
         
         # Add information about the model (model number, contrast variable, current contrast.)
         message("Adding information about model.")
-        
         df_sub$`Model` <- model
         df_sub$`Contrast variable` <- contrast_var
         df_sub$Contrast <- contrast
@@ -201,12 +199,16 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
                      (ratio > 5) * ((sqrt(ratio) - sqrt(5)) + 0.75)
         
         # Get the data frame into the proper format for graphing using geom_rect.
-        df_sub_graphing <- df_sub
+        df_sub_graphing <- df_sub 
+        
         df_sub_graphing$PathwayCleaned <- df_sub_graphing$PathwayCleaned %>% as.factor %>% factor(levels = df_sub %>% dplyr::arrange(NES) %>% .$PathwayCleaned) # Arrange factor levels of pathway by NES.
-        df_sub_graphing$ymin <- ifelse(df_sub$NES >= 0, 0, df_sub$NES)
-        df_sub_graphing$ymax <- ifelse(df_sub$NES >= 0, df_sub$NES, 0)
+        df_sub_graphing$ymin <- ifelse(df_sub_graphing$NES >= 0, 0, df_sub_graphing$NES)
+        df_sub_graphing$ymax <- ifelse(df_sub_graphing$NES >= 0, df_sub_graphing$NES, 0)
         df_sub_graphing$xmin <- (df_sub_graphing$PathwayCleaned %>% as.numeric) - (bar_width/2)
         df_sub_graphing$xmax <- (df_sub_graphing$PathwayCleaned %>% as.numeric) + (bar_width/2)
+        
+        # If the number of pathways > limits for graphing, perform cutoff by PathwayScore.
+        if(!is.null(n_max_pathways) & n_max_pathways != "") if(nrow(df_sub_graphing) > n_max_pathways) df_sub_graphing <- df_sub_graphing %>% dplyr::top_n(n = n_max_pathways, wt = PathwayScore)
         
         # Graph.
         plot <- ggplot(df_sub_graphing, aes(y = NES, x = reorder(PathwayCleaned, NES), fill = NES)) +

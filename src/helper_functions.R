@@ -195,3 +195,21 @@ convert_human_mouse_genes <- function(gene_expression_matrix, mirror = "www",
     return(rownames(newGenes.counts))
   }
 }
+
+#' Function to truncate strings
+#'
+#' @param vec A vector of strings
+#' @param max_length Maximum length a string can be before getting truncated
+#' @param trunc_length Length to truncate a string to that exceeds max_length
+#' @return vector with truncated elements
+#'
+#' @export
+truncate_strings <- function(vec, max_length = 35, trunc_length = 31) {
+  sapply(vec, function(x) {
+    if (nchar(x) > max_length) {
+      paste0(substr(x, 1, trunc_length), " ...")
+    } else {
+      x
+    }
+  }, USE.NAMES = FALSE)
+}
