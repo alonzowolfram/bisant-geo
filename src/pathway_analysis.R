@@ -147,8 +147,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
           unlist() %>% 
           stringr::str_split(": ") %>% 
           lapply(FUN = function(x) stringr::str_to_sentence(x) %>% paste(collapse=": ")) %>% 
-          unlist() %>%
-          truncate_strings()
+          unlist()
         
         # Add pathway ranking score (-log10(padj) * |NES|)
         message("Adding pathway ranking scores.")
@@ -210,27 +209,52 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         # If the number of pathways > limits for graphing, perform cutoff by PathwayScore.
         if(!is.null(n_max_pathways) & n_max_pathways != "") if(nrow(df_sub_graphing) > n_max_pathways) df_sub_graphing <- df_sub_graphing %>% dplyr::top_n(n = n_max_pathways, wt = PathwayScore)
         
+        # Truncate pathway names (doing it here, AFTER conversion to factor, because if truncating makes two pathway names come out the same, we can't have duplicated factors)
+        # Reorder factor levels by NES (so the bars are sorted)
+        df_sub_graphing$PathwayCleanedChar <- df_sub_graphing$PathwayCleaned %>%
+          as.character() %>%
+          truncate_strings()
+        
+        df_sub_graphing$PathwayCleanedChar <- factor(
+          df_sub_graphing$PathwayCleanedChar,
+          levels = df_sub_graphing %>% arrange(NES) %>% pull(PathwayCleanedChar)
+        )
+        
         # Graph.
-        plot <- ggplot(df_sub_graphing, aes(y = NES, x = reorder(PathwayCleaned, NES), fill = NES)) +
-          # Bar graph manually, using geom_rect(angle).
-          geom_rect(xmin = df_sub_graphing$xmin, xmax = df_sub_graphing$xmax, ymin = df_sub_graphing$ymin, ymax = df_sub_graphing$ymax) +
-          # Set the color scale for the bars.
-          scale_fill_gradientn(colors = nes_palette, limits = c(lower_limit, upper_limit)) + 
-          # Flip horizontal.
-          coord_flip() + 
-          # B&W theme.
-          theme_bw() + 
-          # Remove grid lines and set aspect ratio.
-          theme(aspect.ratio = 1/1, # Aspect ratio needs to _decrease_ (limit 0) with the # of rows in df_sub_graphing.
-                legend.position = "right",
-                panel.grid.minor = element_blank(),
-                panel.grid.major = element_blank(),
-                # axis.text.x=element_blank(), 
-                # axis.ticks.x=element_blank(), 
-                # axis.text.y=element_blank(), 
-                axis.ticks.y=element_blank()) + 
-          # Set the labels.
+        plot <- ggplot(df_sub_graphing, aes(x = PathwayCleanedChar, y = NES, fill = NES)) +
+          geom_col(width = 0.8) +  # Adjust width as needed
+          scale_fill_gradientn(colors = nes_palette, limits = c(lower_limit, upper_limit)) +
+          coord_flip() +
+          theme_bw() +
+          theme(
+            aspect.ratio = 1/1,
+            legend.position = "right",
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            axis.ticks.y = element_blank()
+          ) +
           labs(x = "", y = paste0(contrast_element_2, " <-> ", contrast_element_1))
+        
+        # plot <- ggplot(df_sub_graphing, aes(y = NES, x = reorder(PathwayCleanedChar, NES), fill = NES)) +
+        #   # Bar graph manually, using geom_rect(angle).
+        #   geom_rect(xmin = df_sub_graphing$xmin, xmax = df_sub_graphing$xmax, ymin = df_sub_graphing$ymin, ymax = df_sub_graphing$ymax) +
+        #   # Set the color scale for the bars.
+        #   scale_fill_gradientn(colors = nes_palette, limits = c(lower_limit, upper_limit)) + 
+        #   # Flip horizontal.
+        #   coord_flip() + 
+        #   # B&W theme.
+        #   theme_bw() + 
+        #   # Remove grid lines and set aspect ratio.
+        #   theme(aspect.ratio = 1/1, # Aspect ratio needs to _decrease_ (limit 0) with the # of rows in df_sub_graphing.
+        #         legend.position = "right",
+        #         panel.grid.minor = element_blank(),
+        #         panel.grid.major = element_blank(),
+        #         # axis.text.x=element_blank(), 
+        #         # axis.ticks.x=element_blank(), 
+        #         # axis.text.y=element_blank(), 
+        #         axis.ticks.y=element_blank()) + 
+        #   # Set the labels.
+        #   labs(x = "", y = paste0(contrast_element_2, " <-> ", contrast_element_1))
         
         # Add to the list.
         plot_list_pathway_analysis[[subset_var]][[subset_var_level]][[paste0("model_", model_number)]][[contrast]] <- plot
