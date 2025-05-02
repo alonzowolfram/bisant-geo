@@ -346,6 +346,13 @@ experiment:
     # variable3, and the second graph will have its points colored by variable2.
     compartment_vars:
 
+    # [Optional] The column(s) in the annotation to use as point labels (using `geom_text_repel()`).
+    # If provided, each point will be labeled with the corresponding values from the columns.
+    # Also, if values are provided, a separate set of graphs will be created without labels.
+    # You can provide multiple values, separated by commas, e.g. "variable1,variable2".
+    # A separate graph will be created for each variable thus provided.
+    label_vars: 
+    
     # [Optional] The columns in the annotation to use for annotation in the heatmap.
     # Separate multiple values with commas.
     heatmap_ann_vars:
@@ -490,6 +497,15 @@ experiment:
     # If you have a subsetting variable but also want to conduct immune deconvolution
     # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one. 
     imm_decon_subset_vars: 
+    
+    # [Optional] Values of the above imm_decon_subset_vars to include when subsetting.
+    # For each variable in imm_decon_subset_vars above, separate the values of that variable with commas,
+    # and separate multiple variables with semi-colons (;). 
+    # So, if imm_decon_subset_var_levels_manual is not empty, then for each value of imm_decon_subset_vars, 
+    # the pipeline, _in addition to_ subsets by each level individually, will _also_
+    # do a subset consisting of only the imm_decon_subset_var_levels_manual values. 
+    # You can skip a subsetting variable by inputting NA.
+    imm_decon_subset_var_levels_manual:
 
     # [Optional] Whether or not when graphing to remove observations with NA 
     # as the value for the grouping variable of interest. 

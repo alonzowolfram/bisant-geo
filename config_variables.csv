@@ -1,4 +1,4 @@
-﻿variable,required,default_value,split_string
+variable,required,default_value,split_string
 project_name,FALSE,,FALSE
 run_name,FALSE,,FALSE
 dcc_dir,TRUE,,FALSE
@@ -47,10 +47,11 @@ perform_UMAP,FALSE,TRUE,FALSE
 perform_tSNE,FALSE,FALSE,FALSE
 perform_PCA,FALSE,FALSE,FALSE
 compartment_vars,FALSE,,TRUE
+label_vars,FALSE,,TRUE
 heatmap_ann_vars,FALSE,,TRUE
 lmm_formulae_de,TRUE,,TRUE
 subset_vars,FALSE,,TRUE
-subset_var_levels_manual,FALSE,,TRUE
+subset_var_levels_manual,FALSE,,FALSE
 cv_cutoff,FALSE,,FALSE
 n_top_genes,FALSE,15,FALSE
 de_genes_cutoffs,FALSE,"0.25,0.58",TRUE
@@ -61,6 +62,7 @@ modules_exprs,FALSE,,FALSE
 imm_decon_methods,FALSE,,TRUE
 observation_identifiers,FALSE,,TRUE
 imm_decon_subset_vars,FALSE,,TRUE
+imm_decon_subset_var_levels_manual,FALSE,,FALSE
 imm_decon_remove_na,FALSE,TRUE,FALSE
 lmm_formulae_immune,FALSE,,TRUE
 imm_decon_grouping_vars,FALSE,,TRUE

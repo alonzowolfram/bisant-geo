@@ -359,7 +359,7 @@ if(length(error_msg_list) > 0) {
 }
 
 # There are a couple of parameters we have to handle manually:
-# `subset_var_levels_manual`, `de_genes_cutoffs`, and 'imm_decon_methods`.
+# `subset_var_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, and `imm_decon_subset_var_levels_manual`.
 if(flagVariable(subset_var_levels_manual)) {
   subset_var_levels_manual <- rep(list(NA), length(subset_vars))
   names(subset_var_levels_manual) <- subset_vars
@@ -374,6 +374,18 @@ if(flagVariable(subset_var_levels_manual)) {
 }
 if(flagVariable(de_genes_cutoffs)) de_genes_cutoffs <- c(0.25, 0.58)
 if(flagVariable(imm_decon_methods)) imm_decon_methods <- c("mcp_counter", "quantiseq")
+if(flagVariable(imm_decon_subset_var_levels_manual)) {
+  imm_decon_subset_var_levels_manual <- rep(list(NA), length(imm_decon_subset_vars))
+  names(imm_decon_subset_var_levels_manual) <- imm_decon_subset_vars
+} else {
+  imm_decon_subset_var_levels_manual <- imm_decon_subset_var_levels_manual %>% strsplit(";") %>% unlist %>% strsplit(",")
+  if(length(imm_decon_subset_var_levels_manual)==length(imm_decon_subset_vars)) {
+    names(imm_decon_subset_var_levels_manual) <- imm_decon_subset_vars
+  } else {
+    imm_decon_subset_var_levels_manual <- rep(list(NA), length(imm_decon_subset_vars))
+    names(imm_decon_subset_var_levels_manual) <- imm_decon_subset_vars
+  }
+}
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
 ##                                                                

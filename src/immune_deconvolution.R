@@ -263,6 +263,16 @@ for(method in names(imm_decon_res_list)) {
     # Get the levels of the current subset_var.
     subset_var_levels <- pData_tmp[[subset_var]] %>% as.factor %>% levels # as.factor needed because it might be a character vector.
     
+    # If imm_decon_subset_var_levels_manual is set, filter subset_var_levels to include only those values
+    imm_decon_subset_var_levels_manual_i <- imm_decon_subset_var_levels_manual[[subset_var]]
+    if(sum(is.na(imm_decon_subset_var_levels_manual_i)) < length(imm_decon_subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
+      if(sum(imm_decon_subset_var_levels_manual_i %in% subset_var_levels) < 1) {
+        warning(paste0("None of the manually provided levels for subset variable ", subset_var, " are present in that variable. All available levels of subset variable ", subset_var, " will be used"))
+      } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
+        subset_var_levels <- subset_var_levels %>% .[. %in% imm_decon_subset_var_levels_manual_i]
+      }
+    }
+    
     # loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
     for(subset_var_level in subset_var_levels) {
       plot_list[[method]][[subset_var]][[subset_var_level]] <- list()
