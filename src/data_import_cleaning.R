@@ -120,7 +120,7 @@ for(module in data_object_all@annotation %>% regexPipes::gsub("\\.\\D+$", "")) {
 ### Data loading: WTA+TCR ----
 ##
 ## ................................................
-if(!flagVariable(combined_module)) {
+if(!flagVariable(combined_module_wta_tcr)) {
   wta_tcr_pkc_modules <- c(main_module, module_tcr)
   message(paste0("Working on combined WTA+TCR modules ", paste(wta_tcr_pkc_modules, collapse = ", ")))
 
@@ -137,7 +137,44 @@ if(!flagVariable(combined_module)) {
                                           experimentDataColNames = experiment_data_col_names)
     
     # Save to the list.
-    data_object_list[[combined_module]] <- data_object
+    data_object_list[[combined_module_wta_tcr]] <- data_object
+    
+    # Clean up.
+    rm(data_object)
+    gc()
+  }
+}
+
+## ................................................
+##
+### Data loading: all combined modules ----
+##
+## ................................................
+# Name of the combined module (all)
+combined_module_all <- ""
+# Check if there are any modules besides the main one
+if(sum(data_object_all@annotation != paste0(main_module, ".pkc")) > 0) {
+  
+  # If there are, create the combined module
+  modules <- data_object_all@annotation %>% regexPipes::gsub("\\.\\D+$", "") %>% .[. != paste0(main_module)]
+  combined_module_all <- paste(c(main_module, modules), collapse = ",")
+  
+  message(paste0("Working on all modules combined"))
+  
+  # Create the data object (a NanoString GeoMx set) from the input files.
+  all_pkc_files <- paste0(pkc_dir, "/", data_object_all@annotation)
+  # Check that all of the requisite PKC files exist.
+  if(!all(file.exists(all_pkc_files))) { warning("One or more of the WTA and/or TCR PKC files is missing. Combined WTA+TCR object will not be created (but separate objects will still be generated.)") } else {
+    data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
+                                          pkcFiles = all_pkc_files,
+                                          phenoDataFile = sample_annotation_file,
+                                          phenoDataSheet = phenodata_sheet_name,
+                                          phenoDataDccColName = phenodata_dcc_col_name,
+                                          protocolDataColNames = protocol_data_col_names,
+                                          experimentDataColNames = experiment_data_col_names)
+    
+    # Save to the list.
+    data_object_list[[combined_module_all]] <- data_object
     
     # Clean up.
     rm(data_object)
