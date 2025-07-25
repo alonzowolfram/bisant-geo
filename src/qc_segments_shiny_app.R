@@ -12,84 +12,103 @@ library(tidyverse)
 library(NanoStringNCTools) # For NanoString stuff.
 library(GeomxTools) # For NanoString GeoMx stuff. 
 
-# Define UI for application that draws a histogram
+# Define UI
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("QC: Segments"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-          # Minimum number of segment reads (minSegmentReads, min_segment_reads)
-          sliderInput("min_segment_reads",
-                      "Minimum number of segment reads",
-                      min = 0,
-                      max = 1000,
-                      value = 1000),
-          # Percent reads trimmed.
-          sliderInput("percent_trimmed",
-                      "Minimum % of reads trimmed",
-                      min = 0,
-                      max = 100,
-                      value = 80),
-          # Percent reads stitched.
-          sliderInput("percent_stitched",
-                      "Minimum % of reads stitched",
-                      min = 0,
-                      max = 100,
-                      value = 80),
-          # Percent reads aligned.
-          sliderInput("percent_aligned",
-                      "Minimum % of reads aligned",
-                      min = 0,
-                      max = 100,
-                      value = 80),
-          # Minimum sequencing saturation (%).
-          sliderInput("percent_saturation",
-                      "Minimum sequencing saturation (%)",
-                      min = 0,
-                      max = 100,
-                      value = 50),
-          # Minimum number of negative control counts.
-          sliderInput("min_negative_count",
-                      "Minimum # of negative control counts",
-                      min = 0,
-                      max = 10,
-                      value = 5),
-          # Maximum number of counts observed in No Template Control well.
-          sliderInput("max_ntc_count",
-                      "Maximum # of counts in No Template Control (NTC) well",
-                      min = 0,
-                      max = 1000,
-                      value = 1000),
-          # Minimum number of nuclei estimated.
-          sliderInput("min_nuclei",
-                      "Minimum # of nuclei estimated",
-                      min = 0,
-                      max = 100,
-                      value = 20),
-          # Minimum segment area.
-          sliderInput("min_area",
-                      "Minimum segment area",
-                      min = 1000,
-                      max = 10000,
-                      value = 5000),
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           tableOutput("static")
-        )
+  
+  # Application title
+  titlePanel("QC: Segments"),
+  
+  # Sidebar with 1) selection of the module from the data object list and 2) slider inputs for QC metric cutoffs
+  sidebarLayout(
+    sidebarPanel(
+      # Dynamically generated selection of module from data object list
+      uiOutput("dynamicModules"),
+      
+      # Minimum number of segment reads (minSegmentReads, min_segment_reads)
+      sliderInput("min_segment_reads",
+                  "Minimum number of segment reads",
+                  min = 0,
+                  max = 1000,
+                  value = 1000),
+      # Percent reads trimmed.
+      sliderInput("percent_trimmed",
+                  "Minimum % of reads trimmed",
+                  min = 0,
+                  max = 100,
+                  value = 80),
+      # Percent reads stitched.
+      sliderInput("percent_stitched",
+                  "Minimum % of reads stitched",
+                  min = 0,
+                  max = 100,
+                  value = 80),
+      # Percent reads aligned.
+      sliderInput("percent_aligned",
+                  "Minimum % of reads aligned",
+                  min = 0,
+                  max = 100,
+                  value = 80),
+      # Minimum sequencing saturation (%).
+      sliderInput("percent_saturation",
+                  "Minimum sequencing saturation (%)",
+                  min = 0,
+                  max = 100,
+                  value = 50),
+      # Minimum number of negative control counts.
+      sliderInput("min_negative_count",
+                  "Minimum # of negative control counts",
+                  min = 0,
+                  max = 10,
+                  value = 5),
+      # Maximum number of counts observed in No Template Control well.
+      sliderInput("max_ntc_count",
+                  "Maximum # of counts in No Template Control (NTC) well",
+                  min = 0,
+                  max = 10000,
+                  value = 1000),
+      # Minimum number of nuclei estimated.
+      sliderInput("min_nuclei",
+                  "Minimum # of nuclei estimated",
+                  min = 0,
+                  max = 100,
+                  value = 20),
+      # Minimum segment area.
+      sliderInput("min_area",
+                  "Minimum segment area",
+                  min = 1000,
+                  max = 10000,
+                  value = 5000),
+    ),
+    
+    # Show a plot of the generated distribution
+    mainPanel(
+      tableOutput("static")
     )
+  )
 )
 
-# Define server logic required to draw a histogram
+# Define server logic
 server <- function(input, output) {
-
+  # Load in the data object list.
+  data_object_list <- readRDS("Rdata/NanoStringGeoMxSet_raw.rds")
+  
+  # Dynamically generate the drop-down menu with the modules of the `data_object_list`
+  output$dynamicModules <- renderUI({
+    selectInput(
+      inputId = "module",
+      label = "Select module",
+      choices = as.list(names(data_object_list)),
+      multiple = FALSE,
+      selectize = TRUE,
+      width = NULL,
+      size = NULL
+    )
+  })
+  
+  # Render the QC table
   output$static <- renderTable({
-    # Load in the data object.
-    data_object <- readRDS("Rdata/NanoStringGeoMxSet_raw_main-module.rds")
+    # Set the `data_object` based on the user's selection
+    data_object <- data_object_list[[input$module]]
     
     # Set the QC parameters.
     qc_params <-
@@ -121,7 +140,7 @@ server <- function(input, output) {
     
     # Get rownames.
     qc_summary <- qc_summary %>% dplyr::mutate(Parameter = rownames(.)) %>% dplyr::relocate(Parameter, .before = 1)
-
+    
     # Convert to integers.
     qc_summary$Pass <- as.integer(qc_summary$Pass)
     qc_summary$Warning <- as.integer(qc_summary$Warning)
