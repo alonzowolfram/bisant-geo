@@ -117,9 +117,9 @@ cutoff <- loq_sd_cutoff
 min_loq <- min_loq
 
 # Calculate LOQ per module tested.
-# However, for the combined module, if it exists, we will just use the WTA (main) module's LOQ.
+# However, for the combined module(s), if it exists, we will just use the WTA (main) module's LOQ.
 for(module in modules) {
-  if(module==combined_module) next
+  if(base::grepl("combined_module", module)) next
   
   target_data_object <- target_data_object_list[[module]]
   
@@ -143,18 +143,21 @@ for(module in modules) {
   rm(target_data_object)
   gc()
 }
-# If the combined module exists, use the LOQ from the WTA module.
-if(combined_module %in% names(target_data_object_list)) {
-  target_data_object <- target_data_object_list[[combined_module]]
-  
-  pData(target_data_object)$LOQ <- pData(target_data_object_list[[main_module]])$LOQ
-  
-  # Add back to the list.
-  target_data_object_list[[combined_module]] <- target_data_object
-  
-  # Clean up.
-  rm(target_data_object)
-  gc()
+# If any combined modules exist, use the LOQ from the WTA module.
+combined_modules <- names(target_data_object_list) %>% regexPipes::grep("combined_module", value = TRUE)
+if(length(combined_modules) > 0) {
+  for(combined_module in combined_modules) {
+    target_data_object <- target_data_object_list[[combined_module]]
+    
+    pData(target_data_object)$LOQ <- pData(target_data_object_list[[main_module]])$LOQ
+    
+    # Add back to the list.
+    target_data_object_list[[combined_module]] <- target_data_object
+    
+    # Clean up.
+    rm(target_data_object)
+    gc()
+  }
 }
 
 # Calculate detection rates.
@@ -162,7 +165,7 @@ loq_mat_list <- list()
 goi_df_list <- list()
 for(module in modules) {
   # Again, for the combined module, we will just use the WTA QC metrics.
-  if(module==combined_module) next
+  if(base::grepl("combined_module", module)) next
   
   target_data_object <- target_data_object_list[[module]]
   loq <- pData(target_data_object)$LOQ
@@ -225,16 +228,18 @@ if(!flagVariable(genes_of_interest)) {
     rm(goi_df)
   } 
 }
-# If the combined module exists, use the detection rates from the WTA module.
-if(combined_module %in% names(target_data_object_list)) {
-  # Get the columns that are in the pData for the main module but missing in the pData for the combined module.
-  cols <- setdiff(colnames(pData(target_data_object_list[[main_module]])), colnames(pData(target_data_object_list[[combined_module]])))
-  # Add them to the combined module.
-  pData(target_data_object_list[[combined_module]]) <- cbind(pData(target_data_object_list[[combined_module]]), pData(target_data_object_list[[main_module]])[,cols])
-  fData(target_data_object_list[[combined_module]]) <- fData(target_data_object_list[[combined_module]]) %>% 
-    dplyr::left_join(fData(target_data_object_list[[main_module]]) %>% 
-                       dplyr::select(TargetName, DetectedSegments, DetectionRate), 
-                     by = "TargetName")
+# If any combined modules exist, use the detection rates from the WTA module.
+if(length(combined_modules) > 0) {
+  for(combined_module in combined_modules) {
+    # Get the columns that are in the pData for the main module but missing in the pData for the combined module.
+    cols <- setdiff(colnames(pData(target_data_object_list[[main_module]])), colnames(pData(target_data_object_list[[combined_module]])))
+    # Add them to the combined module.
+    pData(target_data_object_list[[combined_module]]) <- cbind(pData(target_data_object_list[[combined_module]]), pData(target_data_object_list[[main_module]])[,cols])
+    fData(target_data_object_list[[combined_module]]) <- fData(target_data_object_list[[combined_module]]) %>% 
+      dplyr::left_join(fData(target_data_object_list[[main_module]]) %>% 
+                         dplyr::select(TargetName, DetectedSegments, DetectionRate), 
+                       by = "TargetName")
+  }
 }
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -243,11 +248,12 @@ if(combined_module %in% names(target_data_object_list)) {
 #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Get the target_data_object for the main module.
-if(combined_module %in% names(target_data_object_list)) {
-  module <- combined_module
-} else {
-  module <- main_module
-}
+# if(combined_module %in% names(target_data_object_list)) {
+#   module <- combined_module
+# } else {
+#   module <- main_module
+# }
+module <- main_module
 target_data_object <- target_data_object_list[[module]]
 
 # Create the object to hold probe QC plots.
