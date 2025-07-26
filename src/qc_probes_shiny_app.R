@@ -21,6 +21,9 @@ ui <- fluidPage(
   # Sidebar for segment gene detection.
   sidebarLayout(
     sidebarPanel(
+      # Dynamically generated selection of module from data object list
+      uiOutput("dynamicModules"),
+      
       # Minimum number of genes detected (minGenesDetected, min_genes_detected)
       numericInput("min_genes_detected",
                    "Minimum number of genes detected",
@@ -58,10 +61,25 @@ ui <- fluidPage(
 
 # Define server logic required to make a table.
 server <- function(input, output) {
+  # Load in the data object list.
+  data_object_list <- readRDS("Rdata/NanoStringGeoMxSet_qc-segments.rds")
+  
+  # Dynamically generate the drop-down menu with the modules of the `data_object_list`
+  output$dynamicModules <- renderUI({
+    selectInput(
+      inputId = "module",
+      label = "Select module",
+      choices = as.list(names(data_object_list)),
+      multiple = FALSE,
+      selectize = TRUE,
+      width = NULL,
+      size = NULL
+    )
+  })
   
   output$static <- renderTable({
-    # Load in the data object.
-    data_object <- readRDS("Rdata/NanoStringGeoMxSet_qc-segments_main-module.rds")
+    # Set the `data_object` based on the user's selection
+    data_object <- data_object_list[[input$module]]
     
     # Access the PKC files, to ensure that expected PKCs have been loaded for this study.
     pkcs <- annotation(data_object)
