@@ -61,6 +61,13 @@ data_object_all <- readNanoStringGeoMxSet(dccFiles = dcc_files,
                                       protocolDataColNames = protocol_data_col_names,
                                       experimentDataColNames = experiment_data_col_names)
 
+# Add `Sample_ID` back in as a column (basically just remove `.dcc` from the rownames)
+pData(data_object_all) <- pData(data_object_all) %>% 
+  tibble::rownames_to_column(var = "Sample_ID") %>% 
+  dplyr::mutate(Sample_ID = Sample_ID %>% regexPipes::gsub("\\.dcc", "")) %>% 
+  dplyr::relocate(Sample_ID, .before = 1)
+rownames(pData(data_object_all)) <- paste0(pData(data_object_all)$Sample_ID, ".dcc")
+
 ## ................................................
 ##
 ### Data loading: individual modules ----
@@ -136,6 +143,13 @@ if(!flagVariable(combined_module_wta_tcr)) {
                                           protocolDataColNames = protocol_data_col_names,
                                           experimentDataColNames = experiment_data_col_names)
     
+    # Add `Sample_ID` back in as a column (basically just remove `.dcc` from the rownames)
+    pData(data_object) <- pData(data_object) %>% 
+      tibble::rownames_to_column(var = "Sample_ID") %>% 
+      dplyr::mutate(Sample_ID = Sample_ID %>% regexPipes::gsub("\\.dcc", "")) %>% 
+      dplyr::relocate(Sample_ID, .before = 1)
+    rownames(pData(data_object)) <- paste0(pData(data_object)$Sample_ID, ".dcc")
+    
     # Save to the list.
     data_object_list[[combined_module_wta_tcr]] <- data_object
     
@@ -172,6 +186,12 @@ if(sum(data_object_all@annotation != paste0(main_module, ".pkc")) > 0) {
                                           phenoDataDccColName = phenodata_dcc_col_name,
                                           protocolDataColNames = protocol_data_col_names,
                                           experimentDataColNames = experiment_data_col_names)
+    # Add `Sample_ID` back in as a column (basically just remove `.dcc` from the rownames)
+    pData(data_object) <- pData(data_object) %>% 
+      tibble::rownames_to_column(var = "Sample_ID") %>% 
+      dplyr::mutate(Sample_ID = Sample_ID %>% regexPipes::gsub("\\.dcc", "")) %>% 
+      dplyr::relocate(Sample_ID, .before = 1)
+    rownames(pData(data_object)) <- paste0(pData(data_object)$Sample_ID, ".dcc")
     
     # Save to the list.
     data_object_list[[combined_module_all]] <- data_object
