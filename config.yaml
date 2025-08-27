@@ -35,6 +35,9 @@ project:
 # Paths to input data. Use absolute (full) paths, not relative paths.
 data:
 
+  # [Required] The analyte for the current pipeline run. Can be one of ["RNA", "protein"]
+  analyte: 
+  
   # [Required] Absolute path to the directory containing the DCC files.
   dcc_dir: 
 

@@ -359,7 +359,8 @@ if(length(error_msg_list) > 0) {
 }
 
 # There are a couple of parameters we have to handle manually:
-# `subset_var_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, and `imm_decon_subset_var_levels_manual`.
+# `analyte`, `subset_var_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, and `imm_decon_subset_var_levels_manual`.
+if(flagVariable(analyte) || !(analyte %in% c("RNA", "protein"))) analyte <- "RNA"
 if(flagVariable(subset_var_levels_manual)) {
   subset_var_levels_manual <- rep(list(NA), length(subset_vars))
   names(subset_var_levels_manual) <- subset_vars
