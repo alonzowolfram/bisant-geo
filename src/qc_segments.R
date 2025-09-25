@@ -38,7 +38,7 @@ data_object <-
                     qcCutoffs = qc_params)        
 
 ### QC result collation ----
-qc_results <- protocolData(data_object)[["QCFlags"]]
+qc_results <- protocolData(data_object)[["QCFlags"]] %>% as.data.frame()
 flag_columns <- colnames(qc_results)
 qc_summary <- data.frame(Pass = colSums(!qc_results[, flag_columns]),
                          Warning = colSums(qc_results[, flag_columns]))
