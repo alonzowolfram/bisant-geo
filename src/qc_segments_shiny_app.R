@@ -126,7 +126,7 @@ server <- function(input, output) {
                         qcCutoffs = qc_params)
     
     # Collate QC Results
-    qc_results <- protocolData(data_object)[["QCFlags"]]
+    qc_results <- protocolData(data_object)[["QCFlags"]] %>% as.data.frame
     flag_columns <- colnames(qc_results)
     qc_summary <- data.frame(Pass = colSums(!qc_results[, flag_columns]),
                              Warning = colSums(qc_results[, flag_columns]))
