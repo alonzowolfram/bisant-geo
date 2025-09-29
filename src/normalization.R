@@ -24,7 +24,7 @@ plot_list_normalization <- list()
 for(module in names(target_data_object_list)) {
   # Check if the combined module (WTA+TCR) exists.
   # If it does, skip the individual WTA, TCR modules (because the WTA and TCR modules have to be normalized together.)
-  if((combined_module %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
+  if((combined_module_wta_tcr %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
   
   target_data_object <- target_data_object_list[[module]]
   plot_list_normalization[[module]] <- list()
@@ -194,7 +194,7 @@ for(module in names(target_data_object_list)) {
 for(module in names(target_data_object_list)) {
   # Check if the combined module (WTA+TCR) exists.
   # If it does, skip the individual WTA, TCR modules.
-  if((combined_module %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
+  if((combined_module_wta_tcr %in% names(target_data_object_list)) && (module %in% c(main_module, module_tcr))) next
   
   target_data_object <- target_data_object_list[[module]]
   
@@ -219,7 +219,7 @@ for(module in names(target_data_object_list)) {
 ## Split combined WTA+TCR ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-if(combined_module %in% names(target_data_object_list)) {
+if(combined_module_wta_tcr %in% names(target_data_object_list)) {
   # Extract unique modules from the WTA+TCR NanoStringGeoMxSet.
   modules <- fData(target_data_object_list[[paste(c(main_module, module_tcr), collapse = ",")]]) %>% .$Module %>% unique
   
@@ -230,7 +230,7 @@ if(combined_module %in% names(target_data_object_list)) {
   names(individual_module_list) <- modules
   
   # Combine with `target_data_object_list`.
-  target_data_object_list <- c(individual_module_list, target_data_object_list[!(names(target_data_object_list) %in% c(combined_module, modules))])
+  target_data_object_list <- c(individual_module_list, target_data_object_list[!(names(target_data_object_list) %in% c(combined_module_wta_tcr, modules))])
   # Removes the combined module and ensures that for the individual modules, only the normalized objects are saved.
 }
 
