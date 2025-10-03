@@ -157,8 +157,10 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         # If individual_pathways is set, subset to include only the pathways of interest.
         if(!is.null(individual_pathways) & sum(individual_pathways=="") < length(individual_pathways)) df_sub <- df_sub %>% dplyr::filter(pathway %in% individual_pathways)
         
-        # Add information about the model (model number, contrast variable, current contrast.)
+        # Add information about the model (model number, subset variable, subset variable level, contrast variable, current contrast.)
         message("Adding information about model.")
+        df_sub$`Subset variable` <- subset_var
+        df_sub$`Subset variable level` <- subset_var_level
         df_sub$`Model` <- model
         df_sub$`Contrast variable` <- contrast_var
         df_sub$Contrast <- contrast
