@@ -146,18 +146,19 @@ if(!flagVariable(lmm_formulae_immune)) {
   between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq")
   model_number <- 1
   da_res_list <- list()
+  if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"
+  
   for(formula in lmm_formulae_immune) {
-    message(paste("Working on model ", as.character(formula)))
     da_res_list[[paste0("model_", model_number)]] <- list()
     
     # Strip anything before the `~`.
     formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
     # Extract variables from formula
     formula_vars <- extractVariables(formula) # Input: string
-    # Extract first fixed effect from formula.
+    # Extract first fixed effect from formula
     first_fixed_effect <- extractFirstFixedEffect(as.formula(formula)) # Input: formula
-    # Add the dependent variable.
-    formula <- paste0("score ", formula) %>% as.formula
+    # Add the dependent variable
+    formula_af <- paste0("score ", formula) %>% as.formula
     
     # Ensure Sample is included
     formula_vars <- c("Sample", formula_vars)
@@ -169,65 +170,131 @@ if(!flagVariable(lmm_formulae_immune)) {
     df_cols <- sapply(pData(target_data_object), is.data.frame)
     
     # Convert only non-data-frame columns (except Sample) to factors
-    pData_subset <- pData(target_data_object) %>%
+    pData_tmp <- pData(target_data_object) %>%
       tibble::rownames_to_column(var = "Sample") %>% 
-      mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.))) %>% 
-      select(all_of(formula_vars))
+      mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.))) 
+    # %>% select(all_of(formula_vars))
     
+    # Loop level 2 (deconvolution method)
     for(method in names(imm_decon_res_list)) {
-      message(paste("Working on method ", method))
       da_res_list[[paste0("model_", model_number)]][[method]] <- list()
       
-      # Check if the method can be used in between-sample comparisons.
+      # Check if the method can be used in between-sample comparisons
       if(!(method %in% between_sample_methods)) next
       
       # Convert immune_data to long format
-      # and merge with `pdata_subset`.
+      # and merge with `pData_subset`
       immune_long <- imm_decon_res_list[[method]] %>%
         pivot_longer(cols = -cell_type, names_to = "Sample", values_to = "score") %>%
-        left_join(pData_subset, by = "Sample")
+        left_join(pData_tmp, by = "Sample")
       
-      # Fit model.
-      for (cell in unique(immune_long$cell_type)) {
-        message(paste("Working on cell type", cell))
+      # Loop level 3 (subset variable)
+      for(subset_var in imm_decon_subset_vars) { # You can't loop over a NULL variable, hence the line `if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"` above. 
+        da_res_list[[paste0("model_", model_number)]][[method]][[subset_var]] <- list()
         
-        # Subset data for this cell type
-        cell_data <- immune_long %>%
-          dplyr::filter(cell_type == cell)
+        if(flagVariable(subset_var)) {
+          subset_tag <- "All ROIs"
+          subset_var <- "Complete dataset"
+        } else {
+          subset_tag <- subset_var
+        }
         
-        # Fit the user-defined linear mixed model
-        model <- lmer(as.formula(formula), data = cell_data)
-        # Extract estimated marginal means (EMMs) for pairwise comparisons
-        # Create a dynamic formula for emmeans
-        emm_formula <- as.formula(paste0("~ ", first_fixed_effect))
-        emm <- emmeans(model, emm_formula)  # Replace 'Group' with your fixed effect variable
+        # Get the levels of the current subset_var.
+        subset_var_levels <- pData_tmp[[subset_var]] %>% levels # Previously as.factor %>% needed because it might be a character vector, but now we convert all non-data-frame columns (except Sample) to factor above
         
-        # Perform all pairwise comparisons (Tukey-adjusted)
-        pairwise_results <- contrast(emm, method = "pairwise", adjust = "tukey") %>%
-          as.data.frame() %>%
-          mutate(CellType = cell)  # Add cell type info
+        # If imm_decon_subset_var_levels_manual is set, filter subset_var_levels to include only those values
+        imm_decon_subset_var_levels_manual_i <- imm_decon_subset_var_levels_manual[[subset_var]]
+        if(sum(is.na(imm_decon_subset_var_levels_manual_i)) < length(imm_decon_subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
+          if(sum(imm_decon_subset_var_levels_manual_i %in% subset_var_levels) < 1) {
+            warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of subset variable {subset_var} will be used"))
+          } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
+            subset_var_levels <- subset_var_levels %>% .[. %in% imm_decon_subset_var_levels_manual_i]
+          }
+        }
         
-        # Extract fixed effect results
-        base_value <- rownames(contrasts(pData_subset[[first_fixed_effect]]))[1] # Get the baseline value.
-        model_summary <- tidy(model, effects = "fixed") %>%
-          dplyr::filter(term != "(Intercept)") %>% # Filter out the intercept.
-          dplyr::mutate(cell_type = cell, fixed_effect = first_fixed_effect, method = method, formula = as.character(formula)[3]) %>%  # Add cell type column. baseline = base_value, 
-          dplyr::mutate(term = base::gsub(paste0("^", fixed_effect), "", term)) %>% # Clean up the fixed effect name.
-          relocate(fixed_effect, .before = term) # baseline, 
+        # loop level 4 (level of current subset variable) << loop level 3 (subset variable) << loop level 2 (deconvolution method) << loop level 1 (LMM model)
+        for(subset_var_level in subset_var_levels) {
+          da_res_list[[paste0("model_", model_number)]][[method]][[subset_var]][[subset_var_level]] <- list()
+          
+          # Get all the samples belonging to the current subset_var_level.
+          samples <- pData_tmp %>% dplyr::filter(!!as.name(subset_var)==subset_var_level) %>% dplyr::select(Sample) %>% unlist
+          # ind <- pData_tmp[[subset_var]] == subset_var_level
+          # pData_tmp_sub <- pData_tmp[ind,]
+          
+          # loop level 5 (cell type) << loop level 4 (level of current subset variable) << loop level 3 (subset variable) << loop level 2 (deconvolution method) << loop level 1 (LMM model)
+          for(cell in unique(immune_long$cell_type)) {
+            message("")
+            message(glue::glue("Calculating differential abundance using formula {formula} | {method} method | subset variable {subset_var} | level {subset_var_level} for cell type {cell} \n"))
+            skip_to_next <- FALSE
+            
+            # Subset data for this cell type, subset variable, and subset variable level
+            cell_data <- immune_long %>%
+              dplyr::filter((Sample %in% samples) & (cell_type == cell))
+            
+            # Fit the user-defined linear mixed model
+            model <- tryCatch(
+              lmer(as.formula(formula_af), data = cell_data),
+              error = function(e) {
+                warning(glue::glue("Error in fitting linear mixed model for model {formula} - {method} - {subset_var} - {subset_var_level} - {cell}: {e$message}"))
+                skip_to_next <<- TRUE
+              }
+            )
+            
+            if (skip_to_next) next
+            message("Successfully calculated differential abundance")
+            
+            # # Extract estimated marginal means (EMMs) for pairwise comparisons
+            # # Create a dynamic formula for emmeans
+            # emm_formula <- as.formula(paste0("~ ", first_fixed_effect))
+            # emm <- emmeans(model, emm_formula)  # Replace 'Group' with your fixed effect variable
+            # # Perform all pairwise comparisons (Tukey-adjusted)
+            # pairwise_results <- contrast(emm, method = "pairwise", adjust = "tukey") %>%
+            #   as.data.frame() %>%
+            #   mutate(CellType = cell)  # Add cell type info
+            
+            # Extract fixed effect results
+            base_value <- rownames(contrasts(pData_tmp[[first_fixed_effect]]))[1] # Get the baseline value.
+            model_summary <- tryCatch(
+              tidy(model, effects = "fixed") %>%
+                dplyr::filter(term != "(Intercept)") %>% # Filter out the intercept.
+                dplyr::mutate(baseline = base_value,
+                              subset_var = subset_var,
+                              subset_var_level = subset_var_level,
+                              cell_type = cell, 
+                              fixed_effect = first_fixed_effect, 
+                              method = method, 
+                              formula = as.character(formula_af)[3]) %>%  # Add cell type column. baseline = base_value, 
+                dplyr::mutate(term = base::gsub(paste0("^", fixed_effect), "", term)) %>% # Clean up the fixed effect name.
+                relocate(fixed_effect, .before = term) %>% relocate(baseline, .before = term), # baseline, 
+              error = function(e) {
+                warning(glue::glue("Error in extracting fixed effect results for model {formula} - {method} - {subset_var} - {subset_var_level} - {cell}: {e$message}"))
+                skip_to_next <<- TRUE
+              }
+            )
+            if (skip_to_next) next
+            message("Successfully extracted fixed effect results")
+            
+            # Store results
+            da_res_list[[paste0("model_", model_number)]][[method]][[subset_var]][[subset_var_level]][[cell]] <- model_summary
+            
+          } # End loop level 5 (cell type) << loop level 4 (level of current subset variable) << loop level 3 (subset variable) << loop level 2 (deconvolution method) << loop level 1 (LMM model)
+          
+        } # End loop level 4 (level of current subset variable) << loop level 3 (subset variable) << loop level 2 (deconvolution method) << loop level 1 (LMM model)
         
-        # Store results
-        da_res_list[[paste0("model_", model_number)]][[method]][[cell]] <- model_summary
-      }
+      } # End loop level 3 (subset variable) << loop level 2 (deconvolution method) << loop level 1 (LMM model)
       
-      # Combine results into a data frame
-      results_df <- bind_rows(da_res_list[[paste0("model_", model_number)]][[method]])
-    }
+      # # Combine results into a data frame
+      # results_df <- bind_rows(da_res_list[[paste0("model_", model_number)]][[method]])
+      
+    } # End loop level 2 (deconvolution methods)
     
     model_number <- model_number + 1
-  }
-  da_res_df <- bind_rows(rlang::squash(da_res_list)) # `sqash` recursively flattens the list.
-}
-
+    
+  } # End loop level 1 (LMM model)
+  
+  da_res_df <- bind_rows(rlang::squash(da_res_list)) # `squash` recursively flattens the list.
+  
+} # End if(!flagVariable(lmm_formulae_immune)) 
 
 ## ................................................
 ##
