@@ -211,16 +211,17 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         # If the number of pathways > limits for graphing, perform cutoff by PathwayScore.
         if(!is.null(n_max_pathways) & n_max_pathways != "") if(nrow(df_sub_graphing) > n_max_pathways) df_sub_graphing <- df_sub_graphing %>% dplyr::top_n(n = n_max_pathways, wt = PathwayScore)
         
-        # Truncate pathway names (doing it here, AFTER conversion to factor, because if truncating makes two pathway names come out the same, we can't have duplicated factors)
-        # Reorder factor levels by NES (so the bars are sorted)
-        df_sub_graphing$PathwayCleanedChar <- df_sub_graphing$PathwayCleaned %>%
-          as.character() %>%
-          truncate_strings()
-        
+        # Convert to factor to order pathways
         df_sub_graphing$PathwayCleanedChar <- factor(
-          df_sub_graphing$PathwayCleanedChar,
-          levels = df_sub_graphing %>% arrange(NES) %>% pull(PathwayCleanedChar)
+          df_sub_graphing$PathwayCleaned,
+          levels = df_sub_graphing %>% arrange(NES) %>% pull(PathwayCleaned)
         )
+        
+        # # Truncate pathway names (doing it here, AFTER conversion to factor, because if truncating makes two pathway names come out the same, we can't have duplicated factors)
+        # # Reorder factor levels by NES (so the bars are sorted)
+        # df_sub_graphing$PathwayCleanedChar <- df_sub_graphing$PathwayCleaned %>%
+        #   as.character() %>%
+        #   truncate_strings()
         
         # Graph.
         plot <- ggplot(df_sub_graphing, aes(x = PathwayCleanedChar, y = NES, fill = NES)) +
