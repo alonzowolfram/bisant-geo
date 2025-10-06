@@ -217,6 +217,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
           levels = df_sub_graphing %>% arrange(NES) %>% pull(PathwayCleaned)
         )
         
+        # 2025/10/06: For now, removing pathway name truncation because if it causes two pathways to have the same truncated name, it causes trouble if we try to turn `PathwayCleaned` into a factor.
         # # Truncate pathway names (doing it here, AFTER conversion to factor, because if truncating makes two pathway names come out the same, we can't have duplicated factors)
         # # Reorder factor levels by NES (so the bars are sorted)
         # df_sub_graphing$PathwayCleanedChar <- df_sub_graphing$PathwayCleaned %>%
