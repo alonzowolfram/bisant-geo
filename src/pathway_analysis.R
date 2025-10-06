@@ -264,16 +264,17 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         # Add df_sub to pathway_df
         pathway_df <- rbind(pathway_df, df_sub %>% dplyr::select(-leadingEdge))
 
-        # Graph enrichment plots.
-        message("Graphing enrichment plots.")
-        for(pathway in names(msigdbr_pathway_list)) {
-          plotEnrichment(msigdbr_pathway_list[[pathway]], ranks, gseaParam = 1, ticksSize = 0.2) +
-            ggtitle(paste0(pathway, " | contrast: ", contrast, " | subset by ", subset_var, " | level: ", subset_var_level))
-          ggsave(filename = paste0(output_dir_pubs, 
-                                   paste0(pathway, "_", contrast, "_model-", model_number, "_subset-var", subset_var, "_level-", subset_var_level, ".png") %>% regexPipes::gsub("\\/", "_")), 
-                 height = 9, width = 10, units = "in")
-
-        }
+        # Let's turn off enrichment plots for now because if there are a lot of pathways, the `pubs` folder is going to be huge  
+        # # Graph enrichment plots.
+        # message("Graphing enrichment plots.")
+        # for(pathway in names(msigdbr_pathway_list)) {
+        #   plotEnrichment(msigdbr_pathway_list[[pathway]], ranks, gseaParam = 1, ticksSize = 0.2) +
+        #     ggtitle(paste0(pathway, " | contrast: ", contrast, " | subset by ", subset_var, " | level: ", subset_var_level))
+        #   ggsave(filename = paste0(output_dir_pubs, 
+        #                            paste0(pathway, "_", contrast, "_model-", model_number, "_subset-var", subset_var, "_level-", subset_var_level, ".png") %>% regexPipes::gsub("\\/", "_")), 
+        #          height = 9, width = 10, units = "in")
+        # 
+        # }
         
       } # End contrasts for loop.
       
