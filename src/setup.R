@@ -341,7 +341,7 @@ if(workflow_system != "Nextflow") {
   
   # Create a subdirectory within `output_dir_pubs` for images
   output_dir_imgs <- paste0(output_dir, "pubs/imgs/")
-  dir.create(output_dir_imgs)
+  if(!dir.exists(output_dir_imgs)) dir.create(output_dir_imgs)
 }
 
 rdata_folder <- ifelse(workflow_system=="Nextflow", "", "Rdata/")
