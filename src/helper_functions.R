@@ -213,3 +213,16 @@ truncate_strings <- function(vec, max_length = 35, trunc_length = 31) {
     }
   }, USE.NAMES = FALSE)
 }
+
+#' Function to check if a vector of RGB colors are valid
+#' 
+#' @param x A vector of strings
+#' @return A vector of Boolean values
+#' 
+#' @export
+areColors <- function(x) {
+  vapply(x, function(X) {
+    tryCatch(is.matrix(col2rgb(X)), 
+             error = function(e) FALSE)
+  }, FUN.VALUE = TRUE) # https://stackoverflow.com/questions/51657605/fun-value-argument-in-vapply
+}
