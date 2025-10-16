@@ -256,16 +256,24 @@ experiment:
     # You can provide multiple values, separated by commas.
     # Each value will be used individually. 
     # If not provided, all normalization methods will be used.
-     # Can be one of the following values: c("neg_norm", "q3_norm", "bg_sub_q3", "bg_sub_neg", "quant")
-    # where "neg_norm" indicates background normalization for WTA/CTA without custom spike-ins and
-    # "q3_norm" indicates Q3 (75th percentile) normalization for WTA/CTA with or without custom spike-ins.
-    # "bg_sub_q3" will perform background subtraction followed by Q3 normalization.
-    # "bg_sub_neg" will perform background subtraction followed by background normalization.
-    # "quant" will perform quantile normalization.
+    # Can be one of the following values, depending on the analyte:
+    # For RNA: c("neg_norm", "q3_norm", "bg_sub_q3", "bg_sub_neg", "quant")
+    # For protein: c("neg_norm", "q_norm", "hk_norm")
+    # where "neg_norm" (RNA) indicates background normalization for WTA/CTA without custom spike-ins and
+    # "q3_norm" (RNA) indicates Q3 (75th percentile) normalization for WTA/CTA with or without custom spike-ins
+    # "bg_sub_q3" (RNA) will perform background subtraction followed by Q3 normalization
+    # "bg_sub_neg" (RNA) will perform background subtraction followed by background normalization
+    # "quant" (RNA) will perform quantile normalization
+    # "neg_norm" (protein) indicates background normalization using IgGs
+    # "q_norm" (protein) indicates quantile normalization
+    # "hk_norm" (protein) will perform normalization using housekeeper genes
     normalization_methods: bg_sub_q3,quant
 
     # [Required] The annotation of interest (e.g. Segment, Region).
     ann_of_interest: segment
+    
+    # [Optional] (Protein only) The factor variable to use to group AOIs when generating a normalization factor QC graph
+    protein_norm_qc_plot_factors: 
 
   # ----------------------------------------------------------------------
   #     16S analysis
@@ -453,6 +461,12 @@ experiment:
     #   pathway ranking score = -log10(adjusted p-value) * abs(normalized enrichment score)
     # This value is optional, but highly recommended to use the default setting of 15.
     n_max_pathways: 15
+    
+    # [Optional] Colors, given as RGB hexadecimal values, for the FGSEA bar graphs
+    # Separate values with a comma (",")
+    # Please provide exactly TWO values if you want custom colors. If fewer than two are provided, then the default colors will be used
+    # If more than two are provided, then the first two will be used
+    fgsea_graph_colors: 
  
   # ----------------------------------------------------------------------
   #     Immune deconvolution
@@ -485,6 +499,12 @@ experiment:
     # estimate
     # spatialdecon
     imm_decon_methods: mcp_counter,quantiseq
+    
+    # [Optional] For method `spatialdecon` only, path to an .RData file containing a custom cell profile matrix with the following components:
+    # profile_matrix: A matrix with genes as rows, cell types as columns
+    # cellGroups: [Optional] A list, with names as main cell types and elements as more granular subsets
+    # metadata: [Optional] Metadata 
+    spatial_decon_profile_matrix: 
 
     # [Optional] For graphing: observation names.
     # The column name(s) in the sample annotation containing the variables

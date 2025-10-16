@@ -39,6 +39,7 @@ genes_of_interest,FALSE,,TRUE
 modules_filter_probes,FALSE,,TRUE
 normalization_methods,FALSE,,TRUE
 ann_of_interest,TRUE,,FALSE
+protein_norm_qc_plot_factors,FALSE,,TRUE
 module_16s,FALSE,,FALSE
 method_16s_probe_selection,FALSE,both,FALSE
 percentile_16s_cutoff,FALSE,,TRUE
@@ -59,8 +60,10 @@ de_genes_cutoffs,FALSE,"0.25,0.58",TRUE
 pathway_table_file,FALSE,,FALSE
 individual_pathways,FALSE,,TRUE
 n_max_pathways,FALSE,15,FALSE
+fgsea_graph_colors,FALSE,,TRUE
 modules_exprs,FALSE,,FALSE
 imm_decon_methods,FALSE,,TRUE
+spatial_decon_profile_matrix,FALSE,,FALSE
 observation_identifiers,FALSE,,TRUE
 imm_decon_subset_vars,FALSE,,TRUE
 imm_decon_subset_var_levels_manual,FALSE,,FALSE
