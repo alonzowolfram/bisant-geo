@@ -215,6 +215,7 @@ truncate_strings <- function(vec, max_length = 35, trunc_length = 31) {
 }
 
 #' Function to check if a vector of RGB colors are valid
+#' Taken from https://stackoverflow.com/questions/13289009/check-if-character-string-is-a-valid-color-representation 
 #' 
 #' @param x A vector of strings
 #' @return A vector of Boolean values
