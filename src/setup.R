@@ -314,14 +314,15 @@ if(workflow_system=="Nextflow") {
 ## File/path settings ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-if(workflow_system == "Nextflow") {
-  output_dir <- ""
-  output_dir_config <- ""
-  output_dir_logs <- ""
-  output_dir_rdata <- ""
-  output_dir_tabular <- ""
-  output_dir_pubs <- ""
-} else {
+output_dir <- ""
+output_dir_config <- ""
+output_dir_logs <- ""
+output_dir_rdata <- ""
+output_dir_tabular <- ""
+output_dir_pubs <- ""
+output_dir_imgs <- ""
+
+if(workflow_system != "Nextflow") {
   ## Output
   output_dir <- paste0(appendSlashToPath(cl_args[4]))
   ### Create the directory if it doesn't already exist. 
@@ -331,11 +332,16 @@ if(workflow_system == "Nextflow") {
     subdir_path <- file.path(output_dir, subdir)
     if(!dir.exists(subdir_path)) dir.create(subdir_path)
   }
+  
   output_dir_config <- paste0(output_dir, "config/")
   output_dir_logs <- paste0(output_dir, "logs/")
   output_dir_rdata <- paste0(output_dir, "Rdata/")
   output_dir_tabular <- paste0(output_dir, "tabular/")
   output_dir_pubs <- paste0(output_dir, "pubs/")
+  
+  # Create a subdirectory within `output_dir_pubs` for images
+  output_dir_imgs <- paste0(output_dir, "pubs/imgs/")
+  dir.create(output_dir_imgs)
 }
 
 rdata_folder <- ifelse(workflow_system=="Nextflow", "", "Rdata/")
