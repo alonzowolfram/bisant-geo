@@ -64,6 +64,7 @@ fgsea_graph_colors,FALSE,,TRUE
 modules_exprs,FALSE,,FALSE
 imm_decon_methods,FALSE,,TRUE
 spatial_decon_profile_matrix,FALSE,,FALSE
+spatial_decon_cells_plot,FALSE,,TRUE
 observation_identifiers,FALSE,,TRUE
 imm_decon_subset_vars,FALSE,,TRUE
 imm_decon_subset_var_levels_manual,FALSE,,FALSE

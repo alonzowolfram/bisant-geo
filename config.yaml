@@ -462,7 +462,7 @@ experiment:
     # This value is optional, but highly recommended to use the default setting of 15.
     n_max_pathways: 15
     
-    # [Optional] Colors, given as RGB hexadecimal values, for the FGSEA bar graphs
+    # [Optional] Colors, given as RGB hexadecimal values (do NOT include the pound sign ["#"] or the pipeline will not be able to read them), for the FGSEA bar graphs
     # Separate values with a comma (",")
     # Please provide exactly TWO values if you want custom colors. If fewer than two are provided, then the default colors will be used
     # If more than two are provided, then the first two will be used
@@ -505,6 +505,12 @@ experiment:
     # cellGroups: [Optional] A list, with names as main cell types and elements as more granular subsets
     # metadata: [Optional] Metadata 
     spatial_decon_profile_matrix: 
+    
+    # [Optional] For method `spatialdecon` only, the cell types from the custom cell profile matrix to be plotted
+    # Separate cell types with a comma (",")
+    # If left blank, all cells in the custom cell profile matrix will be plotted
+    # If a custom cell profile matrix is not provided, this variable will be ignored
+    spatial_decon_cells_plot: 
 
     # [Optional] For graphing: observation names.
     # The column name(s) in the sample annotation containing the variables
