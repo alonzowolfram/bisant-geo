@@ -18,7 +18,7 @@ ui <- fluidPage(
   # Application title
   titlePanel("QC: Probes"),
   
-  # Sidebar for segment gene detection.
+  # Row 1: Sidebar layout for segment gene detection.
   sidebarLayout(
     sidebarPanel(
       # Dynamically generated selection of module from data object list
@@ -41,7 +41,7 @@ ui <- fluidPage(
     )
   ),
   
-  # Sidebar for probe gene detection.
+  # Row 2: Sidebar layout for probe gene detection.
   sidebarLayout(
     sidebarPanel(
       # Minimum number of genes detected (minGenesDetected, min_genes_detected)
