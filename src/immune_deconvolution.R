@@ -53,7 +53,7 @@ if(species == "Mus musculus") {
 imm_decon_res_list <- list()
 for(method in imm_decon_methods) {
   if(!(method %in% c("quantiseq", "mcp_counter", "xcell", "epic", "abis", "estimate", "spatialdecon", "mmcp_counter"))) {
-    warning(paste0(method, " is currently not supported by this pipeline. Please note that TIMER and ConsensusTME, while included in the immunedeconv package, are currently not available in this pipeline due to extra arguments that must be passed to the function; and CIBERSORT will not be available until we figure out how to make the source code play nicely with the immunedeconv package."))
+    warning(glue::glue("{method} is currently not supported by this pipeline. Please note that TIMER and ConsensusTME, while included in the immunedeconv package, are currently not available in this pipeline due to extra arguments that must be passed to the function; and CIBERSORT will not be available until we figure out how to make the source code play nicely with the immunedeconv package."))
     next
   } else {
     # Error catching: https://stackoverflow.com/a/55937737/23532435
@@ -62,7 +62,7 @@ for(method in imm_decon_methods) {
     # If the method is mmcp_counter, check if the species is mouse (Mus musculus).
     if(method == "mmcp_counter") {
       if(species != "Mus musculus") {
-        warning(paste0("mMCP-counter can only be used with human data. Skipping to the next one."))
+        warning("mMCP-counter can only be used with mouse data. Skipping to the next one.")
         next
       } else {
         # Using a mouse method on mouse data. Do not convert to orthologues.
@@ -79,8 +79,7 @@ for(method in imm_decon_methods) {
       }
     }
     
-    # Special steps needed for SpatialDecon.
-    # Also, we can only run it on human data?
+    # Special steps needed for SpatialDecon
     if(method == "spatialdecon") {
       # The spatialdecon function takes 3 arguments of expression data:
       #   
@@ -89,32 +88,49 @@ for(method in imm_decon_methods) {
       # 3. Optionally, either a matrix of per-data-point weights, or the raw data, which is used to derive weights (low counts are less statistically stable, and this allows spatialdecon to down-weight them.)
       # https://bioconductor.org/packages/release/bioc/vignettes/SpatialDecon/inst/doc/SpatialDecon_vignette_NSCLC.html
       
+      # If the user provided a custom profile matrix, load it
+      if(!flagVariable(spatial_decon_profile_matrix) & file.exists(spatial_decon_profile_matrix)) {
+        load(spatial_decon_profile_matrix)
+        # Now we should have a variable named `profile_matrix`
+        if(!exists("profile_matrix")) {
+          warning(glue::glue("Please ensure that the .RData file provided for use with the SpatialDecon method contains a matrix named profile_matrix. No such object was found. The default reference matrix, safeTME, will be used"))
+          profile_matrix <- safeTME
+        }
+      }
+      
       # Estimate each data point's expected BG from the negative control probes from its corresponding observation.
+      # Also, the SpatialDecon algorithm will do its own background subtraction
+      # so we have to give it data that has been normalized using a non BG-sub method (otherwise we'll get a LinAlg error)
+      # we'll go with quant
       negnames <- fData(target_data_object_exprs) %>% 
         dplyr::filter(Negative == TRUE & Module %in% modules_exprs) %>% 
         .$TargetName
-      bg <- derive_GeoMx_background(norm = target_data_object_exprs@assayData[[normalization_methods[1]]],
+      bg <- derive_GeoMx_background(norm = target_data_object_exprs@assayData[["quant"]],
                                     probepool = fData(target_data_object_exprs)$Module,
                                     negnames = negnames)
       
-      signif(safeTME[seq_len(3), seq_len(3)], 2)
+      signif(profile_matrix[seq_len(3), seq_len(3)], 2)
       # heatmap(sweep(safeTME, 1, apply(safeTME, 1, max), "/"),
       #         labRow = NA, margins = c(10, 5))
       
       # Set the cell profile matrix based on the species.
-      if(species == "Homo sapiens") {
+      if(species == "Homo sapiens" & !exists("profile_matrix")) {
         cpm <- safeTME
+        message("Using safeTME as reference (profile) matrix for SpatialDecon")
       } else {
         cpm <- profile_matrix %>% as.matrix
+        message("Using custom reference (profile) matrix for SpatialDecon")
       }
       
       # Run spatial deconvolution.
       system.time({
         res <- tryCatch(runspatialdecon(object = target_data_object_exprs,
-                                        norm_elt = normalization_methods[1], # "neg_norm"   "log_norm"   "bg_sub"     "exprs"      "bg_sub_neg" "quant"      "bg_sub_q3"  "q3_norm"   
+                                        norm_elt = "quant", # "neg_norm"   "log_norm"   "bg_sub"     "exprs"      "bg_sub_neg" "quant"      "bg_sub_q3"  "q3_norm"   
                                         raw_elt = "exprs",
                                         X = cpm,
-                                        align_genes = TRUE),
+                                        align_genes = TRUE#,
+                                        #cell_counts = pData(target_data_object_exprs)
+                                        ),
                         error = function(e) {skip_to_next <<- TRUE})
       })
       if(class(res) != "logical") imm_decon_res <- res$beta %>% t %>% as.data.frame %>% rownames_to_column("cell_type")
@@ -124,7 +140,7 @@ for(method in imm_decon_methods) {
     }
     
     if(skip_to_next) {
-      warning(paste0("An error occurred when trying to run immune deconvolution method ", method, ". Skipping to the next method."))
+      warning(glue::glue("An error occurred when trying to run immune deconvolution method {method}. Skipping to the next method"))
       next
     }
     
@@ -143,7 +159,7 @@ if(!flagVariable(lmm_formulae_immune)) {
   # Per https://omnideconv.org/immunedeconv/articles/immunedeconv.html,
   # the following methods allow between-sample comparisons:
   # MCP-counter, xCell, TIMER, ConsensusTME, ESTIMATE, ABIS, mMCP-counter, BASE, EPIC, quanTIseq, CIBERSORT abs., seqImmuCC
-  between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq")
+  between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq", "spatialdecon")
   model_number <- 1
   da_res_list <- list()
   if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"
@@ -233,7 +249,7 @@ if(!flagVariable(lmm_formulae_immune)) {
             
             # Fit the user-defined linear mixed model
             model <- tryCatch(
-              lmer(as.formula(formula_af), data = cell_data),
+              lmerTest::lmer(as.formula(formula_af), data = cell_data),
               error = function(e) {
                 warning(glue::glue("Error in fitting linear mixed model for model {formula} - {method} - {subset_var} - {subset_var_level} - {cell}: {e$message}"))
                 skip_to_next <<- TRUE
@@ -314,8 +330,8 @@ for(method in names(imm_decon_res_list)) {
   plot_list[[method]] <- list()
   df <- imm_decon_res_list[[method]]
 
-  # QuanTIseq, CIBERSORT (absolute), Epic, SpatialDecon - visualize as stacked bar charts.
-  # MCP-counter - visualize as dot plot.
+  # QuanTIseq, CIBERSORT (absolute), Epic - visualize as stacked bar charts.
+  # MCP-counter, SpatialDecon - visualize as box/dot/violin plot.
   
   for(subset_var in imm_decon_subset_vars) { # You can't loop over a NULL variable, hence the line `if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"` above. 
     plot_list[[method]][[subset_var]] <- list()
@@ -353,7 +369,7 @@ for(method in names(imm_decon_res_list)) {
         df2 <- df
         
         # Gather the dataframe for graphing.
-        if(method %in% c("quantiseq", "epic", "cibersort_abs", "spatialdecon")) {
+        if(method %in% c("quantiseq", "epic", "cibersort_abs")) {
           df3 <- df2 %>% 
             gather(`All ROIs`, fraction, -cell_type)
         } else {
@@ -393,7 +409,7 @@ for(method in names(imm_decon_res_list)) {
           # ^ for stacked bar charts using geom_rect().
           # See also https://stackoverflow.com/questions/28956442/automatically-resize-bars-in-ggplot-for-uniformity-across-several-graphs-r
           for(group in unique(df3$ChunkingGroup)) {
-            message(glue::glue("Creating graph for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
+            message(glue::glue("Creating stacked bar graph for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
             plot <- df3 %>% 
               dplyr::filter(ChunkingGroup==group) %>% 
               ggplot(aes(x = !!as.name(grouping_var), y = fraction, fill = cell_type)) + 
@@ -419,7 +435,7 @@ for(method in names(imm_decon_res_list)) {
         # For CIBERSORT (when installed), MCPcounter, xCell, Abis, and Estimate, create a dot plot to show between-sample (within-cell-type) comparisons.
         if(method %in% c("cibersort", "mcp_counter", "xcell", "abis", "estimate")) {
           for(group in unique(df3$ChunkingGroup)) {
-            message(glue::glue("Creating graph for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
+            message(glue::glue("Creating dotplot for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
             plot <- df3 %>% 
               dplyr::filter(ChunkingGroup==group) %>% 
               ggplot(aes(x = !!as.name(grouping_var), y = score, color = cell_type)) +
@@ -441,6 +457,46 @@ for(method in names(imm_decon_res_list)) {
             
           }
         }
+        
+        # For SpatialDecon and MCPCounter, create a box/violin/dot plot to show between-sample (within-cell-type) comparisons
+        if(method %in% c("spatialdecon", "mcp_counter")) {
+          for(group in unique(df3$ChunkingGroup)) {
+            message(glue::glue("Creating boxplot for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
+            
+            # Subset to include only the cells in `spatial_decon_cells_plot`, if applicable
+            cells_filter <- df3$cell_type %>% unique
+            if(!flagVariable(spatial_decon_cells_plot) & (sum(spatial_decon_cells_plot %in% (df3$cell_type %>% unique)) >= 1)) cells_filter <- intersect(spatial_decon_cells_plot, df3$cell_type %>% unique)
+            
+            plot <- df3 %>% 
+              dplyr::filter(ChunkingGroup==group & cell_type %in% cells_filter) %>% 
+              ggplot(aes(x = !!as.name(grouping_var), y = score)) +
+              geom_boxplot(aes(fill = !!as.name(grouping_var)), width = 0.6, alpha = 0.7, outlier.shape = NA) + 
+              geom_jitter(aes(color = !!as.name(grouping_var)), width = 0.15, size = 2, alpha = 0.9) + 
+              labs(x = NULL, y = "Abundance score", fill = grouping_var, color = grouping_var) +
+              facet_wrap(~cell_type, scales = "free_x", ncol = 3) +
+              scale_fill_manual(values = c("#FD6563","#3767A9", "grey")) + # , guide = FALSE
+              scale_color_manual(values = c("#FD6563","#3767A9", "grey")) + # , guide = FALSE
+              # coord_flip() +
+              theme_bw() +
+              theme(axis.text.x = element_blank(), # 
+                    panel.grid.minor = element_blank(),
+                    panel.grid.major = element_blank()) # +
+              # labs(title = paste0(method, " deconvolution | subset by ", subset_tag, 
+              #                     " | level ", subset_var_level, 
+              #                     "\n compartmentalized by ", grouping_var,
+              #                     " | group ", group))
+            
+            plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]][[group]] <- plot
+            
+            # Save plot to EPS and PDF
+            filename <- glue::glue("imm_decon_boxplot_{subset_var}_{subset_var_level}_{method}_{grouping_var}_{group}")
+            ggplot2::ggsave(filename = paste0(filename, ".pdf"), path = output_dir_imgs, plot = plot, width = 12, height = 9, units = "in")
+            ggplot2::ggsave(filename = paste0(filename, ".eps"), path = output_dir_imgs, plot = plot, width = 12, height = 9, units = "in")
+            
+          }
+        }
+        
+        # Clean up
         rm(df2)
         gc()
         
