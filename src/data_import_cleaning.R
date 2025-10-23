@@ -74,6 +74,9 @@ if(analyte == "protein") {
     dplyr::relocate(Sample_ID, .before = 1)
   rownames(pData(data_object_all)) <- paste0(pData(data_object_all)$Sample_ID, ".dcc")
   
+  # If `main_module` is not set, set it to be the first module in the object
+  if(!flagVariable(main_module)) main_module <- (data_object_all@annotation)[1]
+  
   # Even though we only have one PKC module, the rest of the pipeline expects a list with a data object for each individual module,
   # so let's create that list
   data_object_list <- list()
@@ -103,6 +106,9 @@ if(analyte == "protein") {
     dplyr::mutate(Sample_ID = Sample_ID %>% regexPipes::gsub("\\.dcc", "")) %>% 
     dplyr::relocate(Sample_ID, .before = 1)
   rownames(pData(data_object_all)) <- paste0(pData(data_object_all)$Sample_ID, ".dcc")
+  
+  # If `main_module` is not set, set it to be the first module in the object
+  if(flagVariable(main_module)) main_module <- (data_object_all@annotation)[1] %>% regexPipes::gsub("\\.pkc", "")
   
   ## ................................................
   ##

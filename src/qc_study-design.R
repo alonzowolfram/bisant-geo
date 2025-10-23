@@ -20,6 +20,9 @@ modules <- names(data_object_list)
 pkcs <- paste0(modules, ".pkc")
 pkc_summary <- data.frame(PKCs = pkcs, modules = modules)
 
+# Set `main_module` if not set already
+if(flagVariable(main_module)) main_module <- modules[1]
+
 # # Visually summarize the experimental design for the dataset to look at the different types of samples and ROI/AOI segments; present in Sankey diagram.
 # # Select the annotations we want to show, use `` to surround column names with
 # # spaces or special symbols.

@@ -8,6 +8,10 @@ source("src/setup.R")
 
 # Read in the NanoStringGeoMxSet object. 
 target_data_object_list <- readRDS(cl_args[5])
+# Set `main_module` if not set already
+modules <- names(target_data_object_list[[1]])
+if(flagVariable(main_module)) main_module <- modules[1]
+rm(modules)
 # We'll only need the main module for this one.
 target_data_object <- target_data_object_list[[main_module]]
 
@@ -473,7 +477,7 @@ for(method in names(imm_decon_res_list)) {
               geom_boxplot(aes(fill = !!as.name(grouping_var)), width = 0.6, alpha = 0.7, outlier.shape = NA) + 
               geom_jitter(aes(color = !!as.name(grouping_var)), width = 0.15, size = 2, alpha = 0.9) + 
               labs(x = NULL, y = "Abundance score", fill = grouping_var, color = grouping_var) +
-              facet_wrap(~cell_type, scales = "free_x", ncol = 3) +
+              facet_wrap(~cell_type, scales = "free_y", ncol = 3) +
               scale_fill_manual(values = c("#FD6563","#3767A9", "grey")) + # , guide = FALSE
               scale_color_manual(values = c("#FD6563","#3767A9", "grey")) + # , guide = FALSE
               # coord_flip() +

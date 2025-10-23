@@ -9,6 +9,11 @@ source("src/setup.R")
 # Read in the NanoStringGeoMxSet object. 
 target_data_object_list <- readRDS(cl_args[5])
 
+# Set `main_module` if not set already
+modules <- names(target_data_object_list[[1]])
+if(flagVariable(main_module)) main_module <- modules[1]
+rm(modules)
+
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##
 ## Normalization ----
@@ -18,11 +23,12 @@ target_data_object_list <- readRDS(cl_args[5])
 # Normalization methods will differ depending on whether the analyte is RNA or protein
 # Unless the analyte is specified as "protein", the pipeline will normalize assuming the data to be RNA
 
-### Normalization ----
 # Initialize the list to hold the plots.
 plot_list_normalization <- list()
 
 if(analyte=="protein") {
+  ### Protein normalization ----
+  
   # Choosing the best normalization methods
   # Two graphs that can help decide: concordance plots (measured by SD(log2(ratios between targets))) of IgGs and concordance plots of all normalization factors
   
@@ -42,6 +48,7 @@ if(analyte=="protein") {
   # Get the NanoStringGeoMx object
   module <- names(target_data_object_list)[1]
   target_data_object <- target_data_object_list[[module]]
+  plot_list_normalization[[module]] <- list()
   
   # Visualize normalization factor QC
   igg.names <- iggNames(target_data_object)
@@ -51,7 +58,8 @@ if(analyte=="protein") {
       plot <- plotConcordance(object = target_data_object, targetList = igg.names, plotFactor = factor)
     }
   } else {
-    plot <- plotConcordance(object = target_data_object, targetList = igg.names)
+    # We still need to provide plotFactor
+    plot <- plotConcordance(object = target_data_object, targetList = igg.names, plotFactor = "segment")
   }
   
   # Perform normalization
@@ -60,7 +68,7 @@ if(analyte=="protein") {
   # Background normalization
   target_data_object <- normalize(target_data_object, norm_method="neg", toElt = "neg_norm")
   # Quantile normalization
-  target_data_object <- normalize(target_data_object, norm_method="quant", desiredQuantile = .75, toElt = "q_norm")
+  target_data_object <- normalize(target_data_object, norm_method="quant", desiredQuantile = .75, toElt = "quant")
   
   # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   #
@@ -91,6 +99,8 @@ if(analyte=="protein") {
   }
   
 } else {
+  ### RNA normalization ----
+  
   # Explore the relationship between the upper quartile (Q3) of the counts in each segment with the geometric mean of the negative control probes in the data. Ideally, there should be a separation between these two values to ensure we have stable measure of Q3 signal. If you do not see sufficient separation between these values, you may consider more aggressive filtering of low signal segments/genes.
   
   for(module in names(target_data_object_list)) {

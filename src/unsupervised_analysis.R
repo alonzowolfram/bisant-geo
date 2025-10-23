@@ -17,6 +17,10 @@ source("src/setup.R")
 
 # Read in the NanoStringGeoMxSet object. 
 target_data_object_list <- readRDS(cl_args[5])
+# Set `main_module` if not set already
+modules <- names(target_data_object_list[[1]])
+if(flagVariable(main_module)) main_module <- modules[1]
+rm(modules)
 # We'll only need the main module for this one.
 target_data_object <- target_data_object_list[[main_module]]
 

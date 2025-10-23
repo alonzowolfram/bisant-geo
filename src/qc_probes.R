@@ -17,6 +17,9 @@ modules <- names(data_object_list)
 pkcs <- paste0(modules, ".pkc")
 pkc_summary <- data.frame(PKCs = pkcs, modules = modules)
 
+# Set `main_module` if not set already
+if(flagVariable(main_module)) main_module <- modules[1]
+
 # Set the probes to be included no matter what. 
 probes_include <- probes_include %>% str_split(",") %>% unlist()
 

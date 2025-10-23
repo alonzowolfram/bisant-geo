@@ -11,6 +11,9 @@ data_object_list <- readRDS(cl_args[5])
 modules <- names(data_object_list)
 pkcs <- paste0(modules, ".pkc")
 
+# Set `main_module` if not set already
+if(flagVariable(main_module)) main_module <- modules[1]
+
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## Segment QC ----
