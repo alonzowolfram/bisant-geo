@@ -105,6 +105,26 @@ if(analyte=="protein") {
       labs(y = paste0("Counts, ", normalization_names[names(normalization_names)==norm_method]), x = "Segment", title = paste0(module))
   }
   
+  ### Log-transformation ----
+  for(module in names(target_data_object_list)) {
+    target_data_object <- target_data_object_list[[module]]
+    
+    for(norm_method in names(target_data_object@assayData)) {
+      # Add the log-transformed data to the data object as well under the appropriate normalizations.
+      assayDataElement(object = target_data_object, elt = paste0("log_", norm_method), validate = FALSE) <- # Have to set validate to FALSE; otherwise it thinks the dimensions aren't the same. ... 
+        assayDataApply(target_data_object, 2, FUN = function(x) log2(x+1), elt = norm_method)
+    }
+    
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    #
+    # Save back to list.
+    #
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    target_data_object_list[[module]] <- target_data_object
+    rm(target_data_object)
+    gc()
+  }
+  
 } else {
   ### RNA normalization ----
   
