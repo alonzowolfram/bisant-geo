@@ -38,10 +38,11 @@ custom_umap$random_state <- random_seed
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Because of some weird thing with, I'm guessing, nested data frames,
-# R thinks that the row names aren't unique whenever we manipulate pData.
-# Right now, we're getting an issue when we try to reset the column names after unsupervised analysis.
-# So we'll unnest the nested data frames (LOQ in our case.)
-pData(target_data_object) <- pData(target_data_object) %>% unnest(cols = c(LOQ), names_sep = "-")
+# R thinks that the row names aren't unique whenever we manipulate pData
+# Right now, we're getting an issue when we try to reset the column names after unsupervised analysis
+# So we'll unnest the nested data frames (LOQ in our case)
+# (Note that this applies only if we have RNA as our analyte, as we do not perform probe-level filtering with protein)
+if(analyte=="RNA") pData(target_data_object) <- pData(target_data_object) %>% unnest(cols = c(LOQ), names_sep = "-")
 orig_var_names <- colnames(pData(target_data_object))
 orig_row_names <- rownames(pData(target_data_object))
 
