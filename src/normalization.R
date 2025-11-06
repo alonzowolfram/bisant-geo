@@ -55,12 +55,19 @@ if(analyte=="protein") {
   if(!flagVariable(protein_norm_qc_plot_factors)) { # Were plot factors provided?
     for(factor in protein_norm_qc_plot_factors) {
       if(!(factor %in% colnames(pData(target_data_object)))) next # Is the current plot factor a variable in the pData?
-      plot <- plotConcordance(object = target_data_object, targetList = igg.names, plotFactor = factor)
+      plot_list_normalization[[module]][["Concordance"]] <- plotConcordance(object = target_data_object, targetList = igg.names, plotFactor = factor)
     }
   } else {
     # We still need to provide plotFactor
-    plot <- plotConcordance(object = target_data_object, targetList = igg.names, plotFactor = "segment")
+    plot_list_normalization[[module]][["Concordance"]] <- plotConcordance(object = target_data_object, targetList = igg.names, plotFactor = "segment")
   }
+  
+  norm_factors <- computeNormalizationFactors(object = target_data_object,
+                                             area = area_col_name,
+                                             nuclei = nuclei_col_name)
+  plot_list_normalization[[module]][["NormalizationFactors"]] <- plotNormFactorConcordance(object = target_data_object,
+                                                                                           plotFactor = "segment",
+                                                                                           normfactors = norm_factors)
   
   # Perform normalization
   # Housekeeper normalization
