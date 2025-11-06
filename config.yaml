@@ -124,7 +124,17 @@ experiment:
     # the experiment data column names.
     # E.g., panel
     experiment_data_col_names:
-
+    
+    # [Optional] The column name in the sample annotation (given by {sample_annotation_file}) corresponding to the column containing the AOI area
+    # Usually just "area". If left blank, it will default to "area"
+    # This is pretty much only used for protein normalization stuff, so you can probably leave it blank unless you know for sure that the area column has a different name
+    area_col_name: 
+    
+    # [Optional] The column name in the sample annotation (given by {sample_annotation_file}) corresponding to the column containing the nuclei count
+    # Usually just "nuclei". If left blank, it will default to "nuclei"
+    # This is pretty much only used for protein normalization stuff, so you can probably leave it blank unless you know for sure that the nuclei column has a different name
+    nuclei_col_name: 
+    
     # [Optional] Neo-variables, created by pasting together two or more existing variables in the sample annotation.
     # Use a plus sign ("+") to combine variables. 
     # Separate each neo-variable with a comma (",").

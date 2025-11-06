@@ -16,6 +16,8 @@ random_seed,FALSE,1026,FALSE
 phenodata_dcc_col_name,TRUE,,FALSE
 protocol_data_col_names,TRUE,,TRUE
 experiment_data_col_names,TRUE,,TRUE
+area_col_name,FALSE,area,FALSE
+nuclei_col_name,FALSE,nuclei,FALSE
 neovariables,FALSE,,TRUE
 filter_vars,FALSE,,FALSE
 min_segment_reads,FALSE,1000,FALSE
