@@ -18,7 +18,7 @@ source("src/setup.R")
 # Read in the NanoStringGeoMxSet object. 
 target_data_object_list <- readRDS(cl_args[5])
 # Set `main_module` if not set already
-modules <- names(target_data_object_list[[1]])
+modules <- names(target_data_object_list)
 if(flagVariable(main_module)) main_module <- modules[1]
 rm(modules)
 # We'll only need the main module for this one.
@@ -56,7 +56,7 @@ dim_red_list <- list()
 for(norm_method in names(target_data_object@assayData)) {
   if(norm_method %in% c("exprs", "bg_sub") | base::grepl("log_", norm_method)) next # Skip over raw data, background-subtracted-only data, and log-transformed data.
 
-  message(paste0("Performing dimensionality reduction on data normalized with method ", norm_method))
+  message(glue::glue("Performing dimensionality reduction on data normalized with method {norm_method}"))
 
   plot_list_unsupervised_clustering[[norm_method]] <- list()
   plot_list_unsupervised_clustering[[norm_method]][["UMAP"]] <- list()
@@ -265,7 +265,7 @@ pData(target_data_object) <- cbind(pData(target_data_object), dim_red_df)
 # Arrange plots into grid.
 plot_list_unsupervised_clustering_grid <- list()
 for(norm_method in names(plot_list_unsupervised_clustering)) {
-  message(paste0("Arranging plots for normalization method ", norm_method))
+  message(glue::glue("Arranging plots for normalization method {norm_method}"))
   
   plot_list_unsupervised_clustering_grid[[norm_method]] <- list()
   
@@ -275,7 +275,7 @@ for(norm_method in names(plot_list_unsupervised_clustering)) {
     
     for(label_var in names(plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]])) {
       if(length(plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]]) < 1) next
-      message(paste0("Arranging plots for dimension reduction method ", dim_red_method, " for normalization method ", norm_method, " for labeling variable ", label_var))
+      message(glue::glue("Arranging plots for dimension reduction method {dim_red_method} for normalization method {norm_method} for labeling variable {label_var}"))
       
       p_list <- plot_list_unsupervised_clustering[[norm_method]][[dim_red_method]][[label_var]]
       
@@ -366,7 +366,7 @@ cv_res <- c()
 for(norm_method in names(target_data_object@assayData)) {
   if(norm_method %in% c("exprs", "bg_sub") | base::grepl("log_", norm_method)) next # Skip over raw data, background-subtracted-only data, and log-transformed data.
 
-  print(paste0("Creating heatmap from data normalized with method ", norm_method))
+  print(glue::glue("Creating heatmap from data normalized with method {norm_method}"))
 
   # Calculate coefficient of variance for each gene.
   CV_dat <- assayDataApply(target_data_object,
