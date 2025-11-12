@@ -194,6 +194,8 @@ if(!flagVariable(lmm_formulae_immune)) {
       tibble::rownames_to_column(var = "Sample") %>% 
       mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.))) 
     # %>% select(all_of(formula_vars))
+    # Add "Complete dataset" as variable if it doesn't exist already
+    if(imm_decon_subset_vars=="Complete dataset" & !("Complete dataset" %in% colnames(pData_tmp))) pData_tmp$`Complete dataset` <- as.factor("Complete dataset")
     
     # Loop level 2 (deconvolution method)
     for(method in names(imm_decon_res_list)) {
