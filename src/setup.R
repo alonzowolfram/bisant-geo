@@ -365,7 +365,8 @@ if(length(error_msg_list) > 0) {
 }
 
 # There are a couple of parameters we have to handle manually:
-# `analyte`, `subset_var_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, and `imm_decon_subset_var_levels_manual`.
+# `output_plot_file_types`, `analyte`, `subset_var_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, and `imm_decon_subset_var_levels_manual`.
+if(flagVariable(output_plot_file_types)) {output_plot_file_types <- c("eps", "pdf")} else {output_plot_file_types <- output_plot_file_types %>% str_split(",") %>% unlist %>% str_to_lower}
 if(flagVariable(analyte) || !(analyte %in% c("RNA", "protein"))) analyte <- "RNA"
 if(flagVariable(subset_var_levels_manual)) {
   subset_var_levels_manual <- rep(list(NA), length(subset_vars))

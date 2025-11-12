@@ -11,6 +11,7 @@ phenodata_sheet_name,FALSE,,FALSE
 rmd_template_file,TRUE,,FALSE
 previous_run_out_dir,FALSE,,FALSE
 output_dir,FALSE,,FALSE
+output_plot_file_types,FALSE,,TRUE
 species,TRUE,,FALSE
 random_seed,FALSE,1026,FALSE
 phenodata_dcc_col_name,TRUE,,FALSE
