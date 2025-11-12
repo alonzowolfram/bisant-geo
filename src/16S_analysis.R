@@ -30,7 +30,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
   
   # Stop if there are no 16S probes.
   if(!(all(dim(target_data_object_16s) > 0))) {
-    warning(paste0("There are no probes matching those given in", module_16s, ". 16S analysis will not be performed."))
+    warning(glue::glue("There are no probes matching those given in {module_16s}. 16S analysis will not be performed"))
   } else {
     # Get the names of the negative probes.
     neg_probes <- fData(target_data_object_16s) %>% dplyr::filter(Negative==TRUE) %>% dplyr::select(TargetName) %>% unlist()
@@ -168,7 +168,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               # Check that we have enough levels to perform ANOVA.
               n_grouping_var_levels <- dat$Group %>% unique %>% length
               if(n_grouping_var_levels < 2) {
-                warning("Grouping variable ", grouping_var, " has fewer than 2 levels. Skipping ANOVA.")
+                warning(glue::glue("Grouping variable {grouping_var} has fewer than 2 levels. Skipping ANOVA"))
                 anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["ANOVA"]] <- NA
                 anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- NA
               } else {
@@ -186,20 +186,34 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               # Plot.
               plot <- dat %>%
                 ggplot(aes(x = !!as.name(grouping_var), y = `16S expression`, fill = !!as.name(grouping_var))) + 
-                geom_boxplot() + 
+                geom_boxplot(aes(fill = !!as.name(grouping_var)), width = 0.6, alpha = 0.7, outlier.shape = NA) + 
+                geom_jitter(aes(color = !!as.name(grouping_var)), width = 0.15, size = 2, alpha = 0.9) + 
                 #facet_wrap(~cell_type, scales = "free_x", ncol = 3) +
                 scale_fill_manual(values = mycolors) + # , guide = FALSE
                 scale_color_manual(values = mycolors) + # , guide = FALSE
                 theme_bw() +
-                theme(panel.grid.minor = element_blank(),
-                      panel.grid.major = element_blank()) +
-                labs(title = paste0("Subset variable: ", subset_var, " | level: ", subset_var_level),
+                theme(
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  axis.text.x = element_blank(),
+                  axis.ticks.x = element_blank(),
+                  legend.position = "right",
+                  strip.background = element_rect(fill = "#E4E4E4", color = "#333333")
+                ) +
+                labs(title = glue::glue("Subset variable: {subset_var} | level: {subset_var_level}"),
                      x = paste0(""),
-                     y = paste0(""))
+                     y = paste0("16s expression"))
+              # Add to the plot list
               plot_list[[subset_var]][[subset_var_level]][[grouping_var]] <- plot
+              # Save plot to disk
+              plot
+              file_name <- glue::glue("16S_plot_{subset_var}_{subset_var_level}_{grouping_var}")
+              for(file_type in output_plot_file_types) {
+                ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 12, height = 9, units = "in")
+              }
               
             } else {
-              warning("The names in the 16S expression matrix do not match those in the pData! Skipping plots of 16S expression levels by group.")
+              warning("The names in the 16S expression matrix do not match those in the pData! Skipping plots of 16S expression levels by group")
             }
             
           } # End grouping variables for loop.

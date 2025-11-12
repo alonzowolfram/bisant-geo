@@ -431,8 +431,15 @@ for(method in names(imm_decon_res_list)) {
             if(length(unique_values) > 10) {
               plot <- plot + coord_flip()
             }
+            # Add to plot list
             plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]][[group]] <- plot
-          
+            # Save plot to disk
+            plot
+            file_name <- glue::glue("imm_decon_stacked-bar-graph_{subset_var}_{subset_var_level}_{method}_{grouping_var}_{group}")
+            for(file_type in output_plot_file_types) {
+              ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 12, height = 9, units = "in")
+            }
+            
           }
         }
         
@@ -456,8 +463,14 @@ for(method in names(imm_decon_res_list)) {
                                   " | level ", subset_var_level, 
                                   "\n compartmentalized by ", grouping_var,
                                   " | group ", group))
-            
+            # Add to the plot list
             plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]][[group]] <- plot
+            # Save plot to disk
+            plot
+            file_name <- glue::glue("imm_decon_dotplot_{subset_var}_{subset_var_level}_{method}_{grouping_var}_{group}")
+            for(file_type in output_plot_file_types) {
+              ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 12, height = 9, units = "in")
+            }
             
           }
         }
@@ -489,13 +502,14 @@ for(method in names(imm_decon_res_list)) {
               #                     " | level ", subset_var_level, 
               #                     "\n compartmentalized by ", grouping_var,
               #                     " | group ", group))
-            
+            # Add to the plot list
             plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]][[group]] <- plot
-            
-            # Save plot to EPS and PDF
-            filename <- glue::glue("imm_decon_boxplot_{subset_var}_{subset_var_level}_{method}_{grouping_var}_{group}")
-            ggplot2::ggsave(filename = paste0(filename, ".pdf"), path = output_dir_imgs, plot = plot, width = 12, height = 9, units = "in")
-            ggplot2::ggsave(filename = paste0(filename, ".eps"), path = output_dir_imgs, plot = plot, width = 12, height = 9, units = "in")
+            # Save plot to disk
+            plot
+            file_name <- glue::glue("imm_decon_boxplot_{subset_var}_{subset_var_level}_{method}_{grouping_var}_{group}")
+            for(file_type in output_plot_file_types) {
+              ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 12, height = 9, units = "in")
+            }
             
           }
         }

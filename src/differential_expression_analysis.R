@@ -3,26 +3,26 @@
 ## Setup ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-message("Setting up for differential expression analysis.")
+message("Setting up for differential expression analysis")
 
 ## Source the setup.R file.
 source("src/setup.R")
 
-# Read in the NanoStringGeoMxSet object. 
+# Read in the NanoStringGeoMxSet object
 target_data_object_list <- readRDS(cl_args[5])
 # Set `main_module` if not set already
 modules <- names(target_data_object_list)
 if(flagVariable(main_module)) main_module <- modules[1]
 rm(modules)
-# We'll only need the main module for this one.
+# We'll only need the main module for this one
 target_data_object <- target_data_object_list[[main_module]]
 
-# Get the test variables.
+# Get the test variables
 test_vars <- c()
 for(formula in lmm_formulae_de) {
   test_vars <- union(test_vars, extractVariables(formula))
 }
-# Convert test variables and subset variables to factors.
+# Convert test variables and subset variables to factors
 for(test_var in test_vars) {
   pData(target_data_object)[[test_var]] <- pData(target_data_object)[[test_var]] %>% as.factor
 }
@@ -30,7 +30,7 @@ for(subset_var in subset_vars) {
   if(!is.null(subset_var) && !is.na(subset_var) && subset_var != "NA") pData(target_data_object)[[subset_var]] <- pData(target_data_object)[[subset_var]] %>% as.factor
 }
 
-# # Create the table of LMM parameter combinations.
+# # Create the table of LMM parameter combinations
 # param_combos <- cbind(random_slope, test_vars, random_intercept_vars, random_slope_vars) %>% as.data.frame %>% dplyr::mutate(`Model number` = 1:nrow(.)) # , random_slope_vars
 # colnames(param_combos)[1:4] <- c("Random slope", "Test variable", "Random intercept variable", "Random slope variable") # , "Random slope variable"
 
@@ -40,7 +40,7 @@ for(subset_var in subset_vars) {
 negativeProbefData <- subset(fData(target_data_object), CodeClass == "Negative")
 neg_probes <- unique(negativeProbefData$TargetName)
 
-message("Finished setup for differential expression analysis.")
+message("Finished setup for differential expression analysis")
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
@@ -48,20 +48,20 @@ message("Finished setup for differential expression analysis.")
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Run LMM:
-# formula follows conventions defined by the lme4 package.
-# When running LMM, mixedModelDE seems to have issues with variable names with spaces etc., even if enclosed in backticks (``). 
+# formula follows conventions defined by the lme4 package
+# When running LMM, mixedModelDE seems to have issues with variable names with spaces etc., even if enclosed in backticks ("``")
 
-# Now we can loop over all the param combos and run LMM on each one.
-message("Performing differential expression analysis.")
+# Now we can loop over all the param combos and run LMM on each one
+message("Performing differential expression analysis")
 
 results2 <- data.frame()
 model_number <- 1
 for (lmm_formula in lmm_formulae_de) {
-  message(glue::glue("Working on model {lmm_formula}.") )
+  message(glue::glue("Working on model {lmm_formula}"))
   
-  # Create the model formula.
+  # Create the model formula
   model_formula <- as.formula(lmm_formula)
-  # Extract the grouping variable (by convention, it will be the first fixed effect in the model.)
+  # Extract the grouping variable (by convention, it will be the first fixed effect in the model)
   groupVar <- extractFirstFixedEffect(model_formula)
   
   # Handle missing subset variables
@@ -71,7 +71,7 @@ for (lmm_formula in lmm_formulae_de) {
   }
   
   for (subset_var in subset_vars) {
-    message(glue::glue("Working on subset variable {subset_var} for model {lmm_formula}.") )
+    message(glue::glue("Working on subset variable {subset_var} for model {lmm_formula}"))
     
     if (subset_var %in% c("NA", NA)) {
       pData(target_data_object)$`All observations` <- factor("DummyLevel")
@@ -80,7 +80,7 @@ for (lmm_formula in lmm_formulae_de) {
     
     model_vars <- extractModelComponents(model_formula) %>% unlist
     if (subset_var %in% model_vars) {
-      message(glue::glue("Skipping subset variable {subset_var} due to overlap with one or more fixed-effect or random variables in the model formula."))
+      message(glue::glue("Skipping subset variable {subset_var} due to overlap with one or more fixed-effect or random variables in the model formula"))
       next
     }
     
@@ -89,19 +89,19 @@ for (lmm_formula in lmm_formulae_de) {
     subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
     if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
       if(sum(subset_var_levels_manual_i %in% subset_levels) < 1) {
-        warning(paste0("None of the manually provided levels for subset variable ", subset_var, " are present in that variable. All available levels of subset variable ", subset_var, " will be used"))
+        warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of {subset_var} will be used instead"))
       } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
         subset_levels <- subset_levels %>% .[. %in% subset_var_levels_manual_i]
       }
     }
     
     for (subset_level in subset_levels) {
-      message(glue::glue("Working on level {subset_level} of {subset_var} for model {lmm_formula}.") )
+      message(glue::glue("Working on level {subset_level} of {subset_var} for model {lmm_formula}"))
       
       ind <- pData(target_data_object)[[subset_var]] == subset_level
       
       for (norm_method in normalization_methods) {
-        message(glue::glue("Working on normalization {norm_method} for level {subset_level} of {subset_var} for model {lmm_formula}.") )
+        message(glue::glue("Working on normalization {norm_method} for level {subset_level} of {subset_var} for model {lmm_formula}"))
         skip_to_next <- FALSE
         
         set.seed(random_seed)
@@ -162,14 +162,14 @@ for (lmm_formula in lmm_formulae_de) {
   # colnames(pData(target_data_object)) <- orig_var_names
   if (any(subset_vars == "All observations")) subset_vars <- NA
 }
-message("Differential expression analysis completed.")
+message("Differential expression analysis completed")
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## Volcano plots ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-message("Graphing differentially expressed genes.")
+message("Graphing differentially expressed genes")
 
 ## ................................................
 ##
@@ -182,14 +182,14 @@ top_g_list <- list()
 
 models <- results2$`Model` %>% unique
 model_number <- 1
-for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
+for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it "subset_vars" because we already have a variable by that name ... 
   
   subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
   # If subset_var_levels_manual is set, filter subset_var_levels to include only those values
   subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
   if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
     if(sum(subset_var_levels_manual_i %in% subset_var_levels) < 1) {
-      warning(paste0("None of the manually provided levels for subset variable ", subset_var, " are present in that variable. All available levels of subset variable ", subset_var, " will be used"))
+      warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of {subset_var} will be used instead"))
     } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
       subset_var_levels <- subset_var_levels %>% .[. %in% subset_var_levels_manual_i]
     }
@@ -212,7 +212,7 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
             results2$Contrast==contrast & 
             results2$`Normalization method`==normalization_method
           
-          # Populate top_g.
+          # Populate `top_g`
           top_g <- c(top_g,
                      results2[ind, 'Gene'][
                        order(results2[ind, 'invert_P'], decreasing = TRUE)[1:n_top_genes]],
@@ -249,7 +249,7 @@ results2$Color <- factor(results2$Color,
                                     "FDR < 0.25",
                                     "FDR < 0.05",
                                     "FDR < 0.001"))
-# Set the significance colors.
+# Set the significance colors
 signif_cols <- c("dodgerblue",
                   "lightblue",
                   "orange2",
@@ -262,12 +262,12 @@ names(signif_cols) <- c("FDR < 0.001",
                         "NS or FC < 0.5")
 
 # Graph results2
-# Initialize the list to hold the plots.
+# Initialize the list to hold the plots
 plot_list_diff_exprs <- list()
-model_list <- list() # Hold all the model formulae so we can access them when arranging the plots into grids.
+model_list <- list() # Hold all the model formulae so we can access them when arranging the plots into grids
 models <- results2$`Model` %>% unique
 model_number <- 1
-for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
+for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name ... 
   
   subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
   for(subset_var_level in subset_var_levels) {
@@ -278,29 +278,29 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
       for(normalization_method in unique(results2$`Normalization method`)) {
         
         for(contrast in contrasts) {
-          # Get the parameters for this experiment.
+          # Get the parameters for this experiment
           test_var <- results2 %>% dplyr::filter(`Model`==model) %>% dplyr::select(`Contrast variable`) %>% unlist %>% .[1]
           test_var_lv_1 <- contrast %>% strsplit(" - ") %>% unlist %>% .[1] #pData(target_data_object)[[test_var]] %>% levels %>% .[1]
           test_var_lv_2 <- contrast %>% strsplit(" - ") %>% unlist %>% .[2] #pData(target_data_object)[[test_var]] %>% levels %>% .[2]
           if(subset_var=="NA" || is.na(subset_var) || subset_var=="All observations") {
             subset_by <- ""
           } else {
-            subset_by <- paste0("| Subset variable: ", subset_var, ", level: ", subset_var_level)
+            subset_by <- glue::glue("| Subset variable: {subset_var}, level: {subset_var_level}")
           }
           
-          # Get the top DE genes for this experiment.
+          # Get the top DE genes for this experiment
           # top_genes <- c()
           # for(subset_var_level in subset_var_levels) {
           #   top_genes <- c(top_genes, top_g_list[[subset_var]][[subset_var_level]][[paste0("model_", model_number)]][[contrast]][[normalization_method]])
           # }
           # top_genes <- unique(top_genes)
-          # Above code is a remnant from when we faceted using facet_by() and had to include all top genes.
-          # Now that we manually create a grid, we can just include the appropriate top genes.
+          # Above code is a remnant from when we faceted using facet_by() and had to include all top genes
+          # Now that we manually create a grid, we can just include the appropriate top genes
           top_genes <- top_g_list[[subset_var]][[subset_var_level]][[paste0("model_", model_number)]][[contrast]][[normalization_method]]
           
-          # Set up the data to plot.
+          # Set up the data to plot
           n <- length(contrasts)
-          nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # Used for the font size of the volcano plot labels.
+          nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # Used for the font size of the volcano plot labels
           
           results2_sub <- results2 %>% dplyr::filter(
             `Subset variable`==subset_var &
@@ -309,7 +309,7 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
               Contrast==contrast & 
               `Normalization method`==normalization_method
           )
-          # Make the ggplot.
+          # Make the ggplot
           plot <- ggplot(results2_sub,
                          aes(x = Estimate, y = -log10(`Pr(>|t|)`),
                              color = Color, label = Gene)) +
@@ -317,12 +317,12 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
             geom_hline(yintercept = -log10(0.05), lty = "dashed") +
             geom_point() +
             scale_color_manual(values = signif_cols) +
-            labs(x = paste0("Enriched in ", test_var_lv_2, " <- log2(FC) -> Enriched in ", test_var_lv_1),
+            labs(x = glue::glue("Enriched in {test_var_lv_2} ←  log2(FC) → Enriched in {test_var_lv_1}"),
                  y = "", # Significance, -log10(P)
                  # title = paste0("DE genes", subset_by, " \nTest variable: ", test_var, random_slope_status),
                  color = "Significance") +
             scale_y_continuous(expand = expansion(mult = c(0,0.05))) +
-            geom_text_repel(data = subset(results2_sub, Gene %in% top_genes), # & FDR < 0.001 # The way we have the graphing for the DEGs set up, it will label all genes for a given subset variable, across all values of that variable. This is because we use the values of the subset variable to facet, and AFAIK, ggplot2 doesn't have a way to exclude labels by the variable that's being faceted by. This may change.
+            geom_text_repel(data = subset(results2_sub, Gene %in% top_genes), # & FDR < 0.001 # The way we have the graphing for the DEGs set up, it will label all genes for a given subset variable, across all values of that variable. This is because we use the values of the subset variable to facet, and AFAIK, ggplot2 doesn't have a way to exclude labels by the variable that's being faceted by. This may change
                             size = (4 / nCol), point.padding = 0.15, color = "black",
                             min.segment.length = .1, box.padding = .2, lwd = 2,
                             max.overlaps = 50) +
@@ -331,7 +331,7 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
                   panel.grid.minor = element_blank(),
                   panel.grid.major = element_blank()) # "bottom"
           
-          # Add to the list.
+          # Add to the list
           plot_list_diff_exprs[[subset_var]][[subset_var_level]][[paste0("model_", model_number)]][[normalization_method]][[contrast]] <- plot
           
         }
@@ -361,19 +361,19 @@ for(subset_var in names(plot_list_diff_exprs)) {
         
         n <- length(p_list)
         if(n > 16) {
-          # Stop right there.
-          warning(paste0("The combination of ", subset_var, " - ", subset_var_level, " - ", model_num, " - ", normalization_method, " has ", n, " volcano plots, too many for graphing. Please graph these manually. Skipping to the next list of graphs."))
+          # Stop right there
+          warning(glue::glue("The combination of {subset_var} - {subset_var_level} - {model_num} -  {normalization_method} has {n} volcano plots, too many for graphing. Please graph these manually. Skipping to the next list of graphs"))
           rm(p_list)
           gc()
           next
         }
-        nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
+        nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1
         
-        # Set the scaling factors for label and legend size.
+        # Set the scaling factors for label and legend size
         sqrt_n_col <- sqrt(nCol)
         scaling_factor <- ifelse(nCol > 1, (sqrt_n_col * nCol / 2), 1) # Number of rows in current grid / 2 (base number)
         
-        # Create new dummy plot, scale legend accordingly, and then extract legend.
+        # Create new dummy plot, scale legend accordingly, and then extract legend
         plot_dummy <- p_list[[1]] + 
           scale_color_manual(values = signif_cols,
                              guide = guide_legend(override.aes = list(size = 4 * scaling_factor))
@@ -398,24 +398,28 @@ for(subset_var in names(plot_list_diff_exprs)) {
         if(subset_var=="NA" || is.na(subset_var) || subset_var=="All observations") {
           subset_by <- ""
         } else {
-          subset_by <- paste0("| Subset variable: ", subset_var, ", level: ", subset_var_level)
+          subset_by <-glue::glue("| Subset variable: {subset_var}, level: {subset_var_level}")
         }
         
-        # Arrange plots in p_list onto a grid.
+        # Arrange plots in p_list onto a grid
         plot_grid <- do.call("grid.arrange", c(p_list, ncol=nCol))
         plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("Significance, -log10(P)", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = scaling_factor)),
                                                            bottom = grid::textGrob("", gp = grid::gpar(cex = scaling_factor)),
-                                                           top = grid::textGrob(paste0("DE genes ", subset_by, 
-                                                                                       " \nTest (contrast) variable: ", test_var, 
-                                                                                       " | ", model,
-                                                                                       " \nNormalization method: ", normalization_method), 
+                                                           top = grid::textGrob(glue::glue("DE genes {subset_by} \nTest (contrast) variable: {test_var} | {model} \nNormalization method: {normalization_method}"), 
                                                                                 gp = grid::gpar(cex = scaling_factor)))
         
-        # Add back in the legend we extracted earlier. 
+        # Add back in the legend we extracted earlier
         plot_grid2 <- grid.arrange(plot_grid, legend, ncol = 1, heights=c(10, 1))
         
-        # Save to list.
-        plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[model_num]][[normalization_method]] <- ggplotify::as.ggplot(plot_grid2)
+        # Add to the plot list
+        plot_grid2 <- ggplotify::as.ggplot(plot_grid2)
+        plot_list_diff_exprs_grid[[subset_var]][[subset_var_level]][[model_num]][[normalization_method]] <- plot_grid2
+        # Save plot to disk
+        plot_grid2
+        file_name <- glue::glue("DE_volcano_plot_grid_{subset_var}_{subset_var_level}_{model_num}_{normalization_method}")
+        for(file_type in output_plot_file_types) {
+          ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 12, height = 9, units = "in")
+        }
         
         rm(plot_grid2, p_list)
         gc()

@@ -45,7 +45,7 @@ if(exists("pathway_table")) if(!is.null(pathway_table)) msigdb_list <- as.list(p
 if(!(species %in% c("Homo sapiens", "Mus musculus"))) stop("Please provide a valid species: either 'Homo sapiens' or 'Mus musculus'")
 
 # Set graphical parameters
-nes_palette <- colorRampPalette(c("blue", "white", "red"))(100)
+nes_palette <- colorRampPalette(c("#3767A9", "white", "#FD6563"))(100)
 if(!flagVariable(fgsea_graph_colors)) {
   fgsea_graph_colors <- paste0("#", fgsea_graph_colors)
   if((length(fgsea_graph_colors) >= 2) & (all(areColors(fgsea_graph_colors[1:2])))) { # areColors() is found in helper_functions.R
@@ -233,25 +233,39 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         #   truncate_strings()
         
         # Graph.
-        plot <- ggplot(df_sub_graphing, aes(x = PathwayCleanedChar, y = NES, fill = NES)) +
-          geom_col(width = 0.8) +  # Adjust width as needed
-          scale_fill_gradientn(colors = nes_palette, limits = c(lower_limit, upper_limit)) +
-          coord_flip() +
-          theme_bw() +
+        plot <- df_sub_graphing %>% ggplot(aes(y = PathwayCleanedChar, x = NES, size = -log10(padj), color = NES)) + 
+          theme_bw() + 
+          geom_point() + 
+          scale_color_gradientn(colors = nes_palette, limits = c(lower_limit, upper_limit)) + 
+          labs(y = "", x = glue::glue("{contrast_element_2}  ←  NES  →  {contrast_element_1}")) + 
           theme(
-            aspect.ratio = 1/1,
             legend.position = "right",
             panel.grid.minor = element_blank(),
             panel.grid.major = element_blank(),
             axis.ticks.y = element_blank()
-          ) +
-          labs(x = "", y = paste0(contrast_element_2, " <-> ", contrast_element_1))
+          ) 
+          # ggplot(df_sub_graphing, aes(x = PathwayCleanedChar, y = NES, fill = NES)) +
+          # geom_col(width = 0.8) +  # Adjust width as needed
+          # scale_fill_gradientn(colors = nes_palette, limits = c(lower_limit, upper_limit)) +
+          # coord_flip() +
+          # theme_bw() +
+          # theme(
+          #   aspect.ratio = 1/1,
+          #   legend.position = "right",
+          #   panel.grid.minor = element_blank(),
+          #   panel.grid.major = element_blank(),
+          #   axis.ticks.y = element_blank()
+          # ) +
+          # labs(x = "", y = paste0(contrast_element_2, " <-> ", contrast_element_1))
         
         # Add to the plot list
         plot_list_pathway_analysis[[subset_var]][[subset_var_level]][[paste0("model_", model_number)]][[contrast]] <- plot
-        # Save plot to EPS and PDF
-        ggplot2::ggsave(filename = glue::glue("pathway_plot_{subset_var}_{subset_var_level}_model{model_number}_{contrast_var}_{contrast}.pdf"), path = output_dir_imgs, plot = plot, width = 12, height = 9, units = "in")
-        ggplot2::ggsave(filename = glue::glue("pathway_plot_{subset_var}_{subset_var_level}_model{model_number}_{contrast_var}_{contrast}.eps"), path = output_dir_imgs, plot = plot, width = 12, height = 9, units = "in")
+        # Save plot to disk
+        plot
+        file_name <- glue::glue("pathway_plot_{subset_var}_{subset_var_level}_model{model_number}_{contrast_var}_{contrast}")
+        for(file_type in output_plot_file_types) {
+          ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 12, height = 9, units = "in")
+        }
         
         # Add df_sub to pathway_df
         pathway_df <- rbind(pathway_df, df_sub %>% dplyr::select(-leadingEdge))
