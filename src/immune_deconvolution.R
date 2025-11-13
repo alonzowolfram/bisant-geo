@@ -97,7 +97,7 @@ for(method in imm_decon_methods) {
         load(spatial_decon_profile_matrix)
         # Now we should have a variable named `profile_matrix`
         if(!exists("profile_matrix")) {
-          warning(glue::glue("Please ensure that the .RData file provided for use with the SpatialDecon method contains a matrix named profile_matrix. No such object was found. The default reference matrix, safeTME, will be used"))
+          warning(glue::glue("Please ensure that the .RData file provided for use with the SpatialDecon method contains a matrix named profile_matrix. No such object was found. If you did not provide an .RData file in the configuration YAML file, you can safely ignore the first part of this message. The default reference matrix, safeTME, will be used"))
           profile_matrix <- safeTME
         }
       }
