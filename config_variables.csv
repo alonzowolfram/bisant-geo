@@ -46,8 +46,10 @@ protein_norm_qc_plot_factors,FALSE,,TRUE
 module_16s,FALSE,,FALSE
 method_16s_probe_selection,FALSE,both,FALSE
 percentile_16s_cutoff,FALSE,,TRUE
-exprs_16s_subset_vars,FALSE,,TRUE
-exprs_16s_grouping_vars,FALSE,,TRUE
+subset_vars_16s,FALSE,,TRUE
+grouping_vars_16s,FALSE,,TRUE
+remove_na_16s,FALSE,TRUE,FALSE
+lmm_formulae_16s,FALSE,,FALSE
 perform_UMAP,FALSE,TRUE,FALSE
 perform_tSNE,FALSE,FALSE,FALSE
 perform_PCA,FALSE,FALSE,FALSE
@@ -76,5 +78,7 @@ lmm_formulae_immune,FALSE,,TRUE
 imm_decon_grouping_vars,FALSE,,TRUE
 module_tcr,FALSE,,TRUE
 normalization_tcr,FALSE,bg_sub_p90,FALSE
-tcr_subset_vars,FALSE,,TRUE
-tcr_grouping_vars,FALSE,,TRUE
+subset_vars_tcr,FALSE,,TRUE
+grouping_vars_tcr,FALSE,,TRUE
+remove_na_tcr,FALSE,TRUE,FALSE
+lmm_formulae_tcr,FALSE,,TRUE

@@ -333,14 +333,27 @@ experiment:
     # You can provide multiple variables, separated by commas (,)
     # If you have a subsetting variable but also want to conduct a 16S analysis
     # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one
-    exprs_16s_subset_vars:
+    subset_vars_16s:
 
     # [Optional] The column in the annotation to use as a primary grouping variable
     # If provided, a box-and-whiskers plot will be generated of 16S expression levels (defined as the geometric mean of the normalized
     # values of all 16S probes that passed QC) across the provided grouping variable(s), one
     # variable at a time.
     # If left blank, 16S expression levels will not be graphed at all
-    exprs_16s_grouping_vars:
+    # Typically, you'll want these to match the ones given in `lmm_formulae_16s` below
+    # Multiple values are accepted; separate them with a comma (",")
+    grouping_vars_16s:
+    
+    # [Optional] Whether or not when graphing to remove observations with NA 
+    # as the value for the grouping variable of interest
+    # If set to TRUE, observations with NA as the value for the grouping variable of interest
+    # will be removed. Otherwise (including if left blank), observations with NA will be left in
+    remove_na_16s: TRUE
+    
+    # [Optional] User-supplied formula(e) for running linear mixed models for differential abundance/score analysis
+    # You can provide multiple formulae, separated by commas (",")
+    # If left blank, differential analysis will not be performed
+    lmm_formulae_16s: ~ ContrastVariable + (1 | Patient)
 
   # ----------------------------------------------------------------------
   #     Unsupervised analysis settings
@@ -594,10 +607,21 @@ experiment:
     # You can provide multiple variables, separated by commas (",")
     # If you have a subsetting variable but also want to conduct a TCR analysis
     # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one
-    tcr_subset_vars: 
+    subset_vars_tcr: 
 
     # [Optional] Names of variables by which to group samples for graphing of 
     # diversity (Shannon/Simpson/inverse Simpson) and distribution (Gini) metrics
     # If left blank, no grouping will be performed
     # Multiple variables can be provided, separated with commas (",")
-    tcr_grouping_vars:
+    grouping_vars_tcr:
+    
+    # [Optional] Whether or not when graphing to remove observations with NA 
+    # as the value for the grouping variable of interest
+    # If set to TRUE, observations with NA as the value for the grouping variable of interest
+    # will be removed. Otherwise (including if left blank), observations with NA will be left in
+    remove_na_tcr: TRUE
+    
+    # [Optional] User-supplied formula(e) for running linear mixed models for differential abundance/score analysis
+    # You can provide multiple formulae, separated by commas (",")
+    # If left blank, differential analysis will not be performed
+    lmm_formulae_tcr: ~ ContrastVariable + (1 | Patient)
