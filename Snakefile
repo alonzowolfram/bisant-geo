@@ -99,9 +99,9 @@ rule tcr_analysis:
         # anova_results = OUTPUT_PATH + "Rdata/TCR-analysis_ANOVA-res-list.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/TCR_analysis.R",
+        script = "src/tcr_analysis.R",
         output_path = OUTPUT_PATH,
-        current_module = "TCR_analysis",
+        current_module = "tcr_analysis",
         config_path = CONFIG_PATH
     log:
         out = OUTPUT_PATH + "logs/TCR-analysis.out",
@@ -194,7 +194,7 @@ rule analysis_16s:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/16S_analysis.R",
+        script = "src/16s_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "16S_analysis",
         config_path = CONFIG_PATH
@@ -224,42 +224,42 @@ rule normalization:
 
 rule qc_probes:
     input:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_QC-segments.rds"
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes.rds",
-        R_file_raw_qc_dat = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes-raw.rds",
-        R_file_probe_qc_plot_list = OUTPUT_PATH + "Rdata/qc-probes_plot_list.rds",
-        R_file_probe_qc_table = OUTPUT_PATH + "Rdata/qc-probes_table.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_QC-probes.rds",
+        R_file_raw_qc_dat = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_QC-probes-raw.rds",
+        R_file_probe_qc_plot_list = OUTPUT_PATH + "Rdata/QC-probes_plot_list.rds",
+        R_file_probe_qc_table = OUTPUT_PATH + "Rdata/QC-probes_table.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/qc_probes.R",
+        script = "src/QC_probes.R",
         output_path = OUTPUT_PATH,
-        current_module = "qc_probes",
+        current_module = "QC_probes",
         config_path = CONFIG_PATH
     log:
-        out = OUTPUT_PATH + "logs/qc-probes.out",
-        err = OUTPUT_PATH + "logs/qc-probes.err" 
+        out = OUTPUT_PATH + "logs/QC-probes.out",
+        err = OUTPUT_PATH + "logs/QC-probes.err" 
     shell:
         "Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}"
 
 rule qc_segments:
     input:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-study-design.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_QC-study-design.rds"
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments.rds",
-        R_file_main_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-segments_main-module.rds",
-        R_file_segment_qc_summary_table = OUTPUT_PATH + "Rdata/qc-segments_summary_table.rds",
-        R_file_segment_qc_plot_list = OUTPUT_PATH + "Rdata/qc-segments_plot_list.rds",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_QC-segments.rds",
+        R_file_main_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_QC-segments_main-module.rds",
+        R_file_segment_qc_summary_table = OUTPUT_PATH + "Rdata/QC-segments_summary_table.rds",
+        R_file_segment_qc_plot_list = OUTPUT_PATH + "Rdata/QC-segments_plot_list.rds",
         Shiny_app = OUTPUT_PATH + "qc_probes_shiny_app.R"
     params:
         workflow_system = WORKFLOW_SYSTEM,
         script = "src/qc_segments.R",
         output_path = OUTPUT_PATH,
-        current_module = "qc_segments",
+        current_module = "QC_segments",
         config_path = CONFIG_PATH
     log:
-        out = OUTPUT_PATH + "logs/qc-segments.out",
-        err = OUTPUT_PATH + "logs/qc-segments.err" 
+        out = OUTPUT_PATH + "logs/QC-segments.out",
+        err = OUTPUT_PATH + "logs/QC-segments.err" 
     shell:
         """
         Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}
@@ -271,19 +271,19 @@ rule qc_study_design:
     input:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds"
     output:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-study-design.rds",
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_QC-study-design.rds",
         R_file_main_module = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw_main-module.rds",
-        R_file_pkc_summary_table = OUTPUT_PATH + "Rdata/pkc_summary_table.rds",
+        R_file_pkc_summary_table = OUTPUT_PATH + "Rdata/PKC_summary_table.rds",
         Shiny_app = OUTPUT_PATH + "qc_segments_shiny_app.R"
     params:
         workflow_system = WORKFLOW_SYSTEM,
         script = "src/qc_study-design.R",
         output_path = OUTPUT_PATH,
-        current_module = "qc_study_design",
+        current_module = "QC_study_design",
         config_path = CONFIG_PATH
     log:
-        out = OUTPUT_PATH + "logs/qc-study-design.out",
-        err = OUTPUT_PATH + "logs/qc-study-design.err" 
+        out = OUTPUT_PATH + "logs/QC-study-design.out",
+        err = OUTPUT_PATH + "logs/QC-study-design.err" 
     shell:
         """
         Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}
