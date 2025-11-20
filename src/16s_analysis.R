@@ -117,15 +117,15 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ### 16S expression levels by group ----
     ##
     ## ................................................
-    if(!is.null(exprs_16s_grouping_vars) & (sum(exprs_16s_grouping_vars == "") < length(exprs_16s_grouping_vars))) {
+    if(!is.null(grouping_vars_16s) & (sum(grouping_vars_16s == "") < length(grouping_vars_16s))) {
       # See if we need to do any subsetting prior to graphing.
-      if(flagVariable(exprs_16s_subset_vars)) { # sum(is.na(exprs_16s_subset_vars)) == length(exprs_16s_subset_vars) || sum(exprs_16s_subset_vars=="NA", na.rm = T) == length(exprs_16s_subset_vars[!is.na(exprs_16s_subset_vars)]) || "NA" %in% exprs_16s_subset_vars || NA %in% exprs_16s_subset_vars
+      if(flagVariable(subset_vars_16s)) { # sum(is.na(subset_vars_16s)) == length(subset_vars_16s) || sum(subset_vars_16s=="NA", na.rm = T) == length(subset_vars_16s[!is.na(subset_vars_16s)]) || "NA" %in% subset_vars_16s || NA %in% subset_vars_16s
         # Since there are no subset variables, we will add a column that will act as a dummy subset variable
-        # and change exprs_16s_subset_vars to be the name of this dummy subset variable.
+        # and change subset_vars_16s to be the name of this dummy subset variable.
         # This will allow us to use one loop for either case (controls switch 1a or 1b).
         pData(target_data_object_16s)[["Complete data set"]] <- "Dummy level"
         pData(target_data_object_16s)[["Complete data set"]] <- as.factor(pData(target_data_object_16s)[["Complete data set"]])
-        exprs_16s_subset_vars <- c("Complete data set") # [is.na(exprs_16s_subset_vars)]
+        subset_vars_16s <- c("Complete data set") # [is.na(subset_vars_16s)]
         
       } # End control switch 1a (no subset variables) << loop level 1 (model).
       
@@ -134,7 +134,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       plot_list <- list()
       anova_list <- list()
       
-      for(subset_var in exprs_16s_subset_vars) {
+      for(subset_var in subset_vars_16s) {
         plot_list[[subset_var]] <- list()
         anova_list[[subset_var]] <- list()
         
@@ -154,7 +154,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           pData_sub <- pData(target_data_object_16s) %>% dplyr::filter(!!as.name(subset_var) == subset_var_level)
           mean_16s_sub <- mean_16s %>% .[names(.) %in% rownames(pData_sub)]
           
-          for(grouping_var in exprs_16s_grouping_vars) {
+          for(grouping_var in grouping_vars_16s) {
             plot_list[[subset_var]][[subset_var_level]][[grouping_var]] <- list()
             anova_list[[subset_var]][[subset_var_level]][[grouping_var]] <- list()
             
@@ -220,7 +220,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           
         } # End subset variable levels for loop.
         
-      } # End exprs_16s_subset_vars for loop.
+      } # End subset_vars_16s for loop.
       
       # Arrange the plots into a grid.
       for(subset_var in names(plot_list)) {

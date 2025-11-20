@@ -78,16 +78,16 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
     #### Grouped analysis ----
     ####
     #### ................................................
-    if(is.null(tcr_grouping_vars) || sum(tcr_grouping_vars != "") < 1) {
+    if(is.null(grouping_vars_tcr) || sum(grouping_vars_tcr != "") < 1) {
       pData(target_data_object)[["Full data set"]] <- "Full data set"
-      tcr_grouping_vars <- c("Full data set") 
+      grouping_vars_tcr <- c("Full data set") 
     }
     
     pdata <- pData(target_data_object)
     
     plot_list <- list()
     anova_list <- list()
-    for(var in tcr_grouping_vars) {
+    for(var in grouping_vars_tcr) {
       plot_list[[var]] <- list()
       
       # Convert the current grouping variable to factor
