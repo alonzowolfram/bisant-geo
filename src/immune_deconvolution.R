@@ -93,13 +93,19 @@ for(method in imm_decon_methods) {
       # https://bioconductor.org/packages/release/bioc/vignettes/SpatialDecon/inst/doc/SpatialDecon_vignette_NSCLC.html
       
       # If the user provided a custom profile matrix, load it
-      if(!flagVariable(spatial_decon_profile_matrix) & file.exists(spatial_decon_profile_matrix)) {
-        load(spatial_decon_profile_matrix)
-        # Now we should have a variable named `profile_matrix`
-        if(!exists("profile_matrix")) {
-          warning(glue::glue("Please ensure that the .RData file provided for use with the SpatialDecon method contains a matrix named profile_matrix. No such object was found. If you did not provide an .RData file in the configuration YAML file, you can safely ignore the first part of this message. The default reference matrix, safeTME, will be used"))
-          profile_matrix <- safeTME
+      load_safeTME <- TRUE
+      if(!flagVariable(spatial_decon_profile_matrix)) {
+        if(file.exists(spatial_decon_profile_matrix)) {
+          load_spatial_decon_profile_matrix <- tryCatch(
+                                                        {load(spatial_decon_profile_matrix)}, 
+                                                        error = function(msg) {return(NA)}
+                                                        )
+          if(exists("profile_matrix")) load_safeTME <- FALSE
         }
+      }
+      if(load_safeTME) { 
+        message(glue::glue("The default reference matrix, safeTME, will be used with the SpatialDecon method. If this was not your intended reference matrix, you may have either 1) left the `spatial_decon_profile_matrix` field in the configuration YAML file blank or 2) did not fill in a full path to an .RData file containing an object named `profile_matrix`: a matrix with genes as rows and cell types as columns. If you did intend to use safeTME, you can safely ignore this message"))
+        profile_matrix <- safeTME 
       }
       
       # Estimate each data point's expected BG from the negative control probes from its corresponding observation.
