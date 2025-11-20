@@ -45,6 +45,7 @@ ann_of_interest,TRUE,,FALSE
 protein_norm_qc_plot_factors,FALSE,,TRUE
 module_16s,FALSE,,FALSE
 method_16s_probe_selection,FALSE,both,FALSE
+classification_16s_type,FALSE,score,FALSE
 percentile_16s_cutoff,FALSE,,TRUE
 subset_vars_16s,FALSE,,TRUE
 grouping_vars_16s,FALSE,,TRUE

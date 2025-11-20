@@ -304,8 +304,15 @@ experiment:
     # "both": makes sure to include the probes given in `probes_include` and exclude the probes given in `probes_exclude`
     # If no value is given, it will default to "both"
     method_16s_probe_selection: include
+    
+    # [Optional] Whether to use raw 16S expression or the calculated 16S score when classifying 
+    # samples as high or low 16S
+    # Can be one of either c("raw", "score")
+    # (The percentile to use can be set below with `percentile_16s_cutoff`)
+    # If left blank, will default to "score" (the calculated 16S score)
+    classification_16s_type: 
 
-    # [Optional] Percentile to serve as cutoff for 16S score (high vs low 16S)
+    # [Optional] Percentile to serve as cutoff for 16S classification (high vs low 16S)
     # Samples with values >= this percentile will be classified as "high 16S",
     # while values < this percentile will be classified as "low 16S"
     # This classification will be stored to the metadata (pData), where it can be used for other analyses

@@ -98,12 +98,13 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     # To determine 16S classification, we'll get the average 16S probe expression
     # for each sample. 
     # Samples will then be categorized as high or low 16S based on (a) user-defined quantile cutoff(s).
-    mean_16s <- colMeans(bis_mat)
+    mean_16s_raw <- colMeans(bis_mat)
+    exprs_16s <- ifelse(classification_16s_type=="raw", mean_16s_raw, score_16s) 
     
     percentile_16s_cutoff <- as.numeric(percentile_16s_cutoff)
     for(cutoff in percentile_16s_cutoff) {
       # Determine the classification.
-      group_16s <- ifelse(mean_16s >= quantile(mean_16s, probs = (cutoff/100), na.rm = TRUE), "16S high", "16S low")
+      group_16s <- ifelse(exprs_16s >= quantile(exprs_16s, probs = (cutoff/100), na.rm = TRUE), "16S high", "16S low")
       # Add the 16S scores to pData for all modules (including 16S).
       group_var_name <- paste0("Grouping16S_", cutoff)
       
@@ -114,7 +115,14 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     
     ## ................................................
     ##
-    ### 16S expression levels by group ----
+    ### 16S scores by group (including differential analysis) ----
+    ##
+    ## ................................................
+    
+    
+    ## ................................................
+    ##
+    ### 16S raw expression levels by group ----
     ##
     ## ................................................
     if(!is.null(grouping_vars_16s) & (sum(grouping_vars_16s == "") < length(grouping_vars_16s))) {
@@ -152,7 +160,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           anova_list[[subset_var]][[subset_var_level]] <- list()
           
           pData_sub <- pData(target_data_object_16s) %>% dplyr::filter(!!as.name(subset_var) == subset_var_level)
-          mean_16s_sub <- mean_16s %>% .[names(.) %in% rownames(pData_sub)]
+          mean_16s_sub <- mean_16s_raw %>% .[names(.) %in% rownames(pData_sub)]
           
           for(grouping_var in grouping_vars_16s) {
             plot_list[[subset_var]][[subset_var_level]][[grouping_var]] <- list()
