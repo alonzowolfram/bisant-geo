@@ -3,10 +3,10 @@
 ## Setup ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# Source the setup.R file.
-source("src/setup.R")
+# Source the setup.R file
+source("src/pipeline/setup.R")
 
-# Read in the NanoStringGeoMxSet object.
+# Read in the NanoStringGeoMxSet object
 data_object_list <- readRDS(cl_args[5])
 
 # Access the PKC files, to ensure that expected PKCs have been loaded for this study.

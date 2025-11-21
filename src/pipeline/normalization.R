@@ -3,10 +3,10 @@
 ## Setup ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# Source the setup.R file.
-source("src/setup.R")
+# Source the setup.R file
+source("src/pipeline/setup.R")
 
-# Read in the NanoStringGeoMxSet object. 
+# Read in the NanoStringGeoMxSet object
 target_data_object_list <- readRDS(cl_args[5])
 
 # Set `main_module` if not set already

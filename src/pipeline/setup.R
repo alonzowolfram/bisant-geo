@@ -303,10 +303,10 @@ workflow_system <- cl_args[2]
 if(workflow_system=="Nextflow") {
   path <- Sys.getenv("PATH") |> strsplit(":")
   bin_path <- tail(path[[1]], n=1)
-  source(file.path(bin_path, "helper_functions.R"))
+  source(file.path(bin_path, "functions/helper_functions.R"))
 } else {
   bin_path <- ""
-  source("src/helper_functions.R")
+  source("src/functions/helper_functions.R")
 }
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 

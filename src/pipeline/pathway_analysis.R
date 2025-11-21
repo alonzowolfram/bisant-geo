@@ -3,10 +3,10 @@
 ## Setup ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-message("Setting up for pathway analysis.")
+message("Setting up for pathway analysis")
 
 ## Source the setup.R file
-source("src/setup.R")
+source("src/pipeline/setup.R")
 
 # Read in the DE genes table
 message("Reading in DE genes table.")

@@ -3,26 +3,26 @@
 ## Setup ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-## Source the setup.R file.
-source("src/setup.R")
+## Source the setup.R file
+source("src/pipeline/setup.R")
 
-# Read in the NanoStringGeoMxSet object. 
+# Read in the NanoStringGeoMxSet object
 target_data_object_list <- readRDS(cl_args[5])
 # Set `main_module` if not set already
 modules <- names(target_data_object_list)
 if(flagVariable(main_module)) main_module <- modules[1]
 rm(modules)
-# We'll only need the main module for this one.
+# We'll only need the main module for this one
 target_data_object <- target_data_object_list[[main_module]]
 
-# Set the normalization method.
+# Set the normalization method
 normalization_method <- normalization_names[names(normalization_names)==normalization_methods[1]]
 
-# Cell profile matrices for SpatialDecon.
+# Cell profile matrices for SpatialDecon
 data("safeTME")
 data("safeTME.matches")
 
-# # Set path to CIBERSORT required files.
+# # Set path to CIBERSORT required files
 # set_cibersort_binary(path_to_cibersort)
 # set_cibersort_mat(path_to_lm22)
 # 
@@ -362,7 +362,7 @@ for(method in names(imm_decon_res_list)) {
     imm_decon_subset_var_levels_manual_i <- imm_decon_subset_var_levels_manual[[subset_var]]
     if(sum(is.na(imm_decon_subset_var_levels_manual_i)) < length(imm_decon_subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
       if(sum(imm_decon_subset_var_levels_manual_i %in% subset_var_levels) < 1) {
-        warning(paste0("None of the manually provided levels for subset variable ", subset_var, " are present in that variable. All available levels of subset variable ", subset_var, " will be used"))
+        warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of subset variable {subset_var} will be used"))
       } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
         subset_var_levels <- subset_var_levels %>% .[. %in% imm_decon_subset_var_levels_manual_i]
       }

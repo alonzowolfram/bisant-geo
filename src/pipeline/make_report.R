@@ -16,10 +16,10 @@ workflow_system <- cl_args[2]
 if(workflow_system=="Nextflow") {
   path <- Sys.getenv("PATH") |> strsplit(":")
   bin_path <- tail(path[[1]], n=1)
-  source(file.path(bin_path, "setup.R"))
+  source(file.path(bin_path, "pipeline/setup.R"))
 } else {
   bin_path <- ""
-  source("src/setup.R") # I guess the path it sources from is the current working directory, not the path the R script lives in.
+  source("src/pipeline/setup.R") # I guess the path it sources from is the current working directory, not the path the R script lives in.
 }
 
 # Load the RDS objects with the necessary data (which is just the latest module completed). 
