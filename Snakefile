@@ -87,7 +87,7 @@ onsuccess:
         print("No changes detected in configuration YAML file. Skipping copy.")
 
     # Create the report. 
-    os.system("Rscript src/make_report.R " + config_path[0] + " " + workflow_system[0] + " " + "make_report" + " " + output_path[0] + " " + R_file[0] + " " + project_directory[0] + " 1> " + out[0] + " 2> " + err[0])
+    os.system("Rscript src/pipeline/make_report.R " + config_path[0] + " " + workflow_system[0] + " " + "make_report" + " " + output_path[0] + " " + R_file[0] + " " + project_directory[0] + " 1> " + out[0] + " 2> " + err[0])
 
 rule tcr_analysis: 
     input:
@@ -99,7 +99,7 @@ rule tcr_analysis:
         # anova_results = OUTPUT_PATH + "Rdata/TCR-analysis_ANOVA-res-list.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/tcr_analysis.R",
+        script = "src/pipeline/tcr_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "tcr_analysis",
         config_path = CONFIG_PATH
@@ -118,7 +118,7 @@ rule immune_deconvolution:
         raw_plots = OUTPUT_PATH + "Rdata/immune-deconvolution_plots-list.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/immune_deconvolution.R",
+        script = "src/pipeline/immune_deconvolution.R",
         output_path = OUTPUT_PATH,
         current_module = "immune_deconvolution",
         config_path = CONFIG_PATH
@@ -135,7 +135,7 @@ rule pathway_analysis:
         pathways_table = OUTPUT_PATH + "tabular/pathway-analysis_results.csv"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/pathway_analysis.R",
+        script = "src/pipeline/pathway_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "pathway_analysis",
         config_path = CONFIG_PATH
@@ -155,7 +155,7 @@ rule differential_expression_analysis:
         DE_genes_table = OUTPUT_PATH + "tabular/LMM-differential-expression_results.csv"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/differential_expression_analysis.R",
+        script = "src/pipeline/differential_expression_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "differential_expression_analysis",
         config_path = CONFIG_PATH
@@ -177,7 +177,7 @@ rule unsupervised_analysis:
         CV_file = OUTPUT_PATH + "tabular/CV_results_by-normalization-method.csv"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/unsupervised_analysis.R",
+        script = "src/pipeline/unsupervised_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "unsupervised_analysis",
         config_path = CONFIG_PATH
@@ -194,7 +194,7 @@ rule analysis_16s:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_16S-analysis.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/16s_analysis.R",
+        script = "src/pipeline/16s_analysis.R",
         output_path = OUTPUT_PATH,
         current_module = "16S_analysis",
         config_path = CONFIG_PATH
@@ -212,7 +212,7 @@ rule normalization:
         R_file_normalization_plot_list = OUTPUT_PATH + "Rdata/normalization_plot_list.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/normalization.R",
+        script = "src/pipeline/normalization.R",
         output_path = OUTPUT_PATH,
         current_module = "normalization",
         config_path = CONFIG_PATH
@@ -232,7 +232,7 @@ rule qc_probes:
         R_file_probe_qc_table = OUTPUT_PATH + "Rdata/QC-probes_table.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/QC_probes.R",
+        script = "src/pipeline/qc_probes.R",
         output_path = OUTPUT_PATH,
         current_module = "QC_probes",
         config_path = CONFIG_PATH
@@ -253,7 +253,7 @@ rule qc_segments:
         Shiny_app = OUTPUT_PATH + "qc_probes_shiny_app.R"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/qc_segments.R",
+        script = "src/pipeline/qc_segments.R",
         output_path = OUTPUT_PATH,
         current_module = "QC_segments",
         config_path = CONFIG_PATH
@@ -263,8 +263,8 @@ rule qc_segments:
     shell:
         """
         Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}
-        cp src/qc_probes_shiny_app.R {params.output_path}
-        cp src/qc_probes_protein_shiny_app.R {params.output_path}
+        cp src/apps/qc_probes_shiny_app.R {params.output_path}
+        cp src/apps/qc_probes_protein_shiny_app.R {params.output_path}
         """
 
 rule qc_study_design:
@@ -277,7 +277,7 @@ rule qc_study_design:
         Shiny_app = OUTPUT_PATH + "qc_segments_shiny_app.R"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/qc_study-design.R",
+        script = "src/pipeline/qc_study-design.R",
         output_path = OUTPUT_PATH,
         current_module = "QC_study_design",
         config_path = CONFIG_PATH
@@ -287,7 +287,7 @@ rule qc_study_design:
     shell:
         """
         Rscript {params.script} {params.config_path} {params.workflow_system} {params.current_module} {params.output_path} {input.R_file} 1> {log.out} 2> {log.err}
-        cp src/qc_segments_shiny_app.R {params.output_path}
+        cp src/apps/qc_segments_shiny_app.R {params.output_path}
         """
 
 rule data_import_cleaning:
@@ -295,7 +295,7 @@ rule data_import_cleaning:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_raw.rds"
     params:
         workflow_system = WORKFLOW_SYSTEM,
-        script = "src/data_import_cleaning.R",
+        script = "src/pipeline/data_import_cleaning.R",
         output_path = OUTPUT_PATH,
         current_module = "data_import_cleaning",
         config_path = CONFIG_PATH
