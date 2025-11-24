@@ -25,12 +25,12 @@
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-options(scipen = 6, digits = 4) # View outputs in non-scientific notation.
-# memory.limit(30000000)     # this is needed on some PCs to increase memory allowance, but has no impact on Macs.
+options(scipen = 6, digits = 4) # View outputs in non-scientific notation
+# memory.limit(30000000)     # This is needed on some PCs to increase memory allowance, but has no impact on Macs
 
-# Prevent regexPipes functions from masking base functions.
+# Prevent regexPipes functions from masking base functions
 # https://stackoverflow.com/a/5564654
-# It's crazy how many of our problems stem from that lol. 8/
+# It's crazy how many of our problems stem from that lol 8/
 grep <- base::grep
 grepl <- base::grepl
 gsub <- base::gsub
@@ -41,18 +41,18 @@ gsub <- base::gsub
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-# Load required functions.
+# Load required functions
 library(tidyverse) # For a data-science focused data "grammar".
-## Function to add a slash to a directory path if it doesn't have one already.
+## Function to add a slash to a directory path if it doesn't have one already
 appendSlashToPath <- function(x) {
   ifelse(base::grepl("\\/$", x), x, paste0(x, "/"))
 }
-## Function to check if variable is NULL or empty.
+## Function to check if variable is NULL or empty
 flagVariable <- function(x) {
   return(is.null(x) || sum(x=="") >= length(x))
 }
 
-## Function to recursively assign variables.
+## Function to recursively assign variables
 assignVarsEnv <- function(yaml_list, env = .GlobalEnv) { # env = new.env()
   assignRecursive <- function(lst, parent_keys = NULL) {
     for (key in names(lst)) {
@@ -71,7 +71,7 @@ assignVarsEnv <- function(yaml_list, env = .GlobalEnv) { # env = new.env()
   # return(env)  # Return the environment so you can use it
 }
 
-# Function to validate and process config variables.
+# Function to validate and process config variables
 validateProcessConfig <- function(config_var_metadata) { 
   config_vars <- read.csv(config_var_metadata, stringsAsFactors = FALSE)
   error_msg_list <- list()
@@ -132,7 +132,7 @@ validateProcessConfig <- function(config_var_metadata) {
   return(error_msg_list)
 }
 
-# Function to generate QC histograms.
+# Function to generate QC histograms
 QCHistogram <- function(assay_data = NULL,
                         annotation = NULL,
                         fill_by = NULL,
@@ -153,7 +153,7 @@ QCHistogram <- function(assay_data = NULL,
   plt
 }
 
-# Function to extract all variables from a formula.
+# Function to extract all variables from a formula
 extractVariables <- function(formula_str) {
   # Remove "score ~" and split by operators (+ and |)
   formula_vars <- str_remove(formula_str, "\\~") %>%
@@ -167,7 +167,7 @@ extractVariables <- function(formula_str) {
   # Remove empty elements and return unique variable names
   return(unique(formula_vars[formula_vars != ""]))
 }
-# Function to extract first fixed effect from a model formula.
+# Function to extract first fixed effect from a model formula
 extractFirstFixedEffect <- function(model_formula) {
   # Convert formula to character and extract terms
   terms <- all.vars(model_formula)
@@ -190,7 +190,7 @@ extractFirstFixedEffect <- function(model_formula) {
   }
 }
 
-# Function to extract all variables from a model formula.
+# Function to extract all variables from a model formula
 extractModelComponents <- function(model_formula) {
   # Extract the terms from the formula
   term_labels <- attr(terms(model_formula), "term.labels")
@@ -236,18 +236,18 @@ extractModelComponents <- function(model_formula) {
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-# Set the parameters passed from the configuration YAML file.
-## Read in the config file. 
+# Set the parameters passed from the configuration YAML file
+## Read in the config file
 cl_args <- commandArgs(TRUE)
-library(yaml) # For reading in YAML documents.
+library(yaml) # For reading in YAML documents
 config <- yaml::read_yaml(cl_args[1])
 
-# Check the required parameters passed from the configuration YAML file based on which module we're running.
+# Check the required parameters passed from the configuration YAML file based on which module we're running
 current_module <- cl_args[3]
 
-## Load the raw variables.
+## Load the raw variables
 config_env <- assignVarsEnv(config)
-## Process the variables.
+## Process the variables
 config_metadata_path <- "config_variables.csv"
 error_msg_list <- validateProcessConfig(config_metadata_path)
 
@@ -256,49 +256,49 @@ error_msg_list <- validateProcessConfig(config_metadata_path)
 ## Required libraries and functions ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-library(broom.mixed) # For tidy() function to clean up LMM output.
-library(cowplot) # For plot_grid.
-library(e1071) # Required by CIBERSORT.
-library(emmeans) # Used for post-hoc pairwise comparisons after linear mixed modeling.
-library(fgsea) # For GSEA.
-library(GeomxTools) # For NanoString GeoMx stuff. 
+library(broom.mixed) # For tidy() function to clean up LMM output
+library(cowplot) # For plot_grid
+library(e1071) # Required by CIBERSORT
+library(emmeans) # Used for post-hoc pairwise comparisons after linear mixed modeling
+library(fgsea) # For GSEA
+library(GeomxTools) # For NanoString GeoMx stuff
 library(GenomicRanges) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
-library(ggforce) # I have no idea.
-library(ggplotify) # Convert grobs (such as those created by grid) into ggplot objects, so we can display them in Rmd.
-library(ggpubr) # For annotate_figure(), as_ggplot().
-library(ggrepel) # For graphing. 
-library(grid) # For textGrob().
-library(gridExtra) # Not sure, but I'm using so many plot-related packages, why not just throw in another one.
-library(immunedeconv) # One-stop shop for immune deconvolution.
-library(knitr) # For tables.
-library(lme4) # Linear mixed models, used in differential expression and differential abundance analyses.
-library(msigdbr) # Connecting to MSigDB.
-library(NanoStringNCTools) # For NanoString stuff.
-library(officer) # For PowerPoint output.
-library(openxlsx) # For reading and writing Microsoft Excel files.
-library(parallel) # Required by CIBERSORT.
-library(pheatmap) # For heatmaps.
-library(preprocessCore) # Required by CIBERSORT.
-library(readxl) # For reading Excel files.
-library(reshape2) # For melt().
+library(ggforce) # I have no idea
+library(ggplotify) # Convert grobs (such as those created by grid) into ggplot objects, so we can display them in Rmd
+library(ggpubr) # For annotate_figure(), as_ggplot()
+library(ggrepel) # For graphing
+library(grid) # For textGrob()
+library(gridExtra) # Not sure, but I'm using so many plot-related packages, why not just throw in another one
+library(immunedeconv) # One-stop shop for immune deconvolution
+library(knitr) # For tables
+library(lme4) # Linear mixed models, used in differential expression and differential abundance analyses
+library(msigdbr) # Connecting to MSigDB
+library(NanoStringNCTools) # For NanoString stuff
+library(officer) # For PowerPoint output
+library(openxlsx) # For reading and writing Microsoft Excel files
+library(parallel) # Required by CIBERSORT
+library(pheatmap) # For heatmaps
+library(preprocessCore) # Required by CIBERSORT
+library(readxl) # For reading Excel files
+library(reshape2) # For melt()
 library(Rsamtools) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
 library(rtracklayer) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
-library(Rtsne) # For t-SNE plots.
-library(scales) # For percents.
-library(shiny) # For RMD-related stuff. Can't remember exactly. 
-library(SpatialDecon) # For spatial deconvolution.
-library(stringi) # For string manipulation.
-library(umap) # For UMAPs.
+library(Rtsne) # For t-SNE plots
+library(scales) # For percents
+library(shiny) # For RMD-related stuff. Can't remember exactly
+library(SpatialDecon) # For spatial deconvolution
+library(stringi) # For string manipulations
+library(umap) # For UMAPs
 library(vegan) # For ecological diversity indices (Shannon, Simpson, etc.)
-# library(caret) # For nearZeroVar().
+# library(caret) # For nearZeroVar()
 # install.packages(path_to_regexPipes, repos = NULL, type = "source")
-library(regexPipes) # For pipe-friendly version of base R's regex functions.
+library(regexPipes) # For pipe-friendly version of base R's regex functions
 # library(devtools)
 # devtools::install_github("jdstorey/qvalue") # Dependency for glmmSeq. https://github.com/StoreyLab/qvalue
 # devtools::install_github("myles-lewis/glmmSeq") 
-# library(glmmSeq) # General linear mixed models. 
+# library(glmmSeq) # General linear mixed models
 
-## Load helper functions.
+## Load helper functions
 workflow_system <- cl_args[2]
 if(workflow_system=="Nextflow") {
   path <- Sys.getenv("PATH") |> strsplit(":")
@@ -353,7 +353,7 @@ rdata_folder <- ifelse(workflow_system=="Nextflow", "", "Rdata/")
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # If any of the required parameters are missing, 
-# print a message for each one, then stop the pipeline.
+# print a message for each one, then stop the pipeline
 if(length(error_msg_list) > 0) {
   message("Error: you are missing one or more required parameters. Please see the error messages below.")
   
@@ -361,11 +361,11 @@ if(length(error_msg_list) > 0) {
     message(msg)
   }
   
-  stop("Shutting down pipeline due to missing parameters.")
+  stop("Shutting down pipeline due to missing parameters")
 }
 
 # There are a couple of parameters we have to handle manually:
-# `output_plot_file_types`, `analyte`, `subset_var_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, and `imm_decon_subset_var_levels_manual`.
+# `output_plot_file_types`, `analyte`, `subset_var_16s_levels_manual`, `subset_var_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, `imm_decon_subset_var_levels_manual`, and `subset_var_tcr_levels_manual`
 if(flagVariable(output_plot_file_types)) {output_plot_file_types <- c("eps", "pdf")} else {output_plot_file_types <- output_plot_file_types %>% str_split(",") %>% unlist %>% str_to_lower}
 if(flagVariable(analyte) || !(analyte %in% c("RNA", "protein"))) analyte <- "RNA"
 if(flagVariable(subset_var_levels_manual)) {
@@ -392,6 +392,30 @@ if(flagVariable(imm_decon_subset_var_levels_manual)) {
   } else {
     imm_decon_subset_var_levels_manual <- rep(list(NA), length(imm_decon_subset_vars))
     names(imm_decon_subset_var_levels_manual) <- imm_decon_subset_vars
+  }
+}
+if(flagVariable(subset_var_16s_levels_manual)) {
+  subset_var_16s_levels_manual <- rep(list(NA), length(subset_vars_16s))
+  names(subset_var_16s_levels_manual) <- subset_vars_16s
+} else {
+  subset_var_16s_levels_manual <- subset_var_16s_levels_manual %>% strsplit(";") %>% unlist %>% strsplit(",")
+  if(length(subset_var_16s_levels_manual)==length(subset_vars_16s)) {
+    names(subset_var_16s_levels_manual) <- subset_vars_16s
+  } else {
+    subset_var_16s_levels_manual <- rep(list(NA), length(subset_vars_16s))
+    names(subset_var_16s_levels_manual) <- subset_vars_16s
+  }
+}
+if(flagVariable(subset_var_tcr_levels_manual)) {
+  subset_var_tcr_levels_manual <- rep(list(NA), length(subset_vars_tcr))
+  names(subset_var_tcr_levels_manual) <- subset_vars_tcr
+} else {
+  subset_var_tcr_levels_manual <- subset_var_tcr_levels_manual %>% strsplit(";") %>% unlist %>% strsplit(",")
+  if(length(subset_var_tcr_levels_manual)==length(subset_vars_tcr)) {
+    names(subset_var_tcr_levels_manual) <- subset_vars_tcr
+  } else {
+    subset_var_tcr_levels_manual <- rep(list(NA), length(subset_vars_tcr))
+    names(subset_var_tcr_levels_manual) <- subset_vars_tcr
   }
 }
 
