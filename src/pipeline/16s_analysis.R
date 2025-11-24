@@ -118,16 +118,52 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ### Differential 16S levels ----
     ##
     ## ................................................
-    if(!flagVariable(lmm_formulae_16s)) {
-      model_number <- 1
+    
+    # Check if the formula table has been provided
+    # If formula_table_16s_file is provided, check that it's a valid file
+    # If not, skip differential analysis
+    valid_formula_table <- TRUE
+    if(!flagVariable(formula_table_file_16s)) { 
+      if(!file.exists(formula_table_file_16s)) {
+        warning("The path to the formula table provided does not exist. Differential analysis will not be performed")
+        valid_formula_table <- FALSE
+      } else {
+        # Read in the file and check that it has at least one entry
+        message("Checking provided formula table file")
+        if(base::grepl("\\.csv$", formula_table_file_16s)) { formula_table_16s <- read.csv(formula_table_file_16s, header = F)}
+        else if(base::grepl("\\.tsv$", formula_table_file_16s)) { formula_table_16s <- read.table(formula_table_file_16s, header = F, sep = "\t") }
+        else if(base::grepl("\\.xls.*$", formula_table_file_16s)) { formula_table_16s <- read_excel(formula_table_file_16s, col_names = F, na = "NA")} 
+        else {
+          warning("The path to the formula table provided does not exist. Differential analysis will not be performed")
+          valid_formula_table <- FALSE
+        }
+      }
+    } else {
+      warning("No formula table file was provided. Differential analysis will not be performed")
+      valid_formula_table <- FALSE
+    }
+    # Check that the formula table as read in is valid
+    if(exists("formula_table_16s")) if(!is.null(formula_table_16s)) {warning("The path provided does not contain a valid formula table. Differential analysis will not be performed"); valid_formula_table <- FALSE}
+    
+    # If everything is in place to do differential analysis, run it
+    if(valid_formula_table) {
       da_res_list <- list()
       
+      # If subset variables are not defined, create a dummy subset variable
       if(flagVariable(subset_vars_16s)) subset_vars_16s <- "Complete dataset"
       
-      for(formula in lmm_formulae_16s) {
+      # Loop over each formula
+      # 1 formula / row in formula table
+      for(i in 1:nrow(formula_table_16s)) {
+        model_number <- i
         da_res_list[[paste0("model_", model_number)]] <- list()
         
-        # Strip anything before the `~`.
+        # Extract the formula, whether or not to do all pairwise comparisons, and which level to set as the baseline level (if applicable)
+        formula <- formula_table_16s[i,1] %>% as.character
+        all_pairwise <- formula_table_16s[i,2]
+        baseline_level <- formula_table_16s[i,3] %>% as.character
+        
+        # Strip anything before the `~`
         formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
         # Extract variables from formula
         formula_vars <- extractVariables(formula) # Input: string
@@ -145,7 +181,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         # First identify which columns in pData_subset are data frames (e.g. LOQ)
         df_cols <- sapply(pData(target_data_object_16s), is.data.frame)
         
-        # Convert only non-data-frame columns (except Sample) to factors
+        # Create a temporary pData data frame by converting only non-data-frame columns (except Sample) to factors
         pData_tmp <- pData(target_data_object_16s) %>%
           tibble::rownames_to_column(var = "Sample") %>% 
           dplyr::mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.)))
@@ -153,14 +189,23 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         # Add "Complete dataset" as variable if it doesn't exist already
         if(subset_vars_16s=="Complete dataset" & !("Complete dataset" %in% colnames(pData_tmp))) pData_tmp$`Complete dataset` <- as.factor("Complete dataset")
         
-        # Merge 16S expression with `pData_subset`
+        # If `all_pairwise` is FALSE (i.e., we're doing comparisons against a baseline level)
+        # then re-order the factor levels of `first_fixed_effect` in `pData_tmp` so that `baseline_level` is the first
+        if(is.logical(all_pairwise)) all_pairwise <- T
+        if(!all_pairwise & (baseline_level %in% levels(pData_tmp[[first_fixed_effect]]))) {
+          non_baseline_levels <- levels(pData_tmp[[first_fixed_effect]]) %>% .[. != baseline_level]
+          new_order <- c(baseline_level, non_baseline_levels)
+          pData_tmp[[first_fixed_effect]] <- factor(pData_tmp[[first_fixed_effect]], levels = new_order)
+        }
+        
+        # Merge 16S expression with `pData_tmp` to create the data frame for LMM
         df <- exprs_16s %>% as.data.frame %>% 
           tibble::rownames_to_column(var = "Sample") %>% 
           dplyr::rename(score = ".") %>% # The dependent variable in the formula must be named "score"
           dplyr::left_join(pData_tmp, by = "Sample")
         
         # Loop level 2 (subset variable)
-        for(subset_var in subset_vars_16s) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_16s)) subset_vars_16s <- "Complete dataset"` above. 
+        for(subset_var in subset_vars_16s) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_16s)) subset_vars_16s <- "Complete dataset"` above
           da_res_list[[paste0("model_", model_number)]][[subset_var]] <- list()
           
           if(flagVariable(subset_var)) {
@@ -192,9 +237,9 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
             da_res_list[[paste0("model_", model_number)]][[subset_var]][[subset_var_level]] <- list()
             
             # Get all the samples belonging to the current subset_var_level.
-            samples <- pData_tmp %>% 
-              dplyr::filter(!!as.name(subset_var)==subset_var_level) %>% 
-              dplyr::select(Sample) %>% 
+            samples <- pData_tmp %>%
+              dplyr::filter(!!as.name(subset_var)==subset_var_level) %>%
+              dplyr::select(Sample) %>%
               unlist
             
             # Subset data for this subset variable and subset variable level
@@ -205,47 +250,73 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
             model <- tryCatch(
               lmerTest::lmer(as.formula(formula_af), data = df_final),
               error = function(e) {
-                warning(glue::glue("Error in fitting linear mixed model for model {formula} - {method} - {subset_var} - {subset_var_level} - {cell}: {e$message}"))
+                warning(glue::glue("Error in fitting linear mixed model for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
                 skip_to_next <<- TRUE
               }
             )
             
             if (skip_to_next) next
-            message("Successfully calculated differential abundance")
+            message("Successfully calculated differential score")
             
-            # # Extract estimated marginal means (EMMs) for pairwise comparisons
-            # # Create a dynamic formula for emmeans
-            # emm_formula <- as.formula(paste0("~ ", first_fixed_effect))
-            # emm <- emmeans(model, emm_formula)  # Replace 'Group' with your fixed effect variable
-            # # Perform all pairwise comparisons (Tukey-adjusted)
-            # pairwise_results <- contrast(emm, method = "pairwise", adjust = "tukey") %>%
-            #   as.data.frame() %>%
-            #   mutate(CellType = cell)  # Add cell type info
-            
-            # Extract fixed effect results
-            base_value <- rownames(contrasts(pData_tmp[[first_fixed_effect]]))[1] # Get the baseline value.
-            model_summary <- tryCatch(
-              tidy(model, effects = "fixed") %>%
-                dplyr::filter(term != "(Intercept)") %>% # Filter out the intercept.
-                dplyr::mutate(baseline = base_value,
-                              subset_var = subset_var,
-                              subset_var_level = subset_var_level,
-                              cell_type = cell, 
-                              fixed_effect = first_fixed_effect, 
-                              method = method, 
-                              formula = as.character(formula_af)[3]) %>%  # Add cell type column. baseline = base_value, 
-                dplyr::mutate(term = base::gsub(paste0("^", fixed_effect), "", term)) %>% # Clean up the fixed effect name.
-                relocate(fixed_effect, .before = term) %>% relocate(baseline, .before = term), # baseline, 
-              error = function(e) {
-                warning(glue::glue("Error in extracting fixed effect results for model {formula} - {method} - {subset_var} - {subset_var_level} - {cell}: {e$message}"))
-                skip_to_next <<- TRUE
-              }
-            )
+            # If `all_pairwise` is TRUE, extract estimated marginal means (EMMs) for pairwise comparisons
+            if(all_pairwise) {
+              # Create a dynamic formula for emmeans
+              emm_formula <- as.formula(paste0("~ ", first_fixed_effect))
+              emm <- emmeans::emmeans(model, emm_formula)  # Replace 'Group' with your fixed effect variable
+              # Perform all pairwise comparisons (Tukey-adjusted)
+              pairwise_results <- emmeans::contrast(emm, method = "pairwise", adjust = "tukey") %>%
+                as.data.frame()
+              
+              # Manually create `model_summary` data frame based on `tidy(model)`
+              # Colnames of `model_summary` as created by `tidy(model)`: 
+              # [1] "effect"           "fixed_effect"     "baseline"         "term"             "estimate"         "std.error"        "statistic"       
+              # [8] "df"               "p.value"          "subset_var"       "subset_var_level" "formula"    
+              # Colnames of `pairwise_results`:
+              # [1] "contrast" "estimate" "SE"       "df"       "t.ratio"  "p.value"
+              # So, to turn `pairwise_results` into `model_summary`:
+              # add "effect" = "fixed"
+              # add "fixed_effect" = `first_fixed_effect`
+              # add "baseline" and "term" by splitting "contrast" by "-" and swapping the order
+              # on that note, "estimate" in `pairwise_results` is the inverse of "estimate" in `tidy(model)`, so multiply by -1 to get the correct value
+              # "std.error" is just "SE", so just rename "SE"
+              # like "estimate", "statistic" should be the inverse of "t.ratio" (rename and multiply by -1)
+              # "df" is just "df" (although the values are different between the output of `lmer` and `emmeans`)
+              # "p.value" is just "p.value" (although, again, the values are different due to multiple testing correction)
+              # "subset_var", "subset_var_level", and "formula" need to be added manually
+              model_summary <- pairwise_results %>% 
+                dplyr::mutate(effect = "fixed", fixed_effect = first_fixed_effect) %>% 
+                tidyr::separate(col = "contrast", into = c("baseline", "term"), sep = " - ") %>% 
+                dplyr::mutate(estimate = -1 * estimate, statistic = -1 * t.ratio) %>% 
+                dplyr::rename(std.error = SE) %>% 
+                dplyr::mutate(subset_var = subset_var, subset_var_level = subset_var_level, formula = formula %>% regexPipes::gsub("~ ", ""))
+              model_summary <- model_summary[,c("effect", "fixed_effect", "baseline", "term", "estimate", "std.error",        "statistic", "df", "p.value", "subset_var", "subset_var_level", "formula")]
+              
+            } else { # Comparisons against a single baseline
+              
+              # Extract fixed effect results and create `model_summary` data frame
+              base_value <- rownames(contrasts(pData_tmp[[first_fixed_effect]]))[1] # Get the baseline value
+              model_summary <- tryCatch(
+                tidy(model, effects = "fixed") %>%
+                  dplyr::filter(term != "(Intercept)") %>% # Filter out the intercept
+                  dplyr::mutate(baseline = base_value,
+                                subset_var = subset_var,
+                                subset_var_level = subset_var_level,
+                                fixed_effect = first_fixed_effect,
+                                formula = as.character(formula_af)[3]) %>%  # Add cell type column. baseline = base_value, 
+                  dplyr::mutate(term = base::gsub(paste0("^", fixed_effect), "", term)) %>% # Clean up the fixed effect name
+                  relocate(fixed_effect, .before = term) %>% relocate(baseline, .before = term), # baseline, 
+                error = function(e) {
+                  warning(glue::glue("Error in extracting fixed effect results for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
+                  skip_to_next <<- TRUE
+                }
+              )
+              
+            }
             if (skip_to_next) next
             message("Successfully extracted fixed effect results")
             
             # Store results
-            da_res_list[[paste0("model_", model_number)]][[method]][[subset_var]][[subset_var_level]][[cell]] <- model_summary
+            da_res_list[[paste0("model_", model_number)]][[subset_var]][[subset_var_level]] <- model_summary
             
           } # End loop level 3 (level of current subset variable) << loop level 3 (subset variable) << loop level 2 (deconvolution method) << loop level 1 (LMM model)
           
@@ -253,8 +324,6 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         
         # # Combine results into a data frame
         # results_df <- bind_rows(da_res_list[[paste0("model_", model_number)]][[method]])
-        
-        model_number <- model_number + 1
         
       } # End loop level 1 (LMM model)
       
@@ -529,7 +598,7 @@ for(module in names(target_data_object_list)) {
 }
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-##                                                                
+##
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

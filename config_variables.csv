@@ -52,7 +52,7 @@ subset_vars_16s,FALSE,,TRUE
 subset_var_16s_levels_manual,FALSE,,FALSE
 grouping_vars_16s,FALSE,,TRUE
 remove_na_16s,FALSE,TRUE,FALSE
-lmm_formulae_16s,FALSE,,TRUE
+lmm_formulae_16s,FALSE,,FALSE
 perform_UMAP,FALSE,TRUE,FALSE
 perform_tSNE,FALSE,FALSE,FALSE
 perform_PCA,FALSE,FALSE,FALSE
