@@ -258,7 +258,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         
       } # End loop level 1 (LMM model)
       
-      da_res_df <- bind_rows(rlang::squash(da_res_list)) # `squash` recursively flattens the list.
+      da_res_df <- bind_rows(rlang::squash(da_res_list)) # `squash` recursively flattens the list
       
     }
     
@@ -272,12 +272,12 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       if(flagVariable(subset_vars_16s)) { # sum(is.na(subset_vars_16s)) == length(subset_vars_16s) || sum(subset_vars_16s=="NA", na.rm = T) == length(subset_vars_16s[!is.na(subset_vars_16s)]) || "NA" %in% subset_vars_16s || NA %in% subset_vars_16s
         # Since there are no subset variables, we will add a column that will act as a dummy subset variable
         # and change subset_vars_16s to be the name of this dummy subset variable
-        # This will allow us to use one loop for either case (controls switch 1a or 1b).
+        # This will allow us to use one loop for either case (controls switch 1a or 1b)
         pData(target_data_object_16s)[["Complete data set"]] <- "Dummy level"
         pData(target_data_object_16s)[["Complete data set"]] <- as.factor(pData(target_data_object_16s)[["Complete data set"]])
         subset_vars_16s <- c("Complete data set") # [is.na(subset_vars_16s)]
         
-      } # End control switch 1a (no subset variables) << loop level 1 (model).
+      } # End control switch 1a (no subset variables) << loop level 1 (model)
       
       # Graph 16S expression levels by group,
       # subsetting if requested
@@ -315,7 +315,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               )
               colnames(dat) <- c("16S expression", grouping_var)
               
-              # Check that we have enough levels to perform ANOVA.
+              # Check that we have enough levels to perform ANOVA
               n_grouping_var_levels <- dat$Group %>% unique %>% length
               if(n_grouping_var_levels < 2) {
                 warning(glue::glue("Grouping variable {grouping_var} has fewer than 2 levels. Skipping differential analysis"))
@@ -327,11 +327,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                 anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- tukey_res
               }
               
-              # Make sure we have enough colors.
+              # Make sure we have enough colors
               n_colors <- dat[[grouping_var]] %>% unique %>% length
               mycolors <- colorRampPalette(pal_brewer(palette = "Paired")(12))(n_colors) # show_col(pal_brewer()())
               
-              # Plot.
+              # Plot
               plot <- dat %>%
                 ggplot(aes(x = !!as.name(grouping_var), y = `16S expression`, fill = !!as.name(grouping_var))) + 
                 geom_boxplot(aes(fill = !!as.name(grouping_var)), width = 0.6, alpha = 0.7, outlier.shape = NA) + 
@@ -364,13 +364,13 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               warning("The names in the 16S expression matrix do not match those in the pData! Skipping plots of 16S expression levels by group")
             }
             
-          } # End grouping variables for loop.
+          } # End grouping variables for loop
           
-        } # End subset variable levels for loop.
+        } # End subset variable levels for loop
         
-      } # End subset_vars_16s for loop.
+      } # End subset_vars_16s for loop
       
-      # Arrange the plots into a grid.
+      # Arrange the plots into a grid
       for(subset_var in names(plot_list)) {
         for(subset_var_level in names(plot_list[[subset_var]])) {
           p_list <- plot_list[[subset_var]][[subset_var_level]]
@@ -395,19 +395,19 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ##
     ## ................................................
     if(!is.null(grouping_vars_16s) & (sum(grouping_vars_16s == "") < length(grouping_vars_16s))) {
-      # See if we need to do any subsetting prior to graphing.
+      # See if we need to do any subsetting prior to graphing
       if(flagVariable(subset_vars_16s)) { # sum(is.na(subset_vars_16s)) == length(subset_vars_16s) || sum(subset_vars_16s=="NA", na.rm = T) == length(subset_vars_16s[!is.na(subset_vars_16s)]) || "NA" %in% subset_vars_16s || NA %in% subset_vars_16s
         # Since there are no subset variables, we will add a column that will act as a dummy subset variable
-        # and change subset_vars_16s to be the name of this dummy subset variable.
-        # This will allow us to use one loop for either case (controls switch 1a or 1b).
+        # and change subset_vars_16s to be the name of this dummy subset variable
+        # This will allow us to use one loop for either case (controls switch 1a or 1b)
         pData(target_data_object_16s)[["Complete data set"]] <- "Dummy level"
         pData(target_data_object_16s)[["Complete data set"]] <- as.factor(pData(target_data_object_16s)[["Complete data set"]])
         subset_vars_16s <- c("Complete data set") # [is.na(subset_vars_16s)]
         
-      } # End control switch 1a (no subset variables) << loop level 1 (model).
+      } # End control switch 1a (no subset variables) << loop level 1 (model)
       
       # Graph 16S expression levels by group,
-      # subsetting if requested.
+      # subsetting if requested
       plot_list <- list()
       anova_list <- list()
       
@@ -415,15 +415,15 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         plot_list[[subset_var]] <- list()
         anova_list[[subset_var]] <- list()
         
-        # Check if it's NA.
+        # Check if it's NA
         if(is.na(subset_var) || subset_var=="NA") {
           subset_var <- "Complete data set"
         }
         
-        # Get the levels. 
+        # Get the levels
         subset_var_levels <- pData(target_data_object_16s)[[subset_var]] %>% unique
         
-        # Loop over the levels and subset by each level.
+        # Loop over the levels and subset by each level
         for(subset_var_level in subset_var_levels) {
           plot_list[[subset_var]][[subset_var_level]] <- list()
           anova_list[[subset_var]][[subset_var_level]] <- list()
@@ -442,7 +442,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               )
               colnames(dat) <- c("16S expression", grouping_var)
               
-              # Check that we have enough levels to perform ANOVA.
+              # Check that we have enough levels to perform ANOVA
               n_grouping_var_levels <- dat$Group %>% unique %>% length
               if(n_grouping_var_levels < 2) {
                 warning(glue::glue("Grouping variable {grouping_var} has fewer than 2 levels. Skipping ANOVA"))
@@ -456,11 +456,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                 anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- tukey_res
               }
               
-              # Make sure we have enough colors.
+              # Make sure we have enough colors
               n_colors <- dat[[grouping_var]] %>% unique %>% length
               mycolors <- colorRampPalette(pal_brewer(palette = "Paired")(12))(n_colors) # show_col(pal_brewer()())
               
-              # Plot.
+              # Plot
               plot <- dat %>%
                 ggplot(aes(x = !!as.name(grouping_var), y = `16S expression`, fill = !!as.name(grouping_var))) + 
                 geom_boxplot(aes(fill = !!as.name(grouping_var)), width = 0.6, alpha = 0.7, outlier.shape = NA) + 
@@ -493,13 +493,13 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               warning("The names in the 16S expression matrix do not match those in the pData! Skipping plots of 16S expression levels by group")
             }
             
-          } # End grouping variables for loop.
+          } # End grouping variables for loop
           
-        } # End subset variable levels for loop.
+        } # End subset variable levels for loop
         
-      } # End subset_vars_16s for loop.
+      } # End subset_vars_16s for loop
       
-      # Arrange the plots into a grid.
+      # Arrange the plots into a grid
       for(subset_var in names(plot_list)) {
         for(subset_var_level in names(plot_list[[subset_var]])) {
           p_list <- plot_list[[subset_var]][[subset_var_level]]
@@ -507,7 +507,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           if(is.null(p_list)) next 
           
           n <- length(p_list)
-          nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
+          nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1
           plot_grid <- do.call("grid.arrange", c(p_list, ncol=nCol))
           plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("16S expression", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = 1.3)),
                                                              bottom = grid::textGrob("Grouping variable", gp = grid::gpar(cex = 1.3)),
@@ -518,12 +518,12 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       
     }
     
-  } # End check for 16S probes.
-} # End check for 16S module.
+  } # End check for 16S probes
+} # End check for 16S module
 
-# Check if there's an additional column added if there are no subset variables.
-# If there is, remove it. 
-# (Otherwise, this will mess things up downstream.)
+# Check if there's an additional column added if there are no subset variables
+# If there is, remove it
+# (Otherwise, this will mess things up downstream)
 for(module in names(target_data_object_list)) {
   if("Complete data set" %in% colnames(pData(target_data_object_list[[module]]))) pData(target_data_object_list[[module]]) <- pData(target_data_object_list[[module]]) %>% dplyr::select(-`Complete data set`)
 }
@@ -533,12 +533,12 @@ for(module in names(target_data_object_list)) {
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# Export NanoStringGeoMxSet as RDS file.
+# Export NanoStringGeoMxSet as RDS file
 saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_16S-analysis.rds"))
-# Export graphs.
+# Export graphs
 if(exists("plot_list")) saveRDS(plot_list, paste0(output_dir_rdata, "16S-analysis_raw-plots-list.rds"))
-# Export ANOVA results.
+# Export ANOVA results
 if(exists("anova_list")) saveRDS(anova_list, paste0(output_dir_rdata, "16S-analysis_ANOVA-res-list.rds"))
 
-# Update latest module completed.
+# Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)
