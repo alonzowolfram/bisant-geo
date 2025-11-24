@@ -47,10 +47,12 @@ module_16s,FALSE,,FALSE
 method_16s_probe_selection,FALSE,both,FALSE
 classification_16s_type,FALSE,score,FALSE
 percentile_16s_cutoff,FALSE,,TRUE
+exprs_16s_type,FALSE,score,FALSE
 subset_vars_16s,FALSE,,TRUE
+subset_var_16s_levels_manual,FALSE,,FALSE
 grouping_vars_16s,FALSE,,TRUE
 remove_na_16s,FALSE,TRUE,FALSE
-lmm_formulae_16s,FALSE,,FALSE
+lmm_formulae_16s,FALSE,,TRUE
 perform_UMAP,FALSE,TRUE,FALSE
 perform_tSNE,FALSE,FALSE,FALSE
 perform_PCA,FALSE,FALSE,FALSE
