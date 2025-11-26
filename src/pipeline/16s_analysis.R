@@ -143,14 +143,15 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       valid_formula_table <- FALSE
     }
     # Check that the formula table as read in is valid
-    if(exists("formula_table_16s")) if(!is.null(formula_table_16s)) {warning("The path provided does not contain a valid formula table. Differential analysis will not be performed"); valid_formula_table <- FALSE}
+    if(exists("formula_table_16s")) if(is.null(formula_table_16s)) {warning("The path provided does not contain a valid formula table. Differential analysis will not be performed"); valid_formula_table <- FALSE}
     
     # If everything is in place to do differential analysis, run it
     if(valid_formula_table) {
       da_res_list <- list()
       
       # If subset variables are not defined, create a dummy subset variable
-      if(flagVariable(subset_vars_16s)) subset_vars_16s <- "Complete dataset"
+      subset_vars_16s_orig_flagged <- FALSE # We'll use this in the plotting section, because we need to know if `subset_vars_16s` was originally NULL/empty in the config YAML file
+      if(flagVariable(subset_vars_16s)) { subset_vars_16s <- "Complete data set"; subset_vars_16s_orig_flagged <- TRUE }
       
       # Loop over each formula
       # 1 formula / row in formula table
@@ -186,8 +187,8 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           tibble::rownames_to_column(var = "Sample") %>% 
           dplyr::mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.)))
         # %>% select(all_of(formula_vars))
-        # Add "Complete dataset" as variable if it doesn't exist already
-        if(subset_vars_16s=="Complete dataset" & !("Complete dataset" %in% colnames(pData_tmp))) pData_tmp$`Complete dataset` <- as.factor("Complete dataset")
+        # Add "Complete data set" as variable if it doesn't exist already
+        if(subset_vars_16s=="Complete data set" & !("Complete data set" %in% colnames(pData_tmp))) pData_tmp$`Complete data set` <- as.factor("Complete data set")
         
         # If `all_pairwise` is FALSE (i.e., we're doing comparisons against a baseline level)
         # then re-order the factor levels of `first_fixed_effect` in `pData_tmp` so that `baseline_level` is the first
@@ -205,12 +206,12 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           dplyr::left_join(pData_tmp, by = "Sample")
         
         # Loop level 2 (subset variable)
-        for(subset_var in subset_vars_16s) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_16s)) subset_vars_16s <- "Complete dataset"` above
+        for(subset_var in subset_vars_16s) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_16s)) subset_vars_16s <- "Complete data set"` above
           da_res_list[[paste0("model_", model_number)]][[subset_var]] <- list()
           
           if(flagVariable(subset_var)) {
             subset_tag <- "All ROIs"
-            subset_var <- "Complete dataset"
+            subset_var <- "Complete data set"
           } else {
             subset_tag <- subset_var
           }
@@ -311,16 +312,16 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                 }
               )
               
-            }
+            } # End else comparisons against a single baseline
             if (skip_to_next) next
             message("Successfully extracted fixed effect results")
             
             # Store results
             da_res_list[[paste0("model_", model_number)]][[subset_var]][[subset_var_level]] <- model_summary
             
-          } # End loop level 3 (level of current subset variable) << loop level 3 (subset variable) << loop level 2 (deconvolution method) << loop level 1 (LMM model)
+          } # End loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (LMM model)
           
-        } # End loop level 2 (subset variable) << loop level 2 (deconvolution method) << loop level 1 (LMM model)
+        } # End loop level 2 (subset variable) << loop level 1 (LMM model)
         
         # # Combine results into a data frame
         # results_df <- bind_rows(da_res_list[[paste0("model_", model_number)]][[method]])
@@ -329,7 +330,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       
       da_res_df <- bind_rows(rlang::squash(da_res_list)) # `squash` recursively flattens the list
       
-    }
+    } # End valid formula table check
     
     ## ................................................
     ##
@@ -337,12 +338,15 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ##
     ## ................................................
     if(!is.null(grouping_vars_16s) & (sum(grouping_vars_16s == "") < length(grouping_vars_16s))) {
+      
+      # Set `subset_vars_16s` to whatever it was in the config YAML file
+      if(subset_vars_16s_orig_flagged) subset_vars_16s <- NULL
       # See if we need to do any subsetting prior to graphing
-      if(flagVariable(subset_vars_16s)) { # sum(is.na(subset_vars_16s)) == length(subset_vars_16s) || sum(subset_vars_16s=="NA", na.rm = T) == length(subset_vars_16s[!is.na(subset_vars_16s)]) || "NA" %in% subset_vars_16s || NA %in% subset_vars_16s
+      if(flagVariable(subset_vars_16s)) {
         # Since there are no subset variables, we will add a column that will act as a dummy subset variable
         # and change subset_vars_16s to be the name of this dummy subset variable
         # This will allow us to use one loop for either case (controls switch 1a or 1b)
-        pData(target_data_object_16s)[["Complete data set"]] <- "Dummy level"
+        pData(target_data_object_16s)[["Complete data set"]] <- "Complete data set"
         pData(target_data_object_16s)[["Complete data set"]] <- as.factor(pData(target_data_object_16s)[["Complete data set"]])
         subset_vars_16s <- c("Complete data set") # [is.na(subset_vars_16s)]
         
@@ -351,11 +355,9 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       # Graph 16S expression levels by group,
       # subsetting if requested
       plot_list <- list()
-      anova_list <- list()
       
       for(subset_var in subset_vars_16s) {
         plot_list[[subset_var]] <- list()
-        anova_list[[subset_var]] <- list()
         
         # Check if it's NA
         if(is.na(subset_var) || subset_var=="NA") {
@@ -368,76 +370,118 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         # Loop over the levels and subset by each level
         for(subset_var_level in subset_var_levels) {
           plot_list[[subset_var]][[subset_var_level]] <- list()
-          anova_list[[subset_var]][[subset_var_level]] <- list()
           
           pData_sub <- pData(target_data_object_16s) %>% dplyr::filter(!!as.name(subset_var) == subset_var_level)
-          mean_16s_sub <- mean_16s_raw %>% .[names(.) %in% rownames(pData_sub)]
+          exprs_16s_sub <- exprs_16s %>% .[names(.) %in% rownames(pData_sub)]
           
           for(grouping_var in grouping_vars_16s) {
             plot_list[[subset_var]][[subset_var_level]][[grouping_var]] <- list()
-            anova_list[[subset_var]][[subset_var_level]][[grouping_var]] <- list()
             
-            if(identical(names(mean_16s_sub), rownames(pData_sub))) {
-              dat <- data.frame(
-                `16S expression` = mean_16s_sub,
+            if(identical(names(exprs_16s_sub), rownames(pData_sub))) {
+              plot_df <- data.frame(
+                `16S expression` = exprs_16s_sub,
                 Group = pData_sub[[grouping_var]]
               )
-              colnames(dat) <- c("16S expression", grouping_var)
-              
-              # Check that we have enough levels to perform ANOVA
-              n_grouping_var_levels <- dat$Group %>% unique %>% length
-              if(n_grouping_var_levels < 2) {
-                warning(glue::glue("Grouping variable {grouping_var} has fewer than 2 levels. Skipping differential analysis"))
-                anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["ANOVA"]] <- NA
-                anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- NA
-              } else {
-                # Perform ANOVA.
-                anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["ANOVA"]] <- anova_res
-                anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- tukey_res
-              }
+              colnames(plot_df) <- c("16S expression", grouping_var)
               
               # Make sure we have enough colors
-              n_colors <- dat[[grouping_var]] %>% unique %>% length
+              n_colors <- plot_df[[grouping_var]] %>% unique %>% length
               mycolors <- colorRampPalette(pal_brewer(palette = "Paired")(12))(n_colors) # show_col(pal_brewer()())
               
               # Plot
-              plot <- dat %>%
+              plot_title <- ifelse(subset_var == "Complete data set", "", glue::glue("Subset variable: {subset_var} | level: {subset_var_level}"))
+              plot <- plot_df %>%
                 ggplot(aes(x = !!as.name(grouping_var), y = `16S expression`, fill = !!as.name(grouping_var))) + 
-                geom_boxplot(aes(fill = !!as.name(grouping_var)), width = 0.6, alpha = 0.7, outlier.shape = NA) + 
-                geom_jitter(aes(color = !!as.name(grouping_var)), width = 0.15, size = 2, alpha = 0.9) + 
-                #facet_wrap(~cell_type, scales = "free_x", ncol = 3) +
+                geom_boxplot(aes(fill = !!as.name(grouping_var)), 
+                             width = 0.3, 
+                             lwd = 0.6, 
+                             alpha = 0.7, 
+                             outlier.shape = NA, 
+                             staplewidth = 0.3) + 
+                geom_jitter(aes(color = !!as.name(grouping_var)), 
+                            width = 0.15, 
+                            size = 2, 
+                            alpha = 0.9) + 
                 scale_fill_manual(values = mycolors) + # , guide = FALSE
                 scale_color_manual(values = mycolors) + # , guide = FALSE
-                theme_bw() +
                 theme(
+                  panel.border = element_rect(color = "#333333", fill = NA, linewidth = 0.7),
+                  axis.line = element_line(linewidth = 0),
+                  axis.line.x.top = element_line(linewidth = 0),   # top; only active if we have scales there, e.g. via scale_x_continuous(position = "top")
+                  axis.line.y.right = element_line(linewidth = 0), # right; only active if we have scales there
                   panel.grid.major = element_blank(),
                   panel.grid.minor = element_blank(),
                   axis.text.x = element_blank(),
                   axis.ticks.x = element_blank(),
                   legend.position = "right",
+                  panel.background = element_rect(fill = "#FFFFFF"),
                   strip.background = element_rect(fill = "#E4E4E4", color = "#333333")
                 ) +
-                labs(title = glue::glue("Subset variable: {subset_var} | level: {subset_var_level}"),
+                labs(title = plot_title,
                      x = paste0(""),
-                     y = paste0("16s expression"))
+                     y = paste0("16S expression"))
+              
+              # If `add_boxplot_pvals_16s` is TRUE, 
+              # build p-value data frame and add p-values to plot
+              # using `stat_pvalue_manual()`
+              if(add_boxplot_pvals_16s) {
+                # Check if the current `grouping_var` is in `da_res_df` (the data frame with all the differential LMM results)
+                if(grouping_var %in% da_res_df$fixed_effect) {
+                  # Create the p-value data frame
+                  # p-value data frame: group1, group2, p, y.position, p.label 
+                  pvals_df <- da_res_df %>% 
+                    dplyr::filter(fixed_effect == grouping_var) %>% 
+                    dplyr::select(baseline, term, p.value) %>% 
+                    dplyr::rename(group1 = baseline, group2 = term, p = p.value) %>% 
+                    # Because the LMM or whatever reformats values with special characters
+                    # by enclosing them in parentheses ("()"), we need to strip those parentheses
+                    # out of the values, otherwise it will cause weird stuff to happen with the graphing
+                    dplyr::mutate(group1 = group1 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""),
+                                  group2 = group2 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""))
+                  
+                  # Calculate y.position: slightly above the highest point per facet
+                  tops <- plot_df %>%
+                    summarise(y.position = max(`16S expression`, na.rm = TRUE) * 1.05, .groups = "drop")
+                  
+                  # Add `y.position` to `pvals_df`
+                  # The space between brackets should be ~ 10% the range of the points
+                  bracket_spacing <- 0.1 * diff(range(plot_df$`16S expression`))
+                  highest_bracket <- bracket_spacing * ((da_res_df %>% dplyr::filter(fixed_effect == grouping_var) %>% nrow()) - 1)
+                  pvals_df[["y.position"]] <- tops[,1] + seq(from = 0, to = highest_bracket, by = bracket_spacing)
+                  # Add `label` column 
+                  pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures
+                  
+                  # Add p-values to plot using `ggpubr::stat_pvalue_manual()`
+                  plot <- plot + ggpubr::stat_pvalue_manual(
+                    pvals_df,
+                    y.position = "y.position",
+                    label = "p.label",
+                    xmin = "group1",
+                    xmax = "group2",
+                    bracket.size = 0.4,
+                    tip.length = 0.01,
+                    inherit.aes = FALSE
+                  )
+                  
+                } # End check grouping variable is present in LMM results
+              } # End check whether user specified to add p-vals to box plots
+              
               # Add to the plot list
               plot_list[[subset_var]][[subset_var_level]][[grouping_var]] <- plot
               # Save plot to disk
               plot
-              file_name <- glue::glue("16S_plot_{subset_var}_{subset_var_level}_{grouping_var}")
+              file_name <- glue::glue("16S_exprs_plot_{subset_var}_{subset_var_level}_{grouping_var}")
               for(file_type in output_plot_file_types) {
-                ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 12, height = 9, units = "in")
+                ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 8, height = 6, units = "in")
               }
               
             } else {
-              warning("The names in the 16S expression matrix do not match those in the pData! Skipping plots of 16S expression levels by group")
+              warning("The names in the 16S expression matrix do not match those in the pData. Skipping plots of 16S expression levels by group")
             }
             
-          } # End grouping variables for loop
-          
-        } # End subset variable levels for loop
-        
-      } # End subset_vars_16s for loop
+          } # End grouping variables `for()` loop
+        } # End subset variable levels `for()` loop
+      } # End subset variables `for()` loop
       
       # Arrange the plots into a grid
       for(subset_var in names(plot_list)) {
@@ -453,139 +497,10 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                                                              bottom = grid::textGrob("Grouping variable", gp = grid::gpar(cex = 1.3)),
                                                              top = grid::textGrob(paste0("")))
           
-        }
-      }
+        } # End subset variable level `for()` loop
+      } # End subset variable `for()` loop
       
-    }
-    
-    ## ................................................
-    ##
-    ### 16S raw expression levels by group ----
-    ##
-    ## ................................................
-    if(!is.null(grouping_vars_16s) & (sum(grouping_vars_16s == "") < length(grouping_vars_16s))) {
-      # See if we need to do any subsetting prior to graphing
-      if(flagVariable(subset_vars_16s)) { # sum(is.na(subset_vars_16s)) == length(subset_vars_16s) || sum(subset_vars_16s=="NA", na.rm = T) == length(subset_vars_16s[!is.na(subset_vars_16s)]) || "NA" %in% subset_vars_16s || NA %in% subset_vars_16s
-        # Since there are no subset variables, we will add a column that will act as a dummy subset variable
-        # and change subset_vars_16s to be the name of this dummy subset variable
-        # This will allow us to use one loop for either case (controls switch 1a or 1b)
-        pData(target_data_object_16s)[["Complete data set"]] <- "Dummy level"
-        pData(target_data_object_16s)[["Complete data set"]] <- as.factor(pData(target_data_object_16s)[["Complete data set"]])
-        subset_vars_16s <- c("Complete data set") # [is.na(subset_vars_16s)]
-        
-      } # End control switch 1a (no subset variables) << loop level 1 (model)
-      
-      # Graph 16S expression levels by group,
-      # subsetting if requested
-      plot_list <- list()
-      anova_list <- list()
-      
-      for(subset_var in subset_vars_16s) {
-        plot_list[[subset_var]] <- list()
-        anova_list[[subset_var]] <- list()
-        
-        # Check if it's NA
-        if(is.na(subset_var) || subset_var=="NA") {
-          subset_var <- "Complete data set"
-        }
-        
-        # Get the levels
-        subset_var_levels <- pData(target_data_object_16s)[[subset_var]] %>% unique
-        
-        # Loop over the levels and subset by each level
-        for(subset_var_level in subset_var_levels) {
-          plot_list[[subset_var]][[subset_var_level]] <- list()
-          anova_list[[subset_var]][[subset_var_level]] <- list()
-          
-          pData_sub <- pData(target_data_object_16s) %>% dplyr::filter(!!as.name(subset_var) == subset_var_level)
-          mean_16s_sub <- mean_16s_raw %>% .[names(.) %in% rownames(pData_sub)]
-          
-          for(grouping_var in grouping_vars_16s) {
-            plot_list[[subset_var]][[subset_var_level]][[grouping_var]] <- list()
-            anova_list[[subset_var]][[subset_var_level]][[grouping_var]] <- list()
-            
-            if(identical(names(mean_16s_sub), rownames(pData_sub))) {
-              dat <- data.frame(
-                `16S expression` = mean_16s_sub,
-                Group = pData_sub[[grouping_var]]
-              )
-              colnames(dat) <- c("16S expression", grouping_var)
-              
-              # Check that we have enough levels to perform ANOVA
-              n_grouping_var_levels <- dat$Group %>% unique %>% length
-              if(n_grouping_var_levels < 2) {
-                warning(glue::glue("Grouping variable {grouping_var} has fewer than 2 levels. Skipping ANOVA"))
-                anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["ANOVA"]] <- NA
-                anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- NA
-              } else {
-                # Perform ANOVA.
-                anova_res <- aov(`16S expression` ~ get(grouping_var), data = dat)
-                tukey_res <- TukeyHSD(anova_res)
-                anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["ANOVA"]] <- anova_res
-                anova_list[[subset_var]][[subset_var_level]][[grouping_var]][["TukeyHSD"]] <- tukey_res
-              }
-              
-              # Make sure we have enough colors
-              n_colors <- dat[[grouping_var]] %>% unique %>% length
-              mycolors <- colorRampPalette(pal_brewer(palette = "Paired")(12))(n_colors) # show_col(pal_brewer()())
-              
-              # Plot
-              plot <- dat %>%
-                ggplot(aes(x = !!as.name(grouping_var), y = `16S expression`, fill = !!as.name(grouping_var))) + 
-                geom_boxplot(aes(fill = !!as.name(grouping_var)), width = 0.6, alpha = 0.7, outlier.shape = NA) + 
-                geom_jitter(aes(color = !!as.name(grouping_var)), width = 0.15, size = 2, alpha = 0.9) + 
-                #facet_wrap(~cell_type, scales = "free_x", ncol = 3) +
-                scale_fill_manual(values = mycolors) + # , guide = FALSE
-                scale_color_manual(values = mycolors) + # , guide = FALSE
-                theme_bw() +
-                theme(
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  axis.text.x = element_blank(),
-                  axis.ticks.x = element_blank(),
-                  legend.position = "right",
-                  strip.background = element_rect(fill = "#E4E4E4", color = "#333333")
-                ) +
-                labs(title = glue::glue("Subset variable: {subset_var} | level: {subset_var_level}"),
-                     x = paste0(""),
-                     y = paste0("16s expression"))
-              # Add to the plot list
-              plot_list[[subset_var]][[subset_var_level]][[grouping_var]] <- plot
-              # Save plot to disk
-              plot
-              file_name <- glue::glue("16S_plot_{subset_var}_{subset_var_level}_{grouping_var}")
-              for(file_type in output_plot_file_types) {
-                ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 12, height = 9, units = "in")
-              }
-              
-            } else {
-              warning("The names in the 16S expression matrix do not match those in the pData! Skipping plots of 16S expression levels by group")
-            }
-            
-          } # End grouping variables for loop
-          
-        } # End subset variable levels for loop
-        
-      } # End subset_vars_16s for loop
-      
-      # Arrange the plots into a grid
-      for(subset_var in names(plot_list)) {
-        for(subset_var_level in names(plot_list[[subset_var]])) {
-          p_list <- plot_list[[subset_var]][[subset_var_level]]
-          
-          if(is.null(p_list)) next 
-          
-          n <- length(p_list)
-          nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1
-          plot_grid <- do.call("grid.arrange", c(p_list, ncol=nCol))
-          plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("16S expression", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = 1.3)),
-                                                             bottom = grid::textGrob("Grouping variable", gp = grid::gpar(cex = 1.3)),
-                                                             top = grid::textGrob(paste0("")))
-          
-        }
-      }
-      
-    }
+    } # End check for grouping variables
     
   } # End check for 16S probes
 } # End check for 16S module
@@ -606,8 +521,8 @@ for(module in names(target_data_object_list)) {
 saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_16S-analysis.rds"))
 # Export graphs
 if(exists("plot_list")) saveRDS(plot_list, paste0(output_dir_rdata, "16S-analysis_raw-plots-list.rds"))
-# Export ANOVA results
-if(exists("anova_list")) saveRDS(anova_list, paste0(output_dir_rdata, "16S-analysis_ANOVA-res-list.rds"))
+# Export the LMM results
+if(exists("da_res_df")) da_res_df %>% saveRDS(paste0(output_dir_rdata, "16S-analysis_LMM-results.rds"))
 
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)
