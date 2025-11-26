@@ -26,7 +26,7 @@ for(formula in lmm_formulae_de) {
 for(test_var in test_vars) {
   pData(target_data_object)[[test_var]] <- pData(target_data_object)[[test_var]] %>% as.factor
 }
-for(subset_var in subset_vars) {
+for(subset_var in subset_vars_de) {
   if(!is.null(subset_var) && !is.na(subset_var) && subset_var != "NA") pData(target_data_object)[[subset_var]] <- pData(target_data_object)[[subset_var]] %>% as.factor
 }
 
@@ -65,12 +65,12 @@ for (lmm_formula in lmm_formulae_de) {
   groupVar <- extractFirstFixedEffect(model_formula)
   
   # Handle missing subset variables
-  if (all(is.na(subset_vars)) || all(subset_vars == "NA", na.rm = TRUE)) {
+  if (all(is.na(subset_vars_de)) || all(subset_vars_de == "NA", na.rm = TRUE)) {
     pData(target_data_object)$`All observations` <- factor("DummyLevel")
-    subset_vars <- "All observations"
+    subset_vars_de <- "All observations"
   }
   
-  for (subset_var in subset_vars) {
+  for (subset_var in subset_vars_de) {
     message(glue::glue("Working on subset variable {subset_var} for model {lmm_formula}"))
     
     if (subset_var %in% c("NA", NA)) {
@@ -85,13 +85,13 @@ for (lmm_formula in lmm_formulae_de) {
     }
     
     subset_levels <- levels(factor(pData(target_data_object)[[subset_var]]))
-    # If subset_var_levels_manual is set, filter subset_var_levels to include only those values
-    subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
-    if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
-      if(sum(subset_var_levels_manual_i %in% subset_levels) < 1) {
+    # If subset_var_de_levels_manual is set, filter subset_var_levels to include only those values
+    subset_var_de_levels_manual_i <- subset_var_de_levels_manual[[subset_var]]
+    if(sum(is.na(subset_var_de_levels_manual_i)) < length(subset_var_de_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
+      if(sum(subset_var_de_levels_manual_i %in% subset_levels) < 1) {
         warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of {subset_var} will be used instead"))
       } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
-        subset_levels <- subset_levels %>% .[. %in% subset_var_levels_manual_i]
+        subset_levels <- subset_levels %>% .[. %in% subset_var_de_levels_manual_i]
       }
     }
     
@@ -160,7 +160,7 @@ for (lmm_formula in lmm_formulae_de) {
   }
   
   # colnames(pData(target_data_object)) <- orig_var_names
-  if (any(subset_vars == "All observations")) subset_vars <- NA
+  if (any(subset_vars_de == "All observations")) subset_vars_de <- NA
 }
 message("Differential expression analysis completed")
 
@@ -182,16 +182,16 @@ top_g_list <- list()
 
 models <- results2$`Model` %>% unique
 model_number <- 1
-for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it "subset_vars" because we already have a variable by that name ... 
+for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it "subset_vars_de" because we already have a variable by that name ... 
   
   subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
-  # If subset_var_levels_manual is set, filter subset_var_levels to include only those values
-  subset_var_levels_manual_i <- subset_var_levels_manual[[subset_var]]
-  if(sum(is.na(subset_var_levels_manual_i)) < length(subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
-    if(sum(subset_var_levels_manual_i %in% subset_var_levels) < 1) {
+  # If subset_var_de_levels_manual is set, filter subset_var_levels to include only those values
+  subset_var_de_levels_manual_i <- subset_var_de_levels_manual[[subset_var]]
+  if(sum(is.na(subset_var_de_levels_manual_i)) < length(subset_var_de_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
+    if(sum(subset_var_de_levels_manual_i %in% subset_var_levels) < 1) {
       warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of {subset_var} will be used instead"))
     } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
-      subset_var_levels <- subset_var_levels %>% .[. %in% subset_var_levels_manual_i]
+      subset_var_levels <- subset_var_levels %>% .[. %in% subset_var_de_levels_manual_i]
     }
   }
   
@@ -267,7 +267,7 @@ plot_list_diff_exprs <- list()
 model_list <- list() # Hold all the model formulae so we can access them when arranging the plots into grids
 models <- results2$`Model` %>% unique
 model_number <- 1
-for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name ... 
+for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it subset_vars_de because we already have a variable by that name ... 
   
   subset_var_levels <- results2 %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
   for(subset_var_level in subset_var_levels) {

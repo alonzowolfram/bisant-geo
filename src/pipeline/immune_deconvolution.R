@@ -172,7 +172,7 @@ if(!flagVariable(lmm_formulae_immune)) {
   between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq", "spatialdecon")
   model_number <- 1
   da_res_list <- list()
-  if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"
+  if(flagVariable(subset_vars_imm_decon)) subset_vars_imm_decon <- "Complete dataset"
   
   for(formula in lmm_formulae_immune) {
     da_res_list[[paste0("model_", model_number)]] <- list()
@@ -201,7 +201,7 @@ if(!flagVariable(lmm_formulae_immune)) {
       mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.))) 
     # %>% select(all_of(formula_vars))
     # Add "Complete dataset" as variable if it doesn't exist already
-    if(imm_decon_subset_vars=="Complete dataset" & !("Complete dataset" %in% colnames(pData_tmp))) pData_tmp$`Complete dataset` <- as.factor("Complete dataset")
+    if(subset_vars_imm_decon=="Complete dataset" & !("Complete dataset" %in% colnames(pData_tmp))) pData_tmp$`Complete dataset` <- as.factor("Complete dataset")
     
     # Loop level 2 (deconvolution method)
     for(method in names(imm_decon_res_list)) {
@@ -217,7 +217,7 @@ if(!flagVariable(lmm_formulae_immune)) {
         left_join(pData_tmp, by = "Sample")
       
       # Loop level 3 (subset variable)
-      for(subset_var in imm_decon_subset_vars) { # You can't loop over a NULL variable, hence the line `if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"` above. 
+      for(subset_var in subset_vars_imm_decon) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_imm_decon)) subset_vars_imm_decon <- "Complete dataset"` above. 
         da_res_list[[paste0("model_", model_number)]][[method]][[subset_var]] <- list()
         
         if(flagVariable(subset_var)) {
@@ -230,13 +230,13 @@ if(!flagVariable(lmm_formulae_immune)) {
         # Get the levels of the current subset_var.
         subset_var_levels <- pData_tmp[[subset_var]] %>% levels # Previously as.factor %>% needed because it might be a character vector, but now we convert all non-data-frame columns (except Sample) to factor above
         
-        # If imm_decon_subset_var_levels_manual is set, filter subset_var_levels to include only those values
-        imm_decon_subset_var_levels_manual_i <- imm_decon_subset_var_levels_manual[[subset_var]]
-        if(sum(is.na(imm_decon_subset_var_levels_manual_i)) < length(imm_decon_subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
-          if(sum(imm_decon_subset_var_levels_manual_i %in% subset_var_levels) < 1) {
+        # If subset_var_imm_decon_levels_manual is set, filter subset_var_levels to include only those values
+        subset_var_imm_decon_levels_manual_i <- subset_var_imm_decon_levels_manual[[subset_var]]
+        if(sum(is.na(subset_var_imm_decon_levels_manual_i)) < length(subset_var_imm_decon_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
+          if(sum(subset_var_imm_decon_levels_manual_i %in% subset_var_levels) < 1) {
             warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of subset variable {subset_var} will be used"))
           } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
-            subset_var_levels <- subset_var_levels %>% .[. %in% imm_decon_subset_var_levels_manual_i]
+            subset_var_levels <- subset_var_levels %>% .[. %in% subset_var_imm_decon_levels_manual_i]
           }
         }
         
@@ -337,7 +337,7 @@ pData_tmp <- pData_tmp %>% tidyr::unite("All ROIs", c(observation_identifiers, r
 pData_tmp$`All ROIs` <- pData_tmp$`All ROIs` %>% regexPipes::gsub("\\.dcc", "")
 pData_tmp$`Complete dataset` <- "Complete dataset"
 plot_list <- list()
-if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"
+if(flagVariable(subset_vars_imm_decon)) subset_vars_imm_decon <- "Complete dataset"
 for(method in names(imm_decon_res_list)) {
   plot_list[[method]] <- list()
   df <- imm_decon_res_list[[method]]
@@ -345,7 +345,7 @@ for(method in names(imm_decon_res_list)) {
   # QuanTIseq, CIBERSORT (absolute), Epic - visualize as stacked bar charts.
   # MCP-counter, SpatialDecon - visualize as box/dot/violin plot.
   
-  for(subset_var in imm_decon_subset_vars) { # You can't loop over a NULL variable, hence the line `if(flagVariable(imm_decon_subset_vars)) imm_decon_subset_vars <- "Complete dataset"` above. 
+  for(subset_var in subset_vars_imm_decon) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_imm_decon)) subset_vars_imm_decon <- "Complete dataset"` above. 
     plot_list[[method]][[subset_var]] <- list()
     
     if(flagVariable(subset_var)) {
@@ -358,13 +358,13 @@ for(method in names(imm_decon_res_list)) {
     # Get the levels of the current subset_var.
     subset_var_levels <- pData_tmp[[subset_var]] %>% as.factor %>% levels # as.factor needed because it might be a character vector.
     
-    # If imm_decon_subset_var_levels_manual is set, filter subset_var_levels to include only those values
-    imm_decon_subset_var_levels_manual_i <- imm_decon_subset_var_levels_manual[[subset_var]]
-    if(sum(is.na(imm_decon_subset_var_levels_manual_i)) < length(imm_decon_subset_var_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
-      if(sum(imm_decon_subset_var_levels_manual_i %in% subset_var_levels) < 1) {
+    # If subset_var_imm_decon_levels_manual is set, filter subset_var_levels to include only those values
+    subset_var_imm_decon_levels_manual_i <- subset_var_imm_decon_levels_manual[[subset_var]]
+    if(sum(is.na(subset_var_imm_decon_levels_manual_i)) < length(subset_var_imm_decon_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
+      if(sum(subset_var_imm_decon_levels_manual_i %in% subset_var_levels) < 1) {
         warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of subset variable {subset_var} will be used"))
       } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
-        subset_var_levels <- subset_var_levels %>% .[. %in% imm_decon_subset_var_levels_manual_i]
+        subset_var_levels <- subset_var_levels %>% .[. %in% subset_var_imm_decon_levels_manual_i]
       }
     }
     
@@ -376,7 +376,7 @@ for(method in names(imm_decon_res_list)) {
       ind <- pData_tmp[[subset_var]] == subset_var_level
       pData_tmp_sub <- pData_tmp[ind,]
       
-      for(grouping_var in imm_decon_grouping_vars) {
+      for(grouping_var in grouping_vars_imm_decon) {
         plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]] <- list()
         df2 <- df
         
@@ -397,8 +397,8 @@ for(method in names(imm_decon_res_list)) {
                            by = "All ROIs")
         # Replace NAs with character strings.
         df3[[grouping_var]] <- df3[[grouping_var]] %>% tidyr::replace_na('NA') # https://www.statology.org/replace-na-with-string-in-r/
-        # If imm_decon_remove_na is TRUE (or true or True or tRuE or whatever), remove observations with NAs.
-        if(imm_decon_remove_na | str_to_lower(imm_decon_remove_na)=="true") {
+        # If remove_na_imm_decon is TRUE (or true or True or tRuE or whatever), remove observations with NAs.
+        if(remove_na_imm_decon | str_to_lower(remove_na_imm_decon)=="true") {
           df3 <- df3 %>% dplyr::filter(!!as.name(grouping_var) != "NA")
         }
         

@@ -365,7 +365,7 @@ experiment:
     # If left blank, 16S expression levels will not be graphed at all
     # Typically, you'll want these to match the ones given in `lmm_formulae_16s` below
     # Multiple values are accepted; separate them with a comma (",")
-    grouping_vars_16s:
+    grouping_vars_16s: 
     
     # [Optional] Whether or not when graphing to remove observations with NA 
     # as the value for the grouping variable of interest
@@ -380,6 +380,14 @@ experiment:
     # all comparisons against a baseline level of `ContrastVariable` will be made instead
     # Third column: the baseline level of `ContrastVariable` against which to perform contrasts. Will only be considered if the corresponding value in the second column of this row is FALSE. If the corresponding value in the second column of this row is FALSE and this value in the third column is left blank, `ContrastVariable` will be treated as a factor in R with the appropriate rules of factor level ordering applied
     formula_table_file_16s:
+    
+    # [Optional] Whether or not to automatically add p-values to the plots of 16S expression by group,
+    # where the groups are given by `grouping_vars_16s` above
+    # If TRUE, for each grouping variable in `grouping_vars_16s`, the boxplot created will include p-values
+    # for pairwise comparisons between groups as defined by the formulae given in the table pointed to by `formula_table_file_16s`
+    # if and only if the grouping variable is the first fixed effect for one of the formulae in the table
+    # If no value is provided, will default to TRUE
+    add_boxplot_pvals_16s: TRUE
 
   # ----------------------------------------------------------------------
   #     Unsupervised analysis settings
@@ -436,7 +444,7 @@ experiment:
     # so there will probably be unnecessary models built. That's OK; you can just ignore them
     # If you have a subsetting variable but also want to conduct a differential expression experiment
     # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one
-    subset_vars:
+    subset_vars_de:
 
     # [Optional] Values of the above subset_vars to include when subsetting
     # For each variable in subset_vars above, separate the values of that variable with commas,
@@ -445,7 +453,7 @@ experiment:
     # the pipeline, _in addition to_ subsets by each level individually, will _also_
     # do a subset consisting of only the `subset_var_levels_manual` values
     # You can skip a subsetting variable by inputting NA.
-    subset_var_levels_manual:
+    subset_var_de_levels_manual:
 
     # [Optional] Percentile cutoff, expressed as a decimal, of the coefficient of variance (CV)
     # to filter genes before running differential expression via linear mixed models.
@@ -577,22 +585,22 @@ experiment:
     # You can provide multiple variables, separated by commas (",")
     # If you have a subsetting variable but also want to conduct immune deconvolution
     # WITHOUT subsetting, enter your subsetting variable(s), and add NA as another one
-    imm_decon_subset_vars: 
+    subset_vars_imm_decon: 
     
-    # [Optional] Values of the above imm_decon_subset_vars to include when subsetting
-    # For each variable in imm_decon_subset_vars above, separate the values of that variable with commas,
+    # [Optional] Values of the above subset_vars_imm_decon to include when subsetting
+    # For each variable in subset_vars_imm_decon above, separate the values of that variable with commas,
     # and separate multiple variables with semi-colons (";") 
-    # So, if imm_decon_subset_var_levels_manual is not empty, then for each value of `imm_decon_subset_vars`, 
+    # So, if subset_var_imm_decon_levels_manual is not empty, then for each value of `subset_vars_imm_decon`, 
     # the pipeline, _in addition to_ subsets by each level individually, will _also_
-    # do a subset consisting of only the `imm_decon_subset_var_levels_manual` values
+    # do a subset consisting of only the `subset_var_imm_decon_levels_manual` values
     # You can skip a subsetting variable by inputting NA
-    imm_decon_subset_var_levels_manual:
+    subset_var_imm_decon_levels_manual:
 
     # [Optional] Whether or not when graphing to remove observations with NA 
     # as the value for the grouping variable of interest
     # If set to TRUE, observations with NA as the value for the grouping variable of interest
     # will be removed. Otherwise (including if left blank), observations with NA will be left in
-    imm_decon_remove_na: TRUE
+    remove_na_imm_decon: TRUE
     
     # [Optional] User-supplied formula(e) for running linear mixed models for differential abundance analysis
     # You can provide multiple formulae, separated by commas (",")
@@ -604,7 +612,7 @@ experiment:
     # before graphing
     # Typically, you'll want these to match the ones given in `lmm_formulae_immune` above
     # Multiple values are accepted; separate them with a comma (",")
-    imm_decon_grouping_vars: 
+    grouping_vars_imm_decon: 
     
     ## !-- The next two settings are unused for now. --##
     # # [REQUIRED] path to human genome reference FASTA
@@ -656,7 +664,18 @@ experiment:
     # will be removed. Otherwise (including if left blank), observations with NA will be left in
     remove_na_tcr: TRUE
     
-    # [Optional] User-supplied formula(e) for running linear mixed models for differential abundance/score analysis
-    # You can provide multiple formulae, separated by commas (",")
-    # If left blank, differential analysis will not be performed
-    lmm_formulae_tcr: ~ ContrastVariable + (1 | Patient)
+    # [Optional] Path to a CSV, TSV, or Excel file consisting of three columns, no headers, one row for each linear mixed model formula for the diversity and distribution metrics (Shannon, Gini, etc.)
+    # If left blank, no differential analysis will be performed
+    # First column: formula for linear mixed model for differential score analysis, in the form `~ ContrastVariable + (1 | FixedVariable)
+    # Second column: whether or not to perform all possible pairwise comparisons for `ContrastVariable`. Can be TRUE or FALSE. If FALSE, 
+    # all comparisons against a baseline level of `ContrastVariable` will be made instead
+    # Third column: the baseline level of `ContrastVariable` against which to perform contrasts. Will only be considered if the corresponding value in the second column of this row is FALSE. If the corresponding value in the second column of this row is FALSE and this value in the third column is left blank, `ContrastVariable` will be treated as a factor in R with the appropriate rules of factor level ordering applied
+    formula_table_file_tcr: 
+    
+    # [Optional] Whether or not to automatically add p-values to the plots of diversity/distribution by group,
+    # where the groups are given by `grouping_vars_tcr` above
+    # If TRUE, for each grouping variable in `grouping_vars_tcr`, the boxplot created will include p-values
+    # for pairwise comparisons between groups as defined by the formulae given in the table pointed to by `formula_table_file_tcr`
+    # if and only if the grouping variable is the first fixed effect for one of the formulae in the table
+    # If no value is provided, will default to TRUE
+    add_boxplot_pvals_tcr: TRUE
