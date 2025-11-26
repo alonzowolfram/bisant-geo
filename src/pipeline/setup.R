@@ -365,33 +365,33 @@ if(length(error_msg_list) > 0) {
 }
 
 # There are a couple of parameters we have to handle manually:
-# `output_plot_file_types`, `analyte`, `subset_var_16s_levels_manual`, `subset_var_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, `imm_decon_subset_var_levels_manual`, and `subset_var_tcr_levels_manual`
+# `output_plot_file_types`, `analyte`, `subset_var_16s_levels_manual`, `subset_var_de_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, `subset_var_imm_decon_levels_manual`, and `subset_var_tcr_levels_manual`
 if(flagVariable(output_plot_file_types)) {output_plot_file_types <- c("eps", "pdf")} else {output_plot_file_types <- output_plot_file_types %>% str_split(",") %>% unlist %>% str_to_lower}
 if(flagVariable(analyte) || !(analyte %in% c("RNA", "protein"))) analyte <- "RNA"
-if(flagVariable(subset_var_levels_manual)) {
-  subset_var_levels_manual <- rep(list(NA), length(subset_vars))
-  names(subset_var_levels_manual) <- subset_vars
+if(flagVariable(subset_var_de_levels_manual)) {
+  subset_var_de_levels_manual <- rep(list(NA), length(subset_vars_de))
+  names(subset_var_de_levels_manual) <- subset_vars_de
 } else {
-  subset_var_levels_manual <- subset_var_levels_manual %>% strsplit(";") %>% unlist %>% strsplit(",")
-  if(length(subset_var_levels_manual)==length(subset_vars)) {
-    names(subset_var_levels_manual) <- subset_vars
+  subset_var_de_levels_manual <- subset_var_de_levels_manual %>% strsplit(";") %>% unlist %>% strsplit(",")
+  if(length(subset_var_de_levels_manual)==length(subset_vars_de)) {
+    names(subset_var_de_levels_manual) <- subset_vars_de
   } else {
-    subset_var_levels_manual <- rep(list(NA), length(subset_vars))
-    names(subset_var_levels_manual) <- subset_vars
+    subset_var_de_levels_manual <- rep(list(NA), length(subset_vars_de))
+    names(subset_var_de_levels_manual) <- subset_vars_de
   }
 }
 if(flagVariable(de_genes_cutoffs)) de_genes_cutoffs <- c(0.25, 0.58)
 if(flagVariable(imm_decon_methods)) imm_decon_methods <- c("mcp_counter", "quantiseq")
-if(flagVariable(imm_decon_subset_var_levels_manual)) {
-  imm_decon_subset_var_levels_manual <- rep(list(NA), length(imm_decon_subset_vars))
-  names(imm_decon_subset_var_levels_manual) <- imm_decon_subset_vars
+if(flagVariable(subset_var_imm_decon_levels_manual)) {
+  subset_var_imm_decon_levels_manual <- rep(list(NA), length(subset_vars_imm_decon))
+  names(subset_var_imm_decon_levels_manual) <- subset_vars_imm_decon
 } else {
-  imm_decon_subset_var_levels_manual <- imm_decon_subset_var_levels_manual %>% strsplit(";") %>% unlist %>% strsplit(",")
-  if(length(imm_decon_subset_var_levels_manual)==length(imm_decon_subset_vars)) {
-    names(imm_decon_subset_var_levels_manual) <- imm_decon_subset_vars
+  subset_var_imm_decon_levels_manual <- subset_var_imm_decon_levels_manual %>% strsplit(";") %>% unlist %>% strsplit(",")
+  if(length(subset_var_imm_decon_levels_manual)==length(subset_vars_imm_decon)) {
+    names(subset_var_imm_decon_levels_manual) <- subset_vars_imm_decon
   } else {
-    imm_decon_subset_var_levels_manual <- rep(list(NA), length(imm_decon_subset_vars))
-    names(imm_decon_subset_var_levels_manual) <- imm_decon_subset_vars
+    subset_var_imm_decon_levels_manual <- rep(list(NA), length(subset_vars_imm_decon))
+    names(subset_var_imm_decon_levels_manual) <- subset_vars_imm_decon
   }
 }
 if(flagVariable(subset_var_16s_levels_manual)) {
