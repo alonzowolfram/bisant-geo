@@ -602,10 +602,13 @@ experiment:
     # will be removed. Otherwise (including if left blank), observations with NA will be left in
     remove_na_imm_decon: TRUE
     
-    # [Optional] User-supplied formula(e) for running linear mixed models for differential abundance analysis
-    # You can provide multiple formulae, separated by commas (",")
-    # If left blank, differential abundance analysis will not be performed
-    lmm_formulae_immune: ~ Timepoint + (1 | Patient)
+    # [Optional] Path to a CSV, TSV, or Excel file consisting of three columns, no headers, one row for each linear mixed model formula for the cell-type abundances
+    # If left blank, no differential analysis will be performed
+    # First column: formula for linear mixed model for differential score analysis, in the form `~ ContrastVariable + (1 | FixedVariable)
+    # Second column: whether or not to perform all possible pairwise comparisons for `ContrastVariable`. Can be TRUE or FALSE. If FALSE, 
+    # all comparisons against a baseline level of `ContrastVariable` will be made instead
+    # Third column: the baseline level of `ContrastVariable` against which to perform contrasts. Will only be considered if the corresponding value in the second column of this row is FALSE. If the corresponding value in the second column of this row is FALSE and this value in the third column is left blank, `ContrastVariable` will be treated as a factor in R with the appropriate rules of factor level ordering applied
+    formula_table_file_imm_decon: 
     
     # [Optional] Grouping variable(s).
     # If provided, the data will be grouped by the provided variables, one at a time,
@@ -613,6 +616,14 @@ experiment:
     # Typically, you'll want these to match the ones given in `lmm_formulae_immune` above
     # Multiple values are accepted; separate them with a comma (",")
     grouping_vars_imm_decon: 
+    
+    # [Optional] Whether or not to automatically add p-values to the plots of diversity/distribution by group,
+    # where the groups are given by `grouping_vars_tcr` above
+    # If TRUE, for each grouping variable in `grouping_vars_tcr`, the boxplot created will include p-values
+    # for pairwise comparisons between groups as defined by the formulae given in the table pointed to by `formula_table_file_tcr`
+    # if and only if the grouping variable is the first fixed effect for one of the formulae in the table
+    # If no value is provided, will default to TRUE
+    add_boxplot_pvals_imm_decon: TRUE
     
     ## !-- The next two settings are unused for now. --##
     # # [REQUIRED] path to human genome reference FASTA

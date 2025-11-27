@@ -78,8 +78,9 @@ observation_identifiers,FALSE,,TRUE
 subset_vars_imm_decon,FALSE,,TRUE
 subset_var_imm_decon_levels_manual,FALSE,,FALSE
 remove_na_imm_decon,FALSE,TRUE,FALSE
-lmm_formulae_immune,FALSE,,TRUE
+formula_table_file_imm_decon,FALSE,,TRUE
 grouping_vars_imm_decon,FALSE,,TRUE
+add_boxplot_pvals_imm_decon,FALSE,TRUE,FALSE
 module_tcr,FALSE,,TRUE
 normalization_tcr,FALSE,bg_sub_p90,FALSE
 subset_vars_tcr,FALSE,,TRUE
