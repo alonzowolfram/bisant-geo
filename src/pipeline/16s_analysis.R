@@ -119,11 +119,16 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ##
     ## ................................................
     
+    # Create a list to hold the excluded levels for each grouping variable/first fixed effect
+    # These will be generated in the loop for the differential analysis
+    # and then referenced in the visualization loop
+    excluded_levels_list <- list()
+    
     # Check if the formula table has been provided
     # If formula_table_16s_file is provided, check that it's a valid file
     # If not, skip differential analysis
     valid_formula_table <- TRUE
-    if(!flagVariable(formula_table_file_16s)) { 
+    if(!flagVariable(formula_table_file_16s)) {
       if(!file.exists(formula_table_file_16s)) {
         warning("The path to the formula table provided does not exist. Differential analysis will not be performed")
         valid_formula_table <- FALSE
@@ -132,7 +137,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         message("Checking provided formula table file")
         if(base::grepl("\\.csv$", formula_table_file_16s)) { formula_table_16s <- read.csv(formula_table_file_16s, header = F)}
         else if(base::grepl("\\.tsv$", formula_table_file_16s)) { formula_table_16s <- read.table(formula_table_file_16s, header = F, sep = "\t") }
-        else if(base::grepl("\\.xls.*$", formula_table_file_16s)) { formula_table_16s <- read_excel(formula_table_file_16s, col_names = F, na = "NA")} 
+        else if(base::grepl("\\.xls.*$", formula_table_file_16s)) { formula_table_16s <- read_excel(formula_table_file_16s, col_names = F, na = "NA")}
         else {
           warning("The path to the formula table provided does not exist. Differential analysis will not be performed")
           valid_formula_table <- FALSE
@@ -159,10 +164,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         model_number <- i
         da_res_list[[paste0("model_", model_number)]] <- list()
         
-        # Extract the formula, whether or not to do all pairwise comparisons, and which level to set as the baseline level (if applicable)
+        # Extract the formula, whether or not to do all pairwise comparisons, which level to set as the baseline level (if applicable), and any levels of the first fixed effect to exclude
         formula <- formula_table_16s[i,1] %>% as.character
         all_pairwise <- formula_table_16s[i,2]
         baseline_level <- formula_table_16s[i,3] %>% as.character
+        excluded_levels <- formula_table_16s[i,4] %>% as.character %>% str_split(";") %>% unlist
         
         # Strip anything before the `~`
         formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
@@ -173,7 +179,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         # Add the dependent variable
         formula_af <- paste0("score ", formula) %>% as.formula
         
-        # Ensure Sample is included
+        # Now that we have both the first fixed effect (grouping variable) and associated excluded levels,
+        # add to `excluded_levels_list` 
+        excluded_levels_list[[first_fixed_effect]] <- excluded_levels
+        
+        # Ensure `Sample` is included
         formula_vars <- c("Sample", formula_vars)
         
         # Add the `Sample` column (created from rownames) to pData, then
@@ -182,7 +192,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         # First identify which columns in pData_subset are data frames (e.g. LOQ)
         df_cols <- sapply(pData(target_data_object_16s), is.data.frame)
         
-        # Create a temporary pData data frame by converting only non-data-frame columns (except Sample) to factors
+        # Create a temporary pData data frame by converting only non-data-frame columns (except `Sample`) to factors
         pData_tmp <- pData(target_data_object_16s) %>%
           tibble::rownames_to_column(var = "Sample") %>% 
           dplyr::mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.)))
@@ -246,6 +256,8 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
             # Subset data for this subset variable and subset variable level
             df_final <- df %>%
               dplyr::filter(Sample %in% samples)
+            # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
+            if(!flagVariable(excluded_levels)) df_final <- df_final %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
             
             # Fit the user-defined linear mixed model
             model <- tryCatch(
@@ -334,7 +346,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     
     ## ................................................
     ##
-    ### Plots of 16S expression by group ----
+    ### Visualization ----
     ##
     ## ................................................
     if(!is.null(grouping_vars_16s) & (sum(grouping_vars_16s == "") < length(grouping_vars_16s))) {
@@ -384,6 +396,10 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               )
               colnames(plot_df) <- c("16S expression", grouping_var)
               
+              # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
+              excluded_levels <- excluded_levels_list[[grouping_var]]
+              if(!flagVariable(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
+              
               # Make sure we have enough colors
               n_colors <- plot_df[[grouping_var]] %>% unique %>% length
               mycolors <- colorRampPalette(pal_brewer(palette = "Paired")(12))(n_colors) # show_col(pal_brewer()())
@@ -428,11 +444,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                 # Check if the current `grouping_var` is in `da_res_df` (the data frame with all the differential LMM results)
                 if(grouping_var %in% da_res_df$fixed_effect) {
                   # Create the p-value data frame
-                  # p-value data frame: group1, group2, p, y.position, p.label 
-                  pvals_df <- da_res_df %>% 
-                    dplyr::filter(fixed_effect == grouping_var) %>% 
-                    dplyr::select(baseline, term, p.value) %>% 
-                    dplyr::rename(group1 = baseline, group2 = term, p = p.value) %>% 
+                  # p-value data frame: group1, group2, p, y.position, p.label
+                  pvals_df <- da_res_df %>%
+                    dplyr::filter(fixed_effect == grouping_var) %>%
+                    dplyr::select(baseline, term, p.value) %>%
+                    dplyr::rename(group1 = baseline, group2 = term, p = p.value) %>%
                     # Because the LMM or whatever reformats values with special characters
                     # by enclosing them in parentheses ("()"), we need to strip those parentheses
                     # out of the values, otherwise it will cause weird stuff to happen with the graphing
@@ -449,7 +465,15 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                   highest_bracket <- bracket_spacing * ((da_res_df %>% dplyr::filter(fixed_effect == grouping_var) %>% nrow()) - 1)
                   pvals_df[["y.position"]] <- tops[,1] + seq(from = 0, to = highest_bracket, by = bracket_spacing)
                   # Add `label` column 
-                  pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures
+                  # pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures
+                  pvals_df <- pvals_df %>% 
+                    dplyr::mutate(p.label = dplyr::case_when(
+                      p < 0.0001 ~ "****",
+                      p < 0.005 ~ "***",
+                      p < 0.01 ~ "**",
+                      p < 0.05 ~ "*",
+                      TRUE ~ sprintf("p = %.2f", p)
+                    ))
                   
                   # Add p-values to plot using `ggpubr::stat_pvalue_manual()`
                   plot <- plot + ggpubr::stat_pvalue_manual(

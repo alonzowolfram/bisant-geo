@@ -170,6 +170,11 @@ for(method in imm_decon_methods) {
 # MCP-counter, xCell, TIMER, ConsensusTME, ESTIMATE, ABIS, mMCP-counter, BASE, EPIC, quanTIseq, CIBERSORT abs., seqImmuCC
 between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq", "spatialdecon")
 
+# Create a list to hold the excluded levels for each grouping variable/first fixed effect
+# These will be generated in the loop for the differential analysis
+# and then referenced in the visualization loop
+excluded_levels_list <- list()
+
 # Check if the formula table has been provided
 # If formula_table_imm_decon_file is provided, check that it's a valid file
 # If not, skip differential analysis
@@ -208,10 +213,11 @@ if(valid_formula_table) {
     model_number <- i
     da_res_list[[paste0("model_", model_number)]] <- list()
     
-    # Extract the formula, whether or not to do all pairwise comparisons, and which level to set as the baseline level (if applicable)
+    # Extract the formula, whether or not to do all pairwise comparisons, which level to set as the baseline level (if applicable), and any levels of the first fixed effect to exclude
     formula <- formula_table_imm_decon[i,1] %>% as.character
     all_pairwise <- formula_table_imm_decon[i,2]
     baseline_level <- formula_table_imm_decon[i,3] %>% as.character
+    excluded_levels <- formula_table_imm_decon[i,4] %>% as.character %>% str_split(";") %>% unlist
     
     # Strip anything before the `~`.
     formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
@@ -221,6 +227,10 @@ if(valid_formula_table) {
     first_fixed_effect <- extractFirstFixedEffect(as.formula(formula)) # Input: formula
     # Add the dependent variable
     formula_af <- paste0("score ", formula) %>% as.formula
+    
+    # Now that we have both the first fixed effect (grouping variable) and associated excluded levels,
+    # add to `excluded_levels_list` 
+    excluded_levels_list[[first_fixed_effect]] <- excluded_levels
     
     # Ensure Sample is included
     formula_vars <- c("Sample", formula_vars)
@@ -303,6 +313,8 @@ if(valid_formula_table) {
             # Subset data for this cell type, subset variable, and subset variable level
             cell_data <- immune_long %>%
               dplyr::filter((Sample %in% samples) & (cell_type == cell))
+            # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
+            if(!flagVariable(excluded_levels)) cell_data <- cell_data %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
             
             # Fit the user-defined linear mixed model
             model <- tryCatch(
@@ -484,6 +496,9 @@ for(method in names(imm_decon_res_list)) {
         if(remove_na_imm_decon | str_to_lower(remove_na_imm_decon)=="true") {
           plot_df <- plot_df %>% dplyr::filter(!!as.name(grouping_var) != "NA")
         }
+        # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
+        excluded_levels <- excluded_levels_list[[grouping_var]]
+        if(!flagVariable(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
         
         # If the number of unique values of the pData column `grouping_var` > 50, split into multiple groups for graphing
         # https://forum.posit.co/t/diagram-overload-split-data-into-multiple-charts/104355
@@ -642,7 +657,15 @@ for(method in names(imm_decon_res_list)) {
                 }
                 pvals_df[["y.position"]] <- y.position
                 # Add `label` column 
-                pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures
+                # pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures
+                pvals_df <- pvals_df %>% 
+                  dplyr::mutate(p.label = dplyr::case_when(
+                    p < 0.0001 ~ "****",
+                    p < 0.005 ~ "***",
+                    p < 0.01 ~ "**",
+                    p < 0.05 ~ "*",
+                    TRUE ~ sprintf("p = %.2f", p)
+                  ))
                 
                 # Add p-values to plot using `ggpubr::stat_pvalue_manual()`
                 plot <- plot + ggpubr::stat_pvalue_manual(

@@ -379,6 +379,7 @@ experiment:
     # Second column: whether or not to perform all possible pairwise comparisons for `ContrastVariable`. Can be TRUE or FALSE. If FALSE, 
     # all comparisons against a baseline level of `ContrastVariable` will be made instead
     # Third column: the baseline level of `ContrastVariable` against which to perform contrasts. Will only be considered if the corresponding value in the second column of this row is FALSE. If the corresponding value in the second column of this row is FALSE and this value in the third column is left blank, `ContrastVariable` will be treated as a factor in R with the appropriate rules of factor level ordering applied
+    # Fourth column: levels of `ContrastVariable` (first fixed effect in the formula in the first column) to exclude from linear mixed model differential analysis. Separate multiple levels with semicolons (";"). Note that if `add_boxplot_pvals_16s` is TRUE, then any levels of `ContrastVariable` excluded from linear mixed model differential analysis will be removed from the boxplot as well
     formula_table_file_16s:
     
     # [Optional] Whether or not to automatically add p-values to the plots of 16S expression by group,
@@ -608,6 +609,7 @@ experiment:
     # Second column: whether or not to perform all possible pairwise comparisons for `ContrastVariable`. Can be TRUE or FALSE. If FALSE, 
     # all comparisons against a baseline level of `ContrastVariable` will be made instead
     # Third column: the baseline level of `ContrastVariable` against which to perform contrasts. Will only be considered if the corresponding value in the second column of this row is FALSE. If the corresponding value in the second column of this row is FALSE and this value in the third column is left blank, `ContrastVariable` will be treated as a factor in R with the appropriate rules of factor level ordering applied
+    # Fourth column: levels of `ContrastVariable` (first fixed effect in the formula in the first column) to exclude from linear mixed model differential analysis. Separate multiple levels with semicolons (";"). Note that if `add_boxplot_pvals_16s` is TRUE, then any levels of `ContrastVariable` excluded from linear mixed model differential analysis will be removed from the boxplot as well
     formula_table_file_imm_decon: 
     
     # [Optional] Grouping variable(s).
@@ -681,6 +683,7 @@ experiment:
     # Second column: whether or not to perform all possible pairwise comparisons for `ContrastVariable`. Can be TRUE or FALSE. If FALSE, 
     # all comparisons against a baseline level of `ContrastVariable` will be made instead
     # Third column: the baseline level of `ContrastVariable` against which to perform contrasts. Will only be considered if the corresponding value in the second column of this row is FALSE. If the corresponding value in the second column of this row is FALSE and this value in the third column is left blank, `ContrastVariable` will be treated as a factor in R with the appropriate rules of factor level ordering applied
+    # Fourth column: levels of `ContrastVariable` (first fixed effect in the formula in the first column) to exclude from linear mixed model differential analysis. Separate multiple levels with semicolons (";"). Note that if `add_boxplot_pvals_16s` is TRUE, then any levels of `ContrastVariable` excluded from linear mixed model differential analysis will be removed from the boxplot as well
     formula_table_file_tcr: 
     
     # [Optional] Whether or not to automatically add p-values to the plots of diversity/distribution by group,

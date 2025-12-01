@@ -88,6 +88,11 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
     ###
     ### ................................................
     
+    # Create a list to hold the excluded levels for each grouping variable/first fixed effect
+    # These will be generated in the loop for the differential analysis
+    # and then referenced in the visualization loop
+    excluded_levels_list <- list()
+    
     # Check if the formula table has been provided
     # If formula_table_tcr_file is provided, check that it's a valid file
     # If not, skip differential analysis
@@ -128,10 +133,11 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
         model_number <- i
         da_res_list[[paste0("model_", model_number)]] <- list()
         
-        # Extract the formula, whether or not to do all pairwise comparisons, and which level to set as the baseline level (if applicable)
+        # Extract the formula, whether or not to do all pairwise comparisons, which level to set as the baseline level (if applicable), and any levels of the first fixed effect to exclude
         formula <- formula_table_tcr[i,1] %>% as.character
         all_pairwise <- formula_table_tcr[i,2]
         baseline_level <- formula_table_tcr[i,3] %>% as.character
+        excluded_levels <- formula_table_tcr[i,4] %>% as.character %>% str_split(";") %>% unlist
         
         # Strip anything before the `~`
         formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
@@ -141,6 +147,10 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
         formula_vars <- c("Sample", formula_vars)
         # Extract first fixed effect from formula
         first_fixed_effect <- extractFirstFixedEffect(as.formula(formula)) # Input: formula
+        
+        # Now that we have both the first fixed effect (grouping variable) and associated excluded levels,
+        # add to `excluded_levels_list` 
+        excluded_levels_list[[first_fixed_effect]] <- excluded_levels
         
         # 2025/11/26: for 16S analysis, we would add the dependent variable to create `formula_af` 
         # at this point in the workflow
@@ -217,6 +227,8 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
             # Subset data for this subset variable and subset variable level
             df_final <- df %>%
               dplyr::filter(Sample %in% samples)
+            # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
+            if(!flagVariable(excluded_levels)) df_final <- df_final %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
             
             # Fit the user-defined linear mixed model
             # Loop over the different diversity/distribution metrics
@@ -318,7 +330,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
     
     ### ................................................
     ###
-    ### Plots of diversity and distribution measures ----
+    ### Visualization ----
     ###
     ### ................................................
     if(!is.null(grouping_vars_tcr) & (sum(grouping_vars_tcr == "") < length(grouping_vars_tcr))) {
@@ -366,6 +378,10 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
               dplyr::select(c(grouping_var, metric_names)) %>%
               reshape2::melt(id.vars = grouping_var,
                              variable.name = "metric")
+            
+            # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
+            excluded_levels <- excluded_levels_list[[grouping_var]]
+            if(!flagVariable(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
             
             # Convert the current grouping variable to factor
             plot_df[[grouping_var]] <- as.factor(plot_df[[grouping_var]])
@@ -444,7 +460,15 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                 }
                 pvals_df[["y.position"]] <- y.position
                 # Add `label` column 
-                pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures
+                # pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures
+                pvals_df <- pvals_df %>% 
+                  dplyr::mutate(p.label = dplyr::case_when(
+                    p < 0.0001 ~ "****",
+                    p < 0.005 ~ "***",
+                    p < 0.01 ~ "**",
+                    p < 0.05 ~ "*",
+                    TRUE ~ sprintf("p = %.2f", p)
+                  ))
                 
                 # Add p-values to plot using `ggpubr::stat_pvalue_manual()`
                 plot <- plot + ggpubr::stat_pvalue_manual(
