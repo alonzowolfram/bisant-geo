@@ -207,7 +207,7 @@ if(valid_formula_table) {
   
   # If subset variables are not defined, create a dummy subset variable
   subset_vars_tcr_orig_flagged <- FALSE # We'll use this in the plotting section, because we need to know if `subset_vars_tcr` was originally NULL/empty in the config YAML file
-  if(flagVariable(subset_vars_imm_decon)) { subset_vars_imm_decon <- "Complete data set"; subset_vars_imm_decon_orig_flagged <- TRUE }
+  if(flagVariable(subset_vars_imm_decon)) { subset_vars_imm_decon <- "Complete data set"; subset_vars_imm_decon_orig_flagged <- TRUE } else {subset_vars_imm_decon_orig_flagged <- FALSE}
   
   for(i in 1:nrow(formula_table_imm_decon)) {
     model_number <- i
