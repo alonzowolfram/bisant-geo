@@ -198,7 +198,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           dplyr::mutate(across(!is.data.frame, ~ if (is.numeric(.)) . else as.factor(.)))
         # %>% select(all_of(formula_vars))
         # Add "Complete data set" as variable if it doesn't exist already
-        if(subset_vars_16s=="Complete data set" & !("Complete data set" %in% colnames(pData_tmp))) pData_tmp$`Complete data set` <- as.factor("Complete data set")
+        if(("Complete data set" %in% subset_vars_16s) & !("Complete data set" %in% colnames(pData_tmp))) pData_tmp$`Complete data set` <- as.factor("Complete data set")
         
         # If `all_pairwise` is FALSE (i.e., we're doing comparisons against a baseline level)
         # then re-order the factor levels of `first_fixed_effect` in `pData_tmp` so that `baseline_level` is the first
