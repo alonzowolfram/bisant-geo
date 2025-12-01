@@ -206,7 +206,7 @@ rule analysis_16s:
 
 rule normalization:
     input:
-        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_qc-probes.rds"
+        R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_QC-probes.rds"
     output:
         R_file = OUTPUT_PATH + "Rdata/NanoStringGeoMxSet_normalized.rds",
         R_file_normalization_plot_list = OUTPUT_PATH + "Rdata/normalization_plot_list.rds"
