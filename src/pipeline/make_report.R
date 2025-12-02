@@ -59,7 +59,7 @@ plot_list_pathway_analysis_grid_file <- paste0(output_dir_rdata, "pathway-analys
 # Immune deconvolution
 plot_list_imm_decon_file <- paste0(output_dir_rdata, "immune-deconvolution_plots-list.rds")
 # TCR analysis
-plot_list_tcr_analysis_grid_file <- paste0(output_dir_rdata, "TCR-analysis_plot-grid-list.rds")
+plot_list_tcr_analysis_grid_file <- paste0(output_dir_rdata, "TCR-analysis_plots-list.rds")
 
 # Render.
 rmarkdown::render(rmd_template_file,

@@ -201,8 +201,8 @@ if(file.exists(params$plot_list_imm_decon_file)) {
 if(file.exists(params$plot_list_tcr_analysis_grid_file)) {
   plot_list_tcr_analysis <- readRDS(params$plot_list_tcr_analysis_grid_file)
   for(item in plot_list_tcr_analysis) {
-    # suppressMessages(capture.output(print(item)))
-    suppressMessages(capture.output(grid::grid.draw(item)))
+    suppressMessages(capture.output(print(item)))
+    # suppressMessages(capture.output(grid::grid.draw(item)))
   }
 }
 ```
