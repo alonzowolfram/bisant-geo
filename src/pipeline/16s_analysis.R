@@ -13,6 +13,9 @@ target_data_object_list <- readRDS(cl_args[5])
 probes_include <- probes_include %>% str_split(",") %>% unlist()
 probes_exclude <- probes_exclude %>% str_split(",") %>% unlist()
 
+# Convert any "NA" in `subset_vars_16s` to "Complete data set"
+subset_vars_16s[subset_vars_16s=="NA"] <- "Complete data set"
+
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## 16S analysis ----
@@ -217,16 +220,17 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         
         # Loop level 2 (subset variable)
         for(subset_var in subset_vars_16s) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_16s)) subset_vars_16s <- "Complete data set"` above
+          if(subset_var == first_fixed_effect) next
           da_res_list[[paste0("model_", model_number)]][[subset_var]] <- list()
           
-          if(flagVariable(subset_var)) {
+          if(flagVariable(subset_var) | subset_var == "Complete data set") {
             subset_tag <- "All ROIs"
             subset_var <- "Complete data set"
           } else {
             subset_tag <- subset_var
           }
           
-          # Get the levels of the current subset_var.
+          # Get the levels of the current `subset_var`
           subset_var_levels <- pData_tmp[[subset_var]] %>% levels # Previously as.factor %>% needed because it might be a character vector, but now we convert all non-data-frame columns (except Sample) to factor above
           
           # If `subset_var_16s_levels_manual` is set, filter `subset_var_levels` to include only those values
@@ -354,13 +358,13 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       # Set `subset_vars_16s` to whatever it was in the config YAML file
       if(subset_vars_16s_orig_flagged) subset_vars_16s <- NULL
       # See if we need to do any subsetting prior to graphing
-      if(flagVariable(subset_vars_16s)) {
-        # Since there are no subset variables, we will add a column that will act as a dummy subset variable
-        # and change subset_vars_16s to be the name of this dummy subset variable
+      if(flagVariable(subset_vars_16s) | "Complete data set" %in% subset_vars_16s) {
+        # If there are no subset variables/one of them is "Complete data set", we will add a column that will act as a dummy subset variable
+        # and change `subset_vars_16s` to be the name of this dummy subset variable
         # This will allow us to use one loop for either case (controls switch 1a or 1b)
         pData(target_data_object_16s)[["Complete data set"]] <- "Complete data set"
         pData(target_data_object_16s)[["Complete data set"]] <- as.factor(pData(target_data_object_16s)[["Complete data set"]])
-        subset_vars_16s <- c("Complete data set") # [is.na(subset_vars_16s)]
+        subset_vars_16s <- union(subset_vars_16s, "Complete data set") # [is.na(subset_vars_16s)]
         
       } # End control switch 1a (no subset variables) << loop level 1 (model)
       
@@ -387,6 +391,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           exprs_16s_sub <- exprs_16s %>% .[names(.) %in% rownames(pData_sub)]
           
           for(grouping_var in grouping_vars_16s) {
+            if(grouping_var==subset_var) next
             plot_list[[subset_var]][[subset_var_level]][[grouping_var]] <- list()
             
             if(identical(names(exprs_16s_sub), rownames(pData_sub))) {
@@ -446,7 +451,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                   # Create the p-value data frame
                   # p-value data frame: group1, group2, p, y.position, p.label
                   pvals_df <- da_res_df %>%
-                    dplyr::filter(fixed_effect == grouping_var) %>%
+                    dplyr::filter(fixed_effect == grouping_var & subset_var == !!subset_var & subset_var_level == !!subset_var_level) %>%
                     dplyr::select(baseline, term, p.value) %>%
                     dplyr::rename(group1 = baseline, group2 = term, p = p.value) %>%
                     # Because the LMM or whatever reformats values with special characters
@@ -456,13 +461,13 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                                   group2 = group2 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""))
                   
                   # Calculate y.position: slightly above the highest point per facet
-                  tops <- plot_df %>%
+                  tops <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`
                     summarise(y.position = max(`16S expression`, na.rm = TRUE) * 1.05, .groups = "drop")
                   
                   # Add `y.position` to `pvals_df`
                   # The space between brackets should be ~ 10% the range of the points
                   bracket_spacing <- 0.1 * diff(range(plot_df$`16S expression`))
-                  highest_bracket <- bracket_spacing * ((da_res_df %>% dplyr::filter(fixed_effect == grouping_var) %>% nrow()) - 1)
+                  highest_bracket <- bracket_spacing * ((pvals_df %>% nrow()) - 1)
                   pvals_df[["y.position"]] <- tops[,1] + seq(from = 0, to = highest_bracket, by = bracket_spacing)
                   # Add `label` column 
                   # pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures

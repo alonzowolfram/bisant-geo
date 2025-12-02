@@ -22,6 +22,9 @@ normalization_method <- normalization_names[names(normalization_names)==normaliz
 data("safeTME")
 data("safeTME.matches")
 
+# Convert any "NA" in `subset_vars_imm_decon` to "Complete data set"
+subset_vars_imm_decon[subset_vars_imm_decon=="NA"] <- "Complete data set"
+
 # # Set path to CIBERSORT required files
 # set_cibersort_binary(path_to_cibersort)
 # set_cibersort_mat(path_to_lm22)
@@ -273,9 +276,11 @@ if(valid_formula_table) {
       
       # Loop level 3 (subset variable)
       for(subset_var in subset_vars_imm_decon) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_imm_decon)) subset_vars_imm_decon <- "Complete data set"` above
+        if(subset_var == first_fixed_effect) next
+        
         da_res_list[[paste0("model_", model_number)]][[method]][[subset_var]] <- list()
         
-        if(flagVariable(subset_var)) {
+        if(flagVariable(subset_var) | subset_var == "Complete data set") {
           subset_tag <- "All ROIs"
           subset_var <- "Complete data set"
         } else {
@@ -449,15 +454,15 @@ for(method in names(imm_decon_res_list)) {
       subset_tag <- subset_var
     }
     
-    # Get the levels of the current subset_var
+    # Get the levels of the current `subset_var`
     subset_var_levels <- pData_tmp[[subset_var]] %>% as.factor %>% levels # as.factor needed because it might be a character vector.
     
-    # If subset_var_imm_decon_levels_manual is set, filter subset_var_levels to include only those values
+    # If `subset_var_imm_decon_levels_manual` is set, filter `subset_var_levels` to include only those values
     subset_var_imm_decon_levels_manual_i <- subset_var_imm_decon_levels_manual[[subset_var]]
     if(sum(is.na(subset_var_imm_decon_levels_manual_i)) < length(subset_var_imm_decon_levels_manual_i)) { # At least one subset_var_level_manual_i is not NA
       if(sum(subset_var_imm_decon_levels_manual_i %in% subset_var_levels) < 1) {
         warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of subset variable {subset_var} will be used"))
-      } else { # At least one subset_var_level_manual_i is an actual level of the current subset variable
+      } else { # At least one `subset_var_level_manual_i` is an actual level of the current subset variable
         subset_var_levels <- subset_var_levels %>% .[. %in% subset_var_imm_decon_levels_manual_i]
       }
     }
@@ -472,6 +477,8 @@ for(method in names(imm_decon_res_list)) {
       
       # Loop level 4 (grouping variable) << loop level 3 (level of current subset variable) << loop level 2 (subset variable) << loop level 1 (model)
       for(grouping_var in grouping_vars_imm_decon) {
+        if(grouping_var==subset_var) next
+        
         plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]] <- list()
         df2 <- df
         
@@ -626,11 +633,11 @@ for(method in names(imm_decon_res_list)) {
               # Check if the current `grouping_var` is in `da_res_df` (the data frame with all the differential LMM results)
               if(grouping_var %in% da_res_df$fixed_effect) {
                 # Create the p-value data frame
-                # p-value data frame: group1, group2, p, y.position, p.label 
-                pvals_df <- da_res_df %>% 
-                  dplyr::filter(fixed_effect == grouping_var) %>% 
-                  dplyr::select(baseline, term, p.value, cell_type) %>% 
-                  dplyr::rename(group1 = baseline, group2 = term, p = p.value) %>% 
+                # p-value data frame: group1, group2, p, y.position, p.label
+                pvals_df <- da_res_df %>%
+                  dplyr::filter(fixed_effect == grouping_var & subset_var == !!subset_var & subset_var_level == !!subset_var_level) %>%
+                  dplyr::select(baseline, term, p.value, cell_type) %>%
+                  dplyr::rename(group1 = baseline, group2 = term, p = p.value) %>%
                   # Because the LMM or whatever reformats values with special characters
                   # by enclosing them in parentheses ("()"), we need to strip those parentheses
                   # out of the values, otherwise it will cause weird stuff to happen with the graphing
@@ -638,23 +645,42 @@ for(method in names(imm_decon_res_list)) {
                                 group2 = group2 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""))
                 
                 # Calculate y.position: slightly above the highest point per facet
-                tops <- plot_df %>%
-                  group_by(cell_type) %>% # Group by cell_type
+                tops <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`
+                  group_by(cell_type) %>% # Group by `cell_type`
                   summarise(y.position = max(score, na.rm = TRUE) * 1.05, .groups = "drop") %>%
                   as.data.frame
                 
                 # Add `y.position` to `pvals_df`
                 # The space between brackets should be ~ 10% the range of the points
-                ranges <- plot_df %>% group_by(cell_type) %>% summarise(range = range(score)) %>% summarise(range = diff(range)) %>% as.data.frame
+                ranges <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`
+                  group_by(cell_type) %>% 
+                  summarise(range = range(score)) %>% 
+                  summarise(range = diff(range)) %>% 
+                  as.data.frame
+                # If any of the ranges are 0, it will throw off things downstream, so replace any 0s with 1
+                ranges$range <- ifelse(ranges$range==0,1,ranges$range)
+                # Filter to ensure `pvals_df`, `tops`, and `ranges` all have the same cell types
+                cell_types_common <- intersect(pvals_df$cell_type %>% unique, plot_df$cell_type %>% unique)
+                pvals_df <- pvals_df %>% dplyr::filter(cell_type %in% cell_types_common)
+                tops <- tops %>% dplyr::filter(cell_type %in% cell_types_common)
+                ranges <- ranges %>% dplyr::filter(cell_type %in% cell_types_common)
+                # Calculate bracket spacing
                 bracket_spacing <- 0.15 * ranges[,2]; names(bracket_spacing) <- ranges[,1]
+                # Because something is going wrong, lemme talk this through lol
+                # the highest bracket should be n * bracket_spacing above the lowest bracket
+                # where n = (# of pairwise comparisons) - 1
                 highest_bracket <- bracket_spacing * (
-                  (da_res_df %>% dplyr::filter(fixed_effect == grouping_var) %>% nrow) / length(unique(plot_df$cell_type)) - 1
-                  )
+                  (pvals_df %>% nrow) / length(cell_types_common) - 1
+                )
                 # Calculate the y-positions of the brackets
-                y.position <- c()
-                for(type in pvals_df$cell_type %>% unique) { # using `pvals_df` because `y.position` will be added to pvals_df, so the cell types should match its order
-                  y.position <- c(y.position, (tops %>% dplyr::filter(cell_type==type) %>% .[1,2]) + seq(from = 0, to = highest_bracket %>% .[names(.)==type], by = bracket_spacing %>% .[names(.)==type]))
-                }
+                # for(i in 1:length(pvals_df$cell_type %>% unique)) {
+                  y.position <- c()
+                  for(type in pvals_df$cell_type %>% unique) { # using `pvals_df` because `y.position` will be added to pvals_df, so the cell types should match its order
+                    y.position <- c(y.position, (tops %>% dplyr::filter(cell_type==type) %>% .[1,2]) + seq(from = 0, to = highest_bracket %>% .[names(.)==type], by = bracket_spacing %>% .[names(.)==type]))
+                  }
+                  # vec_length <- length(y.position)
+                  # print(glue::glue("{i}: {vec_length}"))
+                # }
                 pvals_df[["y.position"]] <- y.position
                 # Add `label` column 
                 # pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures

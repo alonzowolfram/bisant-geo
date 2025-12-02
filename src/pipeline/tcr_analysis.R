@@ -10,6 +10,9 @@ source("src/pipeline/setup.R")
 # Read in the NanoStringGeoMxSet object
 target_data_object_list <- readRDS(cl_args[5])
 
+# Convert any "NA" in `subset_vars_tcr` to "Complete data set"
+subset_vars_tcr[subset_vars_tcr=="NA"] <- "Complete data set"
+
 # Functions
 # Gini coefficient
 calculate_gini_coefficient <- function(x) {
@@ -188,17 +191,18 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
         
         # Loop level 2 (subset variable)
         for(subset_var in subset_vars_tcr) { # You can't loop over a NULL variable, hence the line `if(flagVariable(subset_vars_tcr)) subset_vars_tcr <- "Complete data set"` above
+          if(subset_var == first_fixed_effect) next
           da_res_list[[paste0("model_", model_number)]][[subset_var]] <- list()
           
-          if(flagVariable(subset_var)) {
+          if(flagVariable(subset_var) | subset_var == "Complete data set") {
             subset_tag <- "All ROIs"
             subset_var <- "Complete data set"
           } else {
             subset_tag <- subset_var
           }
           
-          # Get the levels of the current subset_var.
-          subset_var_levels <- pData_tmp[[subset_var]] %>% levels # Previously as.factor %>% needed because it might be a character vector, but now we convert all non-data-frame columns (except Sample) to factor above
+          # Get the levels of the current `subset_var`
+          subset_var_levels <- pData_tmp[[subset_var]] %>% levels # Previously as.factor %>% needed because it might be a character vector, but now we convert all non-data-frame columns (except `Sample`) to factor above
           
           # If `subset_var_tcr_levels_manual` is set, filter `subset_var_levels` to include only those values
           subset_var_tcr_levels_manual_i <- subset_var_tcr_levels_manual[[subset_var]]
@@ -218,7 +222,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
             
             da_res_list[[paste0("model_", model_number)]][[subset_var]][[subset_var_level]] <- list()
             
-            # Get all the samples belonging to the current subset_var_level.
+            # Get all the samples belonging to the current `subset_var_level`
             samples <- pData_tmp %>%
               dplyr::filter(!!as.name(subset_var)==subset_var_level) %>%
               dplyr::select(Sample) %>%
@@ -338,13 +342,13 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
       # Set `subset_vars_tcr` to whatever it was in the config YAML file
       if(subset_vars_tcr_orig_flagged) subset_vars_tcr <- NULL
       # See if we need to do any subsetting prior to graphing
-      if(flagVariable(subset_vars_tcr)) {
-        # Since there are no subset variables, we will add a column that will act as a dummy subset variable
-        # and change subset_vars_tcr to be the name of this dummy subset variable
+      if(flagVariable(subset_vars_tcr) | "Complete data set" %in% subset_vars_tcr) {
+        # If there are no subset variables/one of them is "Complete data set", we will add a column that will act as a dummy subset variable
+        # and change `subset_vars_tcr` to be the name of this dummy subset variable
         # This will allow us to use one loop for either case (controls switch 1a or 1b)
         pData(target_data_object)[["Complete data set"]] <- "Complete data set"
         pData(target_data_object)[["Complete data set"]] <- as.factor(pData(target_data_object)[["Complete data set"]])
-        subset_vars_tcr <- c("Complete data set") # [is.na(subset_vars_tcr)]
+        subset_vars_tcr <- union(subset_vars_tcr, "Complete data set") # [is.na(subset_vars_tcr)]
         
       } # End control switch 1a (no subset variables) << loop level 1 (model)
       
@@ -369,6 +373,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
           
           pData_sub <- pData(target_data_object) %>% dplyr::filter(!!as.name(subset_var) == subset_var_level)
           for(grouping_var in grouping_vars_tcr) {
+            if(grouping_var==subset_var) next
             plot_list[[grouping_var]] <- list()
             
             # Create the `plot_df` data frame for graphing from `pData_sub`
@@ -434,7 +439,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                 # Create the p-value data frame
                 # p-value data frame: group1, group2, p, y.position, p.label 
                 pvals_df <- da_res_df %>% 
-                  dplyr::filter(fixed_effect == grouping_var) %>% 
+                  dplyr::filter(fixed_effect == grouping_var & subset_var == !!subset_var & subset_var_level == !!subset_var_level) %>%
                   dplyr::select(baseline, term, p.value, metric) %>% 
                   dplyr::rename(group1 = baseline, group2 = term, p = p.value) %>% 
                   # Because the LMM or whatever reformats values with special characters
@@ -444,7 +449,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                                 group2 = group2 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""))
                 
                 # Calculate y.position: slightly above the highest point per facet
-                tops <- plot_df %>%
+                tops <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`
                   group_by(metric) %>% # Group by metric type
                   summarise(y.position = max(value, na.rm = TRUE) * 1.05, .groups = "drop") %>%
                   as.data.frame
@@ -453,7 +458,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                 # The space between brackets should be ~ 10% the range of the points
                 ranges <- plot_df %>% group_by(metric) %>% summarise(range = range(value)) %>% summarise(range = diff(range)) %>% as.data.frame
                 bracket_spacing <- 0.15 * ranges[,2]; names(bracket_spacing) <- ranges[,1]
-                highest_bracket <- bracket_spacing * ((da_res_df %>% dplyr::filter(fixed_effect == grouping_var) %>% nrow()) / 4 - 1)
+                highest_bracket <- bracket_spacing * ((pvals_df %>% nrow()) / 4 - 1)
                 # Calculate the y-positions of the brackets
                 y.position <- c()
                 for(metric_name in metric_names) {
