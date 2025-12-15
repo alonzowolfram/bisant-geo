@@ -368,7 +368,7 @@ if(valid_formula_table) {
                               formula = formula %>% regexPipes::gsub("~ ", ""),
                               cell_type = cell,
                               method = method)
-              model_summary <- model_summary[,c("method", "cell_type", "effect", "fixed_effect", "baseline", "term", "estimate", "std.error",        "statistic", "df", "p.value", "subset_var", "subset_var_level", "formula")]
+              model_summary <- model_summary[,c("method", "cell_type", "effect", "fixed_effect", "baseline", "term", "estimate", "std.error", "statistic", "df", "p.value", "subset_var", "subset_var_level", "formula")]
               
             } else { # Comparisons against a single baseline
               
