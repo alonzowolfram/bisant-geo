@@ -42,10 +42,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     if(str_to_lower(method_16s_probe_selection) == "include") {
       # Include only the probes given by probes_include (of course including the negative probes)
       target_data_object_16s <- subset(target_data_object_16s, TargetName %in% c(probes_include, neg_probes))
-    } else {
+    } else if(str_to_lower(method_16s_probe_selection) == "exclude") {
       # Exclude the probes given by probes_exclude and keep everything else
       target_data_object_16s <- subset(target_data_object_16s, !(TargetName %in% probes_exclude))
-    }
+    } 
+    # Else: don't subset target data object
     
     ## ................................................
     ##

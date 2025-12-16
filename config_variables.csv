@@ -44,7 +44,9 @@ normalization_methods,FALSE,,TRUE
 ann_of_interest,TRUE,,FALSE
 protein_norm_qc_plot_factors,FALSE,,TRUE
 module_16s,FALSE,,FALSE
-method_16s_probe_selection,FALSE,both,FALSE
+method_16s_probe_selection,FALSE,,FALSE
+probes_include_16s,FALSE,,TRUE
+probes_exclude_16s,FALSE,,TRUE
 classification_16s_type,FALSE,score,FALSE
 percentile_16s_cutoff,FALSE,,TRUE
 exprs_16s_type,FALSE,score,FALSE

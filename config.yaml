@@ -299,11 +299,22 @@ experiment:
     module_16s:
 
     # [Optional] Method to determine which probes to use in 16S analysis
-    # "include": include ONLY the probes given in `probes_include` above
-    # "exclude": include ANY probes NOT excluded by the probes given in `probes_exclude` above
-    # "both": makes sure to include the probes given in `probes_include` and exclude the probes given in `probes_exclude`
-    # If no value is given, it will default to "both"
+    # "include": include ONLY the probes given in `probes_include_16s` below
+    # "exclude": include ANY probes NOT excluded by the probes given in `probes_exclude_16s` below
+    # If no value is given, all available probes in the module given by `module_16s` above will be used
     method_16s_probe_selection: include
+    
+    # [Optional] Probes to include in 16S analysis
+    # Only used if `method_16s_probe_selection` above is set to "include", and
+    # if it is, then only the probes given by `probes_include_16s` will be used
+    # Separate multiple probes with commas (",")
+    probes_include_16s:
+    
+    # [Optional] Probes to exclude from 16S analysis
+    # Only used if `method_16s_probe_selection` above is set to "exclude"
+    # then only the probes not in `probes_exclude_16s` will be used
+    # Separate multiple probes with commas (",")
+    probes_exclude_16s:
     
     # [Optional] Whether to use raw 16S expression or the calculated 16S score when classifying 
     # samples as high or low 16S
