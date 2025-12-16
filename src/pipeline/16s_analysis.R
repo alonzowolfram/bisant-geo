@@ -10,8 +10,8 @@ source("src/pipeline/setup.R")
 target_data_object_list <- readRDS(cl_args[5])
 
 # Set the probes to be included/excluded
-probes_include <- probes_include %>% str_split(",") %>% unlist()
-probes_exclude <- probes_exclude %>% str_split(",") %>% unlist()
+probes_include_16s <- probes_include_16s %>% str_split(",") %>% unlist()
+probes_exclude_16s <- probes_exclude_16s %>% str_split(",") %>% unlist()
 
 # Convert any "NA" in `subset_vars_16s` to "Complete data set"
 subset_vars_16s[subset_vars_16s=="NA"] <- "Complete data set"
@@ -40,11 +40,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     # Depending on the value given by `method_16s_probe_selection`,
     # exclude or include probes as appropriate
     if(str_to_lower(method_16s_probe_selection) == "include") {
-      # Include only the probes given by probes_include (of course including the negative probes)
-      target_data_object_16s <- subset(target_data_object_16s, TargetName %in% c(probes_include, neg_probes))
+      # Include only the probes given by probes_include_16s (of course including the negative probes)
+      target_data_object_16s <- subset(target_data_object_16s, TargetName %in% c(probes_include_16s, neg_probes))
     } else if(str_to_lower(method_16s_probe_selection) == "exclude") {
-      # Exclude the probes given by probes_exclude and keep everything else
-      target_data_object_16s <- subset(target_data_object_16s, !(TargetName %in% probes_exclude))
+      # Exclude the probes given by probes_exclude_16s and keep everything else
+      target_data_object_16s <- subset(target_data_object_16s, !(TargetName %in% probes_exclude_16s))
     } 
     # Else: don't subset target data object
     
