@@ -58,108 +58,171 @@ if(species == "Mus musculus") {
 
 # Loop through imm_decon_methods
 imm_decon_res_list <- list()
-for(method in imm_decon_methods) {
-  if(!(method %in% c("quantiseq", "mcp_counter", "xcell", "epic", "abis", "estimate", "spatialdecon", "mmcp_counter"))) {
-    warning(glue::glue("{method} is currently not supported by this pipeline. Please note that TIMER and ConsensusTME, while included in the immunedeconv package, are currently not available in this pipeline due to extra arguments that must be passed to the function; and CIBERSORT will not be available until we figure out how to make the source code play nicely with the immunedeconv package"))
-    next
-  } else {
-    # Error catching: https://stackoverflow.com/a/55937737/23532435
-    skip_to_next <- FALSE
-    
-    # If the method is mmcp_counter, check if the species is mouse (Mus musculus)
-    if(method == "mmcp_counter") {
-      if(species != "Mus musculus") {
-        warning("mMCP-counter can only be used with mouse data. Skipping to the next method")
-        next
-      } else {
-        # Using a mouse method on mouse data. Do not convert to orthologues
-        exprs_mat_effective <- exprs_mat
-      }
+if(analyte=="protein") {
+  
+  for(method in imm_decon_methods) {
+    if(!(method %in% c("protein_cell_abundance"))) {
+      warning(glue::glue("{method} is not currently supported by this pipeline"))
+      next
     } else {
-      # If the current method is not mMCP-counter, check the species
-      if(species == "Mus musculus") {
-        # Using a human method on mouse data. Convert to orthologues
-        exprs_mat_effective <- exprs_mat_ortho
-      } else {
-        # Using a human method on human data. Do not convert to orthologues
-        exprs_mat_effective <- exprs_mat
-      }
-    }
-    
-    # Special steps needed for SpatialDecon
-    if(method == "spatialdecon") {
-      # The spatialdecon function takes 3 arguments of expression data:
-      #   
-      # 1. The normalized data
-      # 2. A matrix of expected background for all data points in the normalized data matrix
-      # 3. Optionally, either a matrix of per-data-point weights, or the raw data, which is used to derive weights (low counts are less statistically stable, and this allows spatialdecon to down-weight them)
-      # https://bioconductor.org/packages/release/bioc/vignettes/SpatialDecon/inst/doc/SpatialDecon_vignette_NSCLC.html
+      # Error catching: https://stackoverflow.com/a/55937737/23532435
+      skip_to_next <- FALSE
       
-      # If the user provided a custom profile matrix, load it
-      load_safeTME <- TRUE
-      if(!flagVariable(spatial_decon_profile_matrix)) {
-        if(file.exists(spatial_decon_profile_matrix)) {
-          load_spatial_decon_profile_matrix <- tryCatch(
-                                                        {load(spatial_decon_profile_matrix)}, 
-                                                        error = function(msg) {return(NA)}
-                                                        )
-          if(exists("profile_matrix")) load_safeTME <- FALSE
+      # Check that everything is provided for the selected method
+      if(method=="protein_cell_abundance") {
+        if(flagVariable(protein_cell_marker_db)) {
+          skip_to_next <- TRUE
+        } else {
+          if(!file.exists(protein_cell_marker_db)) {
+            skip_to_next <- TRUE
+          }
+        }
+        
+        # If everything is there, make sure it's the correct file format
+        # Read in the file and check that it has at least one entry
+        message("Checking provided protein marker database")
+        if(base::grepl("\\.csv$", protein_cell_marker_db)) { imm_marker_db <- read.csv(protein_cell_marker_db, header = F)}
+        else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = F, sep = "\t") }
+        else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = F, na = "NA")}
+        else {skip_to_next <- TRUE}
+      } # End checks for "protein_cell_abundance" method
+      
+      if(skip_to_next) {
+        warning(glue::glue("Could not run method {method}. Please provide all required inputs, or check that paths to provided inputs are correct (file exists, file is the correct format)"))
+        next
+      }
+      
+      # Perform immune deconvolution
+      imm_decon_res <- data.frame()
+      for(module in imm_marker_db$module %>% unique) {
+        message(glue::glue("Performing immune deconvolution for protein, cell type/module {module}"))
+        
+        # Get the identity marker proteins
+        id_marker_prots <- imm_marker_db %>% dplyr::filter(module == !!module) %>% .[["target"]]
+        
+        # Calculate the score for each sample
+        score_mat <- exprs_mat %>% .[rownames(.) %in% id_marker_prots,,drop=F] %>% colSums() %>% as.matrix %>% t
+        rownames(score_mat) <- module
+        imm_decon_res <- rbind(imm_decon_res, score_mat)
+        
+      }
+      imm_decon_res <- imm_decon_res %>% as.data.frame %>% tibble::rownames_to_column(var = "cell_type")
+      
+      if(skip_to_next) {
+        warning(glue::glue("An error occurred when trying to run immune deconvolution method {method}. Skipping to the next method"))
+        next
+      }
+      
+      imm_decon_res_list[[method]] <- imm_decon_res
+      
+    } # End check for valid immune deconvolution method
+  } # End for() loop: immune deconvolution methods
+  
+} else {
+  for(method in imm_decon_methods) {
+    if(!(method %in% c("quantiseq", "mcp_counter", "xcell", "epic", "abis", "estimate", "spatialdecon", "mmcp_counter"))) {
+      warning(glue::glue("{method} is not currently supported by this pipeline. Please note that TIMER and ConsensusTME, while included in the immunedeconv package, are currently not available in this pipeline due to extra arguments that must be passed to the function; and CIBERSORT will not be available until we figure out how to make the source code play nicely with the immunedeconv package"))
+      next
+    } else {
+      # Error catching: https://stackoverflow.com/a/55937737/23532435
+      skip_to_next <- FALSE
+      
+      # If the method is mmcp_counter, check if the species is mouse (Mus musculus)
+      if(method == "mmcp_counter") {
+        if(species != "Mus musculus") {
+          warning("mMCP-counter can only be used with mouse data. Skipping to the next method")
+          next
+        } else {
+          # Using a mouse method on mouse data. Do not convert to orthologues
+          exprs_mat_effective <- exprs_mat
+        }
+      } else {
+        # If the current method is not mMCP-counter, check the species
+        if(species == "Mus musculus") {
+          # Using a human method on mouse data. Convert to orthologues
+          exprs_mat_effective <- exprs_mat_ortho
+        } else {
+          # Using a human method on human data. Do not convert to orthologues
+          exprs_mat_effective <- exprs_mat
         }
       }
-      if(load_safeTME) { 
-        message(glue::glue("The default reference matrix, safeTME, will be used with the SpatialDecon method. If this was not your intended reference matrix, you may have either 1) left the `spatial_decon_profile_matrix` field in the configuration YAML file blank or 2) did not fill in a full path to an .RData file containing an object named `profile_matrix`: a matrix with genes as rows and cell types as columns. If you did intend to use safeTME, you can safely ignore this message"))
-        profile_matrix <- safeTME 
-      }
       
-      # Estimate each data point's expected BG from the negative control probes from its corresponding observation
-      # Also, the SpatialDecon algorithm will do its own background subtraction
-      # so we have to give it data that has been normalized using a non BG-sub method (otherwise we'll get a LinAlg error)
-      # we'll go with quant
-      negnames <- fData(target_data_object_exprs) %>% 
-        dplyr::filter(Negative == TRUE & Module %in% modules_exprs) %>% 
-        .$TargetName
-      bg <- derive_GeoMx_background(norm = target_data_object_exprs@assayData[["quant"]],
-                                    probepool = fData(target_data_object_exprs)$Module,
-                                    negnames = negnames)
-      
-      signif(profile_matrix[seq_len(3), seq_len(3)], 2)
-      # heatmap(sweep(safeTME, 1, apply(safeTME, 1, max), "/"),
-      #         labRow = NA, margins = c(10, 5))
-      
-      # Set the cell profile matrix based on the species
-      if(species == "Homo sapiens" & !exists("profile_matrix")) {
-        cpm <- safeTME
-        message("Using safeTME as reference (profile) matrix for SpatialDecon")
+      # Special steps needed for SpatialDecon
+      if(method == "spatialdecon") {
+        # The spatialdecon function takes 3 arguments of expression data:
+        #   
+        # 1. The normalized data
+        # 2. A matrix of expected background for all data points in the normalized data matrix
+        # 3. Optionally, either a matrix of per-data-point weights, or the raw data, which is used to derive weights (low counts are less statistically stable, and this allows spatialdecon to down-weight them)
+        # https://bioconductor.org/packages/release/bioc/vignettes/SpatialDecon/inst/doc/SpatialDecon_vignette_NSCLC.html
+        
+        # If the user provided a custom profile matrix, load it
+        load_safeTME <- TRUE
+        if(!flagVariable(spatial_decon_profile_matrix)) {
+          if(file.exists(spatial_decon_profile_matrix)) {
+            load_spatial_decon_profile_matrix <- tryCatch(
+              {load(spatial_decon_profile_matrix)}, 
+              error = function(msg) {return(NA)}
+            )
+            if(exists("profile_matrix")) load_safeTME <- FALSE
+          }
+        }
+        if(load_safeTME) { 
+          message(glue::glue("The default reference matrix, safeTME, will be used with the SpatialDecon method. If this was not your intended reference matrix, you may have either 1) left the `spatial_decon_profile_matrix` field in the configuration YAML file blank or 2) did not fill in a full path to an .RData file containing an object named `profile_matrix`: a matrix with genes as rows and cell types as columns. If you did intend to use safeTME, you can safely ignore this message"))
+          profile_matrix <- safeTME 
+        }
+        
+        # Estimate each data point's expected BG from the negative control probes from its corresponding observation
+        # Also, the SpatialDecon algorithm will do its own background subtraction
+        # so we have to give it data that has been normalized using a non BG-sub method (otherwise we'll get a LinAlg error)
+        # we'll go with quant
+        negnames <- fData(target_data_object_exprs) %>% 
+          dplyr::filter(Negative == TRUE & Module %in% modules_exprs) %>% 
+          .$TargetName
+        bg <- derive_GeoMx_background(norm = target_data_object_exprs@assayData[["quant"]],
+                                      probepool = fData(target_data_object_exprs)$Module,
+                                      negnames = negnames)
+        
+        signif(profile_matrix[seq_len(3), seq_len(3)], 2)
+        # heatmap(sweep(safeTME, 1, apply(safeTME, 1, max), "/"),
+        #         labRow = NA, margins = c(10, 5))
+        
+        # Set the cell profile matrix based on the species
+        if(species == "Homo sapiens" & !exists("profile_matrix")) {
+          cpm <- safeTME
+          message("Using safeTME as reference (profile) matrix for SpatialDecon")
+        } else {
+          cpm <- profile_matrix %>% as.matrix
+          message("Using custom reference (profile) matrix for SpatialDecon")
+        }
+        
+        # Run spatial deconvolution
+        system.time({
+          res <- tryCatch(runspatialdecon(object = target_data_object_exprs,
+                                          norm_elt = "quant", # "neg_norm"   "log_norm"   "bg_sub"     "exprs"      "bg_sub_neg" "quant"      "bg_sub_q3"  "q3_norm"   
+                                          raw_elt = "exprs",
+                                          X = cpm,
+                                          align_genes = TRUE#,
+                                          #cell_counts = pData(target_data_object_exprs)
+          ),
+          error = function(e) {skip_to_next <<- TRUE})
+        })
+        if(class(res) != "logical") imm_decon_res <- res$beta %>% t %>% as.data.frame %>% rownames_to_column("cell_type")
       } else {
-        cpm <- profile_matrix %>% as.matrix
-        message("Using custom reference (profile) matrix for SpatialDecon")
+        imm_decon_res <- tryCatch(immunedeconv::deconvolute(exprs_mat_effective, method),
+                                  error = function(e) {skip_to_next <<- TRUE})
       }
       
-      # Run spatial deconvolution
-      system.time({
-        res <- tryCatch(runspatialdecon(object = target_data_object_exprs,
-                                        norm_elt = "quant", # "neg_norm"   "log_norm"   "bg_sub"     "exprs"      "bg_sub_neg" "quant"      "bg_sub_q3"  "q3_norm"   
-                                        raw_elt = "exprs",
-                                        X = cpm,
-                                        align_genes = TRUE#,
-                                        #cell_counts = pData(target_data_object_exprs)
-                                        ),
-                        error = function(e) {skip_to_next <<- TRUE})
-      })
-      if(class(res) != "logical") imm_decon_res <- res$beta %>% t %>% as.data.frame %>% rownames_to_column("cell_type")
-    } else {
-      imm_decon_res <- tryCatch(immunedeconv::deconvolute(exprs_mat_effective, method),
-                                error = function(e) {skip_to_next <<- TRUE})
-    }
-    
-    if(skip_to_next) {
-      warning(glue::glue("An error occurred when trying to run immune deconvolution method {method}. Skipping to the next method"))
-      next
-    }
-    
-    imm_decon_res_list[[method]] <- imm_decon_res
-  }
-}
+      if(skip_to_next) {
+        warning(glue::glue("An error occurred when trying to run immune deconvolution method {method}. Skipping to the next method"))
+        next
+      }
+      
+      imm_decon_res_list[[method]] <- imm_decon_res
+      
+    } # End check for valid immune deconvolution method
+  } # End for() loop: immune deconvolution methods
+} # End else: analyte is RNA
 
 ## ................................................
 ##
@@ -171,7 +234,7 @@ for(method in imm_decon_methods) {
 # Per https://omnideconv.org/immunedeconv/articles/immunedeconv.html,
 # the following methods allow between-sample comparisons:
 # MCP-counter, xCell, TIMER, ConsensusTME, ESTIMATE, ABIS, mMCP-counter, BASE, EPIC, quanTIseq, CIBERSORT abs., seqImmuCC
-between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq", "spatialdecon")
+between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_counter", "epic", "quantiseq", "spatialdecon", "protein_cell_abundance")
 
 # Create a list to hold the excluded levels for each grouping variable/first fixed effect
 # These will be generated in the loop for the differential analysis
@@ -179,7 +242,7 @@ between_sample_methods <- c("mcp_counter", "xcell", "estimate", "abis", "mmcp_co
 excluded_levels_list <- list()
 
 # Check if the formula table has been provided
-# If formula_table_imm_decon_file is provided, check that it's a valid file
+# If `formula_table_imm_decon_file` is provided, check that it's a valid file
 # If not, skip differential analysis
 valid_formula_table <- TRUE
 if(!flagVariable(formula_table_file_imm_decon)) { 

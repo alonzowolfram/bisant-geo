@@ -74,6 +74,7 @@ n_max_pathways,FALSE,15,FALSE
 fgsea_graph_colors,FALSE,,TRUE
 modules_exprs,FALSE,,FALSE
 imm_decon_methods,FALSE,,TRUE
+protein_cell_marker_db,FALSE,,FALSE
 spatial_decon_profile_matrix,FALSE,,FALSE
 spatial_decon_cells_plot,FALSE,,TRUE
 observation_identifiers,FALSE,,TRUE

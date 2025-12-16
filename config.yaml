@@ -561,6 +561,7 @@ experiment:
     # [Optional] names of immune deconvolution methods to use
     # Multiple values are accepted; separate them with a comma (",")
     # Possible values:
+    # (RNA only)
     # quantiseq
     # [CURRENTLY UNAVAILABLE] cibersort
     # [CURRENTLY UNAVAILABLE] cibersort_abs
@@ -570,7 +571,17 @@ experiment:
     # abis
     # estimate
     # spatialdecon
+    # (protein only)
+    # protein_cell_abundance
     imm_decon_methods: mcp_counter,quantiseq
+    
+    # [Optional] For method "protein_cell_abundance" only, path to a CSV, TSV, or Excel (.xlsx) file
+    # containing a cell-marker database in the following format:
+    # first column: named "module", containing the arbitrary cell types or cell modules (e.g. "CD4_T", "CD4_T_activated", etc.)
+    # second column: named "target", containing the identifier for the protein marker(s) for its corresponding module. One protein marker per row
+    # optional third+ columns: columns containing arbitrary metadata
+    # If not provided, cell deconvolution using "protein_cell_abundance" will be skipped
+    protein_cell_marker_db:
     
     # [Optional] For method "spatialdecon" only, path to an .RData file containing a custom cell profile matrix with the following components:
     # profile_matrix: A matrix with genes as rows, cell types as columns
