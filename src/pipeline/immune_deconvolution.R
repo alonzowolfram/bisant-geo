@@ -81,9 +81,9 @@ if(analyte=="protein") {
         # If everything is there, make sure it's the correct file format
         # Read in the file and check that it has at least one entry
         message("Checking provided protein marker database")
-        if(base::grepl("\\.csv$", protein_cell_marker_db)) { imm_marker_db <- read.csv(protein_cell_marker_db, header = F)}
-        else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = F, sep = "\t") }
-        else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = F, na = "NA")}
+        if(base::grepl("\\.csv$", protein_cell_marker_db)) { imm_marker_db <- read.csv(protein_cell_marker_db, header = T)}
+        else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = T, sep = "\t") }
+        else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = T, na = "NA")}
         else {skip_to_next <- TRUE}
       } # End checks for "protein_cell_abundance" method
       
