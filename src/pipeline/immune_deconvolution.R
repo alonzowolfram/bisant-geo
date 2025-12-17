@@ -101,7 +101,13 @@ if(analyte=="protein") {
         id_marker_prots <- imm_marker_db %>% dplyr::filter(module == !!module) %>% .[["target"]]
         
         # Calculate the score for each sample
-        score_mat <- exprs_mat %>% .[rownames(.) %in% id_marker_prots,,drop=F] %>% colSums() %>% as.matrix %>% t
+        score_mat <- exprs_mat %>% 
+          .[rownames(.) %in% id_marker_prots,,drop=F] %>% 
+          # Remove rows with 0 variance (https://stackoverflow.com/questions/50005717/remove-rows-with-zero-variance-in-r)
+          .[apply(., 1, var) != 0, ] %>% 
+          t %>% scale(center = TRUE, scale = TRUE) %>% t %>%
+          colSums() %>% 
+          as.matrix %>% t
         rownames(score_mat) <- module
         imm_decon_res <- rbind(imm_decon_res, score_mat)
         
@@ -655,8 +661,8 @@ for(method in names(imm_decon_res_list)) {
           } # End chunking group for() loop
         } # End if method is one of the dot-plot ones
         
-        # For SpatialDecon and MCPCounter, create a box/violin/dot plot to show between-sample (within-cell-type) comparisons
-        if(method %in% c("spatialdecon", "mcp_counter")) {
+        # For SpatialDecon, MCPCounter, and protein cell abundance, create a box/violin/dot plot to show between-sample (within-cell-type) comparisons
+        if(method %in% c("spatialdecon", "mcp_counter", "protein_cell_abundance")) {
           for(group in unique(plot_df$ChunkingGroup)) {
             message(glue::glue("Creating boxplot for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
             
