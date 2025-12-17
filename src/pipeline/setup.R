@@ -1,7 +1,7 @@
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##   License ----
 ##
-#     bisantine-geo is a Snakemake pipeline for processing, running QC on, and analyzing NanoString GeoMx spatial transcriptomics data.
+#     bisantine-geo is a Snakemake pipeline for processing, running QC on, and analyzing NanoString (Bruker) GeoMx spatial transcriptomics data.
 #     Copyright (C) 2024 Lon Fong.
 
 #     This program is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@ gsub <- base::gsub
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Load required functions
-library(tidyverse) # For a data-science focused data "grammar".
+library(tidyverse) # For a data-science focused data "grammar"
 ## Function to add a slash to a directory path if it doesn't have one already
 appendSlashToPath <- function(x) {
   ifelse(base::grepl("\\/$", x), x, paste0(x, "/"))
@@ -161,7 +161,7 @@ extractVariables <- function(formula_str) {
     unlist() %>%
     regexPipes::gsub("[\\(\\)]", "") %>% 
     str_trim() %>% 
-    # Remove "1"s.
+    # Remove "1"s
     regexPipes::grep("[1]{1}", invert = TRUE, value = TRUE)
   
   # Remove empty elements and return unique variable names
@@ -325,9 +325,9 @@ output_dir_imgs <- ""
 if(workflow_system != "Nextflow") {
   ## Output
   output_dir <- paste0(appendSlashToPath(cl_args[4]))
-  ### Create the directory if it doesn't already exist. 
+  ### Create the directory if it doesn't already exist
   if(!dir.exists(output_dir)) dir.create(output_dir)
-  ### Create the folder structure within the output_dir.
+  ### Create the folder structure within the output_dir
   for(subdir in c("config", "logs", "pubs", "Rdata", "tabular")) {
     subdir_path <- file.path(output_dir, subdir)
     if(!dir.exists(subdir_path)) dir.create(subdir_path)

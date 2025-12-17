@@ -433,7 +433,7 @@ for(subset_var in names(plot_list_diff_exprs)) {
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-message("Exporting differential expression analysis results.")
+message("Exporting differential expression analysis results")
 
 # Export tables of DE genes to CSV.
 results2 %>% write.csv(paste0(output_dir_tabular, "LMM-differential-expression_results.csv")) 
@@ -444,4 +444,4 @@ saveRDS(plot_list_diff_exprs_grid, paste0(output_dir_rdata, "LMM-DEG_volcano-plo
 # Update latest module completed.
 updateLatestModule(output_dir_rdata, current_module)
 
-message("Differential expression analysis results successfully exported.")
+message("Differential expression analysis results successfully exported")

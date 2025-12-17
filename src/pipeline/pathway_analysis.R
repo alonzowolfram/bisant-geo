@@ -9,7 +9,7 @@ message("Setting up for pathway analysis")
 source("src/pipeline/setup.R")
 
 # Read in the DE genes table
-message("Reading in DE genes table.")
+message("Reading in DE genes table")
 results2 <- read.csv(cl_args[5], row.names = 1, check.names = FALSE)
 print(paste0("results2 dimensions: ", dim(results2)))
 
