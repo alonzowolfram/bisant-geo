@@ -223,6 +223,10 @@ experiment:
     # [REQUIRED] Minimum limit of quantification (LOQ) (2) 
     # Values that fall below the cutoff given by {loq_sd_cutoff} are thresholded to this value
     min_loq: 2
+    
+    # [Optional] (Protein only) log2(signal:noise ratio) a protein must have to "pass" in a given ROI
+    # If left blank, will default to 1
+    min_log2_protein_snr: 1
 
     # In some of the segments, the gene detection rate (i.e. the % of genes that are above the LOQ)
     # is low compared to the other segments in the study
@@ -234,6 +238,7 @@ experiment:
 
     # [REQUIRED] The percent of segments a gene must be detected in order to be kept (5)
     # We typically want to pick a cutoff that will leave us with at least 8000 genes
+    # For protein modules only, detection means having a signal:noise ratio of >= 2
     percent_of_segments: 5
 
     # [REQUIRED] Probes to exclude from the analysis. Separate probes with commas (",")
@@ -244,7 +249,7 @@ experiment:
     # [Optional] Probes to specifically include the analysis. regardless of if they pass QC or not
     # Separate probes with commas (",")
     # If there are no probes you specifically want to include, input "None"
-    # Note that this will not prevent removal of segments with these probes
+    # Note that this will not prevent removal of segments with these probes in RNA analysis
     # If segments that fail QC are the only segments that contain these probes, the probes will be excluded by default
     probes_include: None
     
@@ -256,8 +261,6 @@ experiment:
     # Separate modules with commas (",")
     # If not provided, will not perform filtering
     modules_filter_probes: Hs_R_NGS_WTA_v1.0
-    
-    # [Optional] Modules for which to aggregate probes to target level
 
   # ----------------------------------------------------------------------
   #     Normalization settings

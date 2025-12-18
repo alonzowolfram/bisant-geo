@@ -34,6 +34,7 @@ min_probe_ratio,FALSE,0.1,FALSE
 percent_fail_grubbs,FALSE,20,FALSE
 loq_sd_cutoff,FALSE,2,FALSE
 min_loq,FALSE,2,FALSE
+min_log2_protein_snr,FALSE,1,FALSE
 gene_detection_rate,FALSE,5,FALSE
 percent_of_segments,FALSE,5,FALSE
 probes_exclude,FALSE,,TRUE
