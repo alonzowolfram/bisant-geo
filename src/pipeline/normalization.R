@@ -355,5 +355,8 @@ saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_no
 # Save the graphs.
 saveRDS(plot_list_normalization, paste0(output_dir_rdata, "normalization_plot_list.rds"))
 
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_normalization.RData"))
+
 # Update latest module completed.
 updateLatestModule(output_dir_rdata, current_module)

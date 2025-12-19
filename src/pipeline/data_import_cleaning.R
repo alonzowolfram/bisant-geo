@@ -342,5 +342,8 @@ for(module in names(data_object_list)) {
 # Export the NanoStringGeoMxSet object.
 saveRDS(data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw.rds"))
 
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_data_import_cleaning.RData"))
+
 # Update latest pipeline module completed.
 updateLatestModule(output_dir_rdata, current_module)

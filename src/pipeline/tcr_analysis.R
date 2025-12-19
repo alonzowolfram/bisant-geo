@@ -542,3 +542,9 @@ saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_TC
 if(exists("plot_list")) plot_list %>% saveRDS(paste0(output_dir_rdata, "TCR-analysis_plots-list.rds"))
 # Export the LMM results
 if(exists("da_res_df")) da_res_df %>% saveRDS(paste0(output_dir_rdata, "TCR-analysis_LMM-results.rds"))
+
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_tcr_analysis.RData"))
+
+# Update latest module completed.
+updateLatestModule(output_dir_rdata, current_module)

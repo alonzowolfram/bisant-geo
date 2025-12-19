@@ -373,3 +373,9 @@ pathway_df %>% write.csv(paste0(output_dir_tabular, "pathway-analysis_results.cs
 plot_list_pathway_analysis %>% saveRDS(paste0(output_dir_rdata, "pathway-analysis_raw-plots-list.rds"))
 # Export the grid-arranged plots as RDS file
 plot_list_pathway_analysis_grid %>% saveRDS(paste0(output_dir_rdata, "pathway-analysis_grid-arranged-plots-list.rds"))
+
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_pathway_analysis.RData"))
+
+# Update latest module completed.
+updateLatestModule(output_dir_rdata, current_module)

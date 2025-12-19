@@ -554,5 +554,8 @@ if(exists("plot_list")) saveRDS(plot_list, paste0(output_dir_rdata, "16S-analysi
 # Export the LMM results
 if(exists("da_res_df")) da_res_df %>% saveRDS(paste0(output_dir_rdata, "16S-analysis_LMM-results.rds"))
 
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_16s_analysis.RData"))
+
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)

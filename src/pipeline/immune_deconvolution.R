@@ -105,12 +105,12 @@ if(analyte=="protein") {
           .[rownames(.) %in% id_marker_prots,,drop=F] %>% 
           # Remove rows with 0 variance (https://stackoverflow.com/questions/50005717/remove-rows-with-zero-variance-in-r)
           .[apply(., 1, var) != 0, ] %>% 
-          t %>% scale(center = TRUE, scale = TRUE) %>% t %>%
+          # 2025/12/19: for now, we won't scale the expression
+          # t %>% scale(center = TRUE, scale = TRUE) %>% t %>%
           colSums() %>% 
           as.matrix %>% t
         rownames(score_mat) <- module
         imm_decon_res <- rbind(imm_decon_res, score_mat)
-        
       }
       imm_decon_res <- imm_decon_res %>% as.data.frame %>% tibble::rownames_to_column(var = "cell_type")
       
@@ -821,3 +821,9 @@ if(exists("da_res_df")) {
 }
 # Export the raw plots as RDS file
 plot_list %>% saveRDS(paste0(output_dir_rdata, "immune-deconvolution_plots-list.rds"))
+
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_immune_deconvolution.RData"))
+
+# Update latest module completed.
+updateLatestModule(output_dir_rdata, current_module)

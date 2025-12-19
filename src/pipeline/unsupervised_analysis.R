@@ -399,5 +399,8 @@ saveRDS(plot_list_heatmap, paste0(output_dir_rdata, "plot-list_cv_heatmaps.rds")
 # Save the CV results to CSV
 write.table(cv_res, paste0(output_dir_tabular, "CV_results_by-normalization-method.csv"), sep = ",")
 
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_unsupervised_analysis.RData"))
+
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)

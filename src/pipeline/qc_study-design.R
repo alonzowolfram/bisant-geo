@@ -62,5 +62,8 @@ saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw_main-modul
 # Save the PKC summary table.
 saveRDS(pkc_summary, paste0(output_dir_rdata, "pkc_summary_table.rds"))
 
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_qc_study-design.RData"))
+
 # Update latest module completed.
 updateLatestModule(output_dir_rdata, current_module)

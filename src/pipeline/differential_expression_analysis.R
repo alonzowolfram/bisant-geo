@@ -441,6 +441,9 @@ results2 %>% write.csv(paste0(output_dir_tabular, "LMM-differential-expression_r
 saveRDS(plot_list_diff_exprs, paste0(output_dir_rdata, "LMM-DEG_volcano-plots.rds"))
 saveRDS(plot_list_diff_exprs_grid, paste0(output_dir_rdata, "LMM-DEG_volcano-plot_grids.rds"))
 
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_differential_expression_analysis.RData"))
+
 # Update latest module completed.
 updateLatestModule(output_dir_rdata, current_module)
 

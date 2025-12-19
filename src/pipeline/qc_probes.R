@@ -460,5 +460,8 @@ if(exists("goi_df")) saveRDS(goi_df, paste0(output_dir_rdata, "genes-of-interest
 # Save the protein QC table
 if(exists("protein_qc_table")) saveRDS(protein_qc_table, paste0(output_dir_rdata, "protein-QC-table.rds"))
 
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_qc_probes.RData"))
+
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)

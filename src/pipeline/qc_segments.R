@@ -160,5 +160,8 @@ if(exists("ntc_table")) saveRDS(ntc_table, paste0(output_dir_rdata, "ntc_summary
 # Export the list of graphs
 saveRDS(plot_list_segment_qc, paste0(output_dir_rdata, "qc-segments_plot_list.rds"))
 
+# Save environment to .Rdata
+save.image(paste0(output_dir_rdata, "env_qc_segments.RData"))
+
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)
