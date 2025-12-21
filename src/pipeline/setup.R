@@ -283,6 +283,7 @@ library(knitr) # For tables
 library(lme4) # Linear mixed models, used in differential expression and differential abundance analyses
 library(msigdbr) # Connecting to MSigDB
 library(NanoStringNCTools) # For NanoString stuff
+library(networkD3) # For Sankey plots
 library(officer) # For PowerPoint output
 library(openxlsx) # For reading and writing Microsoft Excel files
 library(pheatmap) # For heatmaps
