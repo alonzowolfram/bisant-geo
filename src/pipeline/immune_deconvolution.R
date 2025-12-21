@@ -292,7 +292,7 @@ if(valid_formula_table) {
     excluded_levels <- formula_table_imm_decon[i,4] %>% as.character %>% str_split(";") %>% unlist
     
     # Strip anything before the `~`.
-    formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
+    formula <- formula %>% pipe.gsub("^([[:space:]]|.)*~", "~")
     # Extract variables from formula
     formula_vars <- extractVariables(formula) # Input: string
     # Extract first fixed effect from formula
@@ -434,7 +434,7 @@ if(valid_formula_table) {
                 dplyr::rename(std.error = SE) %>% 
                 dplyr::mutate(subset_var = subset_var, 
                               subset_var_level = subset_var_level, 
-                              formula = formula %>% regexPipes::gsub("~ ", ""),
+                              formula = formula %>% pipe.gsub("~ ", ""),
                               cell_type = cell,
                               method = method)
               model_summary <- model_summary[,c("method", "cell_type", "effect", "fixed_effect", "baseline", "term", "estimate", "std.error", "statistic", "df", "p.value", "subset_var", "subset_var_level", "formula")]
@@ -499,7 +499,7 @@ if(valid_formula_table) {
 pData_tmp <- pData(target_data_object) %>% as.data.frame %>% tibble::rownames_to_column(var = "rownames")
 observation_identifiers <- intersect(observation_identifiers, colnames(pData_tmp)) # Make sure the observation identifiers are actually in the pData.
 pData_tmp <- pData_tmp %>% tidyr::unite("All ROIs", c(observation_identifiers, rownames), remove = FALSE, na.rm = FALSE, sep = " | ") 
-pData_tmp$`All ROIs` <- pData_tmp$`All ROIs` %>% regexPipes::gsub("\\.dcc", "")
+pData_tmp$`All ROIs` <- pData_tmp$`All ROIs` %>% pipe.gsub("\\.dcc", "")
 pData_tmp$`Complete data set` <- "Complete data set"
 plot_list <- list()
 
@@ -559,7 +559,7 @@ for(method in names(imm_decon_res_list)) {
           plot_df <- df2 %>% 
             gather(`All ROIs`, score, -cell_type)
         }
-        plot_df$`All ROIs` <- plot_df$`All ROIs` %>% regexPipes::gsub("\\.dcc", "")
+        plot_df$`All ROIs` <- plot_df$`All ROIs` %>% pipe.gsub("\\.dcc", "")
         
         # Add the grouping variable by left_join
         plot_df <- plot_df %>% 
@@ -710,8 +710,8 @@ for(method in names(imm_decon_res_list)) {
                   # Because the LMM or whatever reformats values with special characters
                   # by enclosing them in parentheses ("()"), we need to strip those parentheses
                   # out of the values, otherwise it will cause weird stuff to happen with the graphing
-                  dplyr::mutate(group1 = group1 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""),
-                                group2 = group2 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""))
+                  dplyr::mutate(group1 = group1 %>% pipe.gsub("^\\(", "") %>% pipe.gsub("\\)$", ""),
+                                group2 = group2 %>% pipe.gsub("^\\(", "") %>% pipe.gsub("\\)$", ""))
                 
                 # Calculate y.position: slightly above the highest point per facet
                 tops <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`

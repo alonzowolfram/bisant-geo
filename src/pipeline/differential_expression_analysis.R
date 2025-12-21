@@ -137,7 +137,7 @@ for (lmm_formula in lmm_formulae_de) {
           as.data.frame() %>% 
           tibble::rownames_to_column(var = "Contrast") %>% 
           mutate(
-            Contrast = Contrast %>% regexPipes::gsub("\\.[[:digit:]]+$", "") %>% regexPipes::gsub("\\.{3}", " \\- "),
+            Contrast = Contrast %>% pipe.gsub("\\.[[:digit:]]+$", "") %>% pipe.gsub("\\.{3}", " \\- "),
             Gene = rep(colnames(mixedOutmc), each = n()/ncol(mixedOutmc)),
             `Subset variable` = subset_var,
             `Subset level` = subset_level,

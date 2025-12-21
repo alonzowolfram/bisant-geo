@@ -47,14 +47,14 @@ if(analyte=="protein") {
       as.data.frame() %>% 
       mutate(IgG_bg = exp(rowMeans(log(select(., all_of(igg_names)) + 1)))) %>% 
       tibble::rownames_to_column(var = "sample") %>% 
-      dplyr::mutate(sample = sample %>% regexPipes::gsub("-[[:alpha:]]{1}-", "-")) %>% 
+      dplyr::mutate(sample = sample %>% pipe.gsub("-[[:alpha:]]{1}-", "-")) %>% 
       dplyr::select(sample, IgG_bg)
     
     # Calculate signal:noise ratios
     df <- exp_protein %>% t %>% as.data.frame %>% 
       as.data.frame() %>% 
       tibble::rownames_to_column(var = "sample") %>% 
-      dplyr::mutate(sample = sample %>% regexPipes::gsub("-[[:alpha:]]{1}-", "-")) %>%
+      dplyr::mutate(sample = sample %>% pipe.gsub("-[[:alpha:]]{1}-", "-")) %>%
       # Get into long form as required by ggplot2
       reshape2::melt(id.vars = c("sample"), variable.name = "protein", value.name = "expression") %>%
       # Left join BG
@@ -234,7 +234,7 @@ if(analyte=="protein") {
     gc()
   }
   # If any combined modules exist, use the LOQ from the WTA module
-  combined_modules <- names(target_data_object_list) %>% regexPipes::grep("combined_module", value = TRUE)
+  combined_modules <- names(target_data_object_list) %>% pipe.grep("combined_module", value = TRUE)
   if(length(combined_modules) > 0) {
     for(combined_module in combined_modules) {
       target_data_object <- target_data_object_list[[combined_module]]

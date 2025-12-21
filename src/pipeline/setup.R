@@ -43,6 +43,17 @@ gsub <- base::gsub
 
 # Load required functions
 library(tidyverse) # For a data-science focused data "grammar"
+## Load helper functions
+workflow_system <- cl_args[2]
+if(workflow_system=="Nextflow") {
+  path <- Sys.getenv("PATH") |> strsplit(":")
+  bin_path <- tail(path[[1]], n=1)
+  source(file.path(bin_path, "functions/helper_functions.R"))
+} else {
+  bin_path <- ""
+  source("src/functions/helper_functions.R")
+}
+
 ## Function to add a slash to a directory path if it doesn't have one already
 appendSlashToPath <- function(x) {
   ifelse(base::grepl("\\/$", x), x, paste0(x, "/"))
@@ -159,10 +170,10 @@ extractVariables <- function(formula_str) {
   formula_vars <- str_remove(formula_str, "\\~") %>%
     str_split("\\+|\\|") %>%
     unlist() %>%
-    regexPipes::gsub("[\\(\\)]", "") %>% 
+    pipe.gsub("[\\(\\)]", "") %>% 
     str_trim() %>% 
     # Remove "1"s
-    regexPipes::grep("[1]{1}", invert = TRUE, value = TRUE)
+    pipe.grep("[1]{1}", invert = TRUE, value = TRUE)
   
   # Remove empty elements and return unique variable names
   return(unique(formula_vars[formula_vars != ""]))
@@ -258,17 +269,15 @@ error_msg_list <- validateProcessConfig(config_metadata_path)
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 library(broom.mixed) # For tidy() function to clean up LMM output
 library(cowplot) # For plot_grid
-library(e1071) # Required by CIBERSORT
 library(emmeans) # Used for post-hoc pairwise comparisons after linear mixed modeling
 library(fgsea) # For GSEA
 library(GeomxTools) # For NanoString GeoMx stuff
-library(GenomicRanges) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
 library(ggforce) # I have no idea
 library(ggplotify) # Convert grobs (such as those created by grid) into ggplot objects, so we can display them in Rmd
 library(ggpubr) # For annotate_figure(), as_ggplot()
 library(ggrepel) # For graphing
 library(grid) # For textGrob()
-library(gridExtra) # Not sure, but I'm using so many plot-related packages, why not just throw in another one
+library(gridExtra) # For arrangeGrob / grid.arrange
 library(immunedeconv) # One-stop shop for immune deconvolution
 library(knitr) # For tables
 library(lme4) # Linear mixed models, used in differential expression and differential abundance analyses
@@ -276,13 +285,9 @@ library(msigdbr) # Connecting to MSigDB
 library(NanoStringNCTools) # For NanoString stuff
 library(officer) # For PowerPoint output
 library(openxlsx) # For reading and writing Microsoft Excel files
-library(parallel) # Required by CIBERSORT
 library(pheatmap) # For heatmaps
-library(preprocessCore) # Required by CIBERSORT
 library(readxl) # For reading Excel files
 library(reshape2) # For melt()
-library(Rsamtools) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
-library(rtracklayer) # https://github.com/dpryan79/Answers/blob/master/SEQanswers_42420/GTF2LengthGC.R
 library(Rtsne) # For t-SNE plots
 library(scales) # For percents
 library(shiny) # For RMD-related stuff. Can't remember exactly
@@ -290,24 +295,7 @@ library(SpatialDecon) # For spatial deconvolution
 library(stringi) # For string manipulations
 library(umap) # For UMAPs
 library(vegan) # For ecological diversity indices (Shannon, Simpson, etc.)
-# library(caret) # For nearZeroVar()
-# install.packages(path_to_regexPipes, repos = NULL, type = "source")
-library(regexPipes) # For pipe-friendly version of base R's regex functions
 # library(devtools)
-# devtools::install_github("jdstorey/qvalue") # Dependency for glmmSeq. https://github.com/StoreyLab/qvalue
-# devtools::install_github("myles-lewis/glmmSeq") 
-# library(glmmSeq) # General linear mixed models
-
-## Load helper functions
-workflow_system <- cl_args[2]
-if(workflow_system=="Nextflow") {
-  path <- Sys.getenv("PATH") |> strsplit(":")
-  bin_path <- tail(path[[1]], n=1)
-  source(file.path(bin_path, "functions/helper_functions.R"))
-} else {
-  bin_path <- ""
-  source("src/functions/helper_functions.R")
-}
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
 ##                                                                

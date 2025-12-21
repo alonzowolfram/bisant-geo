@@ -47,7 +47,7 @@ mergeConfig <- function(master_file, project_file) {
     } else {
       # Check if the variable already exists in the copy (project_file)
       # First extract the key only, not the value
-      key <- line %>% regexPipes::gsub(":.+$", "")
+      key <- line %>% pipe.gsub(":.+$", "")
       # Now look for this key in project_lines
       # Make sure to check only the non-comment lines
       index <- base::grep(key, project_lines_non_comment)

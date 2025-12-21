@@ -277,7 +277,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         #   plotEnrichment(msigdbr_pathway_list[[pathway]], ranks, gseaParam = 1, ticksSize = 0.2) +
         #     ggtitle(paste0(pathway, " | contrast: ", contrast, " | subset by ", subset_var, " | level: ", subset_var_level))
         #   ggsave(filename = paste0(output_dir_pubs, 
-        #                            paste0(pathway, "_", contrast, "_model-", model_number, "_subset-var", subset_var, "_level-", subset_var_level, ".png") %>% regexPipes::gsub("\\/", "_")), 
+        #                            paste0(pathway, "_", contrast, "_model-", model_number, "_subset-var", subset_var, "_level-", subset_var_level, ".png") %>% pipe.gsub("\\/", "_")), 
         #          height = 9, width = 10, units = "in")
         # 
         # }

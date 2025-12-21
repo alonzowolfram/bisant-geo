@@ -70,12 +70,12 @@ if(analyte == "protein") {
   # Add `Sample_ID` back in as a column (basically just remove `.dcc` from the rownames)
   pData(data_object_all) <- pData(data_object_all) %>% 
     tibble::rownames_to_column(var = "Sample_ID") %>% 
-    dplyr::mutate(Sample_ID = Sample_ID %>% regexPipes::gsub("\\.dcc", "")) %>% 
+    dplyr::mutate(Sample_ID = Sample_ID %>% pipe.gsub("\\.dcc", "")) %>% 
     dplyr::relocate(Sample_ID, .before = 1)
   rownames(pData(data_object_all)) <- paste0(pData(data_object_all)$Sample_ID, ".dcc")
   
   # If `main_module` is not set, set it to be the first module in the object
-  if(flagVariable(main_module)) main_module <- (data_object_all@annotation)[1] %>% regexPipes::gsub("\\.pkc", "")
+  if(flagVariable(main_module)) main_module <- (data_object_all@annotation)[1] %>% pipe.gsub("\\.pkc", "")
   
   # Even though we only have one PKC module, the rest of the pipeline expects a list with a data object for each individual module,
   # so let's create that list
@@ -103,12 +103,12 @@ if(analyte == "protein") {
   # Add `Sample_ID` back in as a column (basically just remove `.dcc` from the rownames)
   pData(data_object_all) <- pData(data_object_all) %>% 
     tibble::rownames_to_column(var = "Sample_ID") %>% 
-    dplyr::mutate(Sample_ID = Sample_ID %>% regexPipes::gsub("\\.dcc", "")) %>% 
+    dplyr::mutate(Sample_ID = Sample_ID %>% pipe.gsub("\\.dcc", "")) %>% 
     dplyr::relocate(Sample_ID, .before = 1)
   rownames(pData(data_object_all)) <- paste0(pData(data_object_all)$Sample_ID, ".dcc")
   
   # If `main_module` is not set, set it to be the first module in the object
-  if(flagVariable(main_module)) main_module <- (data_object_all@annotation)[1] %>% regexPipes::gsub("\\.pkc", "")
+  if(flagVariable(main_module)) main_module <- (data_object_all@annotation)[1] %>% pipe.gsub("\\.pkc", "")
   
   ## ................................................
   ##
@@ -120,7 +120,7 @@ if(analyte == "protein") {
   
   # Split `data_object_all` into individual modules.
   data_object_list <- list()
-  for(module in data_object_all@annotation %>% regexPipes::gsub("\\.\\D+$", "")) {
+  for(module in data_object_all@annotation %>% pipe.gsub("\\.\\D+$", "")) {
     message(paste0("Working on PKC file ", module, ".pkc"))
     
     # Extract the necessary elements.
@@ -188,7 +188,7 @@ if(analyte == "protein") {
       # Add `Sample_ID` back in as a column (basically just remove `.dcc` from the rownames)
       pData(data_object) <- pData(data_object) %>% 
         tibble::rownames_to_column(var = "Sample_ID") %>% 
-        dplyr::mutate(Sample_ID = Sample_ID %>% regexPipes::gsub("\\.dcc", "")) %>% 
+        dplyr::mutate(Sample_ID = Sample_ID %>% pipe.gsub("\\.dcc", "")) %>% 
         dplyr::relocate(Sample_ID, .before = 1)
       rownames(pData(data_object)) <- paste0(pData(data_object)$Sample_ID, ".dcc")
       
@@ -212,7 +212,7 @@ if(analyte == "protein") {
   if(sum(data_object_all@annotation != paste0(main_module, ".pkc")) > 0) {
     
     # If there are, create the combined module
-    modules <- data_object_all@annotation %>% regexPipes::gsub("\\.\\D+$", "") %>% .[. != paste0(main_module)]
+    modules <- data_object_all@annotation %>% pipe.gsub("\\.\\D+$", "") %>% .[. != paste0(main_module)]
     combined_module_all <- paste(c(main_module, modules), collapse = ",")
     
     message(paste0("Working on all modules combined"))
@@ -231,7 +231,7 @@ if(analyte == "protein") {
       # Add `Sample_ID` back in as a column (basically just remove `.dcc` from the rownames)
       pData(data_object) <- pData(data_object) %>% 
         tibble::rownames_to_column(var = "Sample_ID") %>% 
-        dplyr::mutate(Sample_ID = Sample_ID %>% regexPipes::gsub("\\.dcc", "")) %>% 
+        dplyr::mutate(Sample_ID = Sample_ID %>% pipe.gsub("\\.dcc", "")) %>% 
         dplyr::relocate(Sample_ID, .before = 1)
       rownames(pData(data_object)) <- paste0(pData(data_object)$Sample_ID, ".dcc")
       

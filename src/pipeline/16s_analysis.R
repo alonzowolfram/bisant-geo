@@ -175,7 +175,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         excluded_levels <- formula_table_16s[i,4] %>% as.character %>% str_split(";") %>% unlist
         
         # Strip anything before the `~`
-        formula <- formula %>% regexPipes::gsub("^([[:space:]]|.)*~", "~")
+        formula <- formula %>% pipe.gsub("^([[:space:]]|.)*~", "~")
         # Extract variables from formula
         formula_vars <- extractVariables(formula) # Input: string
         # Extract first fixed effect from formula
@@ -306,7 +306,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                 tidyr::separate(col = "contrast", into = c("baseline", "term"), sep = " - ") %>% 
                 dplyr::mutate(estimate = -1 * estimate, statistic = -1 * t.ratio) %>% 
                 dplyr::rename(std.error = SE) %>% 
-                dplyr::mutate(subset_var = subset_var, subset_var_level = subset_var_level, formula = formula %>% regexPipes::gsub("~ ", ""))
+                dplyr::mutate(subset_var = subset_var, subset_var_level = subset_var_level, formula = formula %>% pipe.gsub("~ ", ""))
               model_summary <- model_summary[,c("effect", "fixed_effect", "baseline", "term", "estimate", "std.error",        "statistic", "df", "p.value", "subset_var", "subset_var_level", "formula")]
               
             } else { # Comparisons against a single baseline
@@ -458,8 +458,8 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                     # Because the LMM or whatever reformats values with special characters
                     # by enclosing them in parentheses ("()"), we need to strip those parentheses
                     # out of the values, otherwise it will cause weird stuff to happen with the graphing
-                    dplyr::mutate(group1 = group1 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""),
-                                  group2 = group2 %>% regexPipes::gsub("^\\(", "") %>% regexPipes::gsub("\\)$", ""))
+                    dplyr::mutate(group1 = group1 %>% pipe.gsub("^\\(", "") %>% pipe.gsub("\\)$", ""),
+                                  group2 = group2 %>% pipe.gsub("^\\(", "") %>% pipe.gsub("\\)$", ""))
                   
                   # Calculate y.position: slightly above the highest point per facet
                   tops <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`

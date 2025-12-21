@@ -162,7 +162,7 @@ if(analyte=="protein") {
     stat_data_m_list <- list()
     plot_list_normalization[[module]][["Q3_norm"]] <- list()
     # One entry for each negative probe set.
-    for(probeset in colnames(stat_data) %>% regexPipes::grep("NegProbe", value=T)) {
+    for(probeset in colnames(stat_data) %>% pipe.grep("NegProbe", value=T)) {
       stat_data_m <- melt(stat_data, measure.vars = c("Q3", probeset),
                           variable.name = "Statistic", value.name = "Value")
       stat_data_m_list[[probeset]] <- stat_data_m
