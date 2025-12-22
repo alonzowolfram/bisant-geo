@@ -25,14 +25,6 @@ data("safeTME.matches")
 # Convert any "NA" in `subset_vars_imm_decon` to "Complete data set"
 subset_vars_imm_decon[subset_vars_imm_decon=="NA"] <- "Complete data set"
 
-# # Set path to CIBERSORT required files
-# set_cibersort_binary(path_to_cibersort)
-# set_cibersort_mat(path_to_lm22)
-# 
-# # Calculate TPM - this is necessary for CIBERSORT among others, not so much for xCell or MCP-counter
-# # https://bioinformatics.stackexchange.com/questions/2567/how-can-i-calculate-gene-length-for-rpkm-calculation-from-counts-data
-# # But can we even calculate TPM for GeoMx data? Bc it's probe-based, so it wouldn't have the same assumptions that RNA-seq does ...
-
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## Immune deconvolution ----
@@ -60,15 +52,19 @@ if(species == "Mus musculus") {
 imm_decon_res_list <- list()
 if(analyte=="protein") {
   
+  ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  #### Protein ----
+  ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
   for(method in imm_decon_methods) {
-    if(!(method %in% c("protein_cell_abundance"))) {
+    if(!(method %in% c("protein_cell_abundance", "protein_cell_proportions"))) {
       warning(glue::glue("{method} is not currently supported by this pipeline"))
       next
     } else {
       # Error catching: https://stackoverflow.com/a/55937737/23532435
       skip_to_next <- FALSE
       
-      # Check that everything is provided for the selected method
+      # Method: "protein_cell_abundance"
       if(method=="protein_cell_abundance") {
         if(flagVariable(protein_cell_marker_db)) {
           skip_to_next <- TRUE
@@ -85,39 +81,94 @@ if(analyte=="protein") {
         else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = T, sep = "\t") }
         else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = T, na = "NA")}
         else {skip_to_next <- TRUE}
-      } # End checks for "protein_cell_abundance" method
-      
-      if(skip_to_next) {
-        warning(glue::glue("Could not run method {method}. Please provide all required inputs, or check that paths to provided inputs are correct (file exists, file is the correct format)"))
-        next
-      }
-      
-      # Perform immune deconvolution
-      imm_decon_res <- data.frame()
-      for(module in imm_marker_db$module %>% unique) {
-        message(glue::glue("Performing immune deconvolution for protein, cell type/module {module}"))
+        if(!skip_to_next) if(!(all(c("module", "target") %in% colnames(imm_marker_db)))) skip_to_next <- TRUE
         
-        # Get the identity marker proteins
-        id_marker_prots <- imm_marker_db %>% dplyr::filter(module == !!module) %>% .[["target"]]
+        if(skip_to_next) {
+          warning(glue::glue("Could not run method {method}. Please provide all required inputs, or check that paths to provided inputs are correct (file exists, file is the correct format)"))
+          next
+        }
         
-        # Calculate the score for each sample
-        score_mat <- exprs_mat %>% 
-          .[rownames(.) %in% id_marker_prots,,drop=F] %>% 
-          # Remove rows with 0 variance (https://stackoverflow.com/questions/50005717/remove-rows-with-zero-variance-in-r)
-          .[apply(., 1, var) != 0, ] %>% 
-          # 2025/12/19: for now, we won't scale the expression
-          # t %>% scale(center = TRUE, scale = TRUE) %>% t %>%
-          colSums() %>% 
-          as.matrix %>% t
-        rownames(score_mat) <- module
-        imm_decon_res <- rbind(imm_decon_res, score_mat)
-      }
-      imm_decon_res <- imm_decon_res %>% as.data.frame %>% tibble::rownames_to_column(var = "cell_type")
+        # Perform immune deconvolution
+        imm_decon_res <- data.frame()
+        for(module in imm_marker_db$module %>% unique) {
+          message(glue::glue("Performing immune deconvolution for protein, cell type/module {module}"))
+          
+          # Get the identity marker proteins
+          id_marker_prots <- imm_marker_db %>% dplyr::filter(module == !!module) %>% .[["target"]]
+          
+          # Calculate the score for each sample
+          score_mat <- exprs_mat %>% 
+            .[rownames(.) %in% id_marker_prots,,drop=F] %>% 
+            # Remove rows with 0 variance (https://stackoverflow.com/questions/50005717/remove-rows-with-zero-variance-in-r)
+            .[apply(., 1, var) != 0, ] %>% 
+            # 2025/12/19: for now, we won't scale the expression
+            # t %>% scale(center = TRUE, scale = TRUE) %>% t %>%
+            colSums() %>% 
+            as.matrix %>% t
+          rownames(score_mat) <- module
+          imm_decon_res <- rbind(imm_decon_res, score_mat)
+        }
+        imm_decon_res <- imm_decon_res %>% as.data.frame %>% tibble::rownames_to_column(var = "cell_type")
+        
+        if(skip_to_next) {
+          warning(glue::glue("An error occurred when trying to run immune deconvolution method {method}. Skipping to the next method"))
+          next
+        }
+        
+      } # End "protein_cell_abundance" method
       
-      if(skip_to_next) {
-        warning(glue::glue("An error occurred when trying to run immune deconvolution method {method}. Skipping to the next method"))
-        next
-      }
+      # Method: "protein_cell_proportions"
+      if(method=="protein_cell_proportions") {
+        if(flagVariable(protein_cell_marker_db)) {
+          skip_to_next <- TRUE
+        } else {
+          if(!file.exists(protein_cell_marker_db)) {
+            skip_to_next <- TRUE
+          }
+        }
+        
+        # If everything is there, make sure it's the correct file format
+        # Read in the file and check that it has at least one entry
+        message("Checking provided protein marker database")
+        if(base::grepl("\\.csv$", protein_cell_marker_db)) { imm_marker_db <- read.csv(protein_cell_marker_db, header = T)}
+        else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = T, sep = "\t") }
+        else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = T, na = "NA")}
+        else {skip_to_next <- TRUE}
+        if(!skip_to_next) if(!(all(c("module", "target", "weight") %in% colnames(imm_marker_db)))) skip_to_next <- TRUE
+        
+        if(skip_to_next) {
+          warning(glue::glue("Could not run method {method}. Please provide all required inputs, or check that paths to provided inputs are correct (file exists, file is the correct format)"))
+          next
+        }
+        
+        # Create the weights matrix
+        targets <- imm_marker_db[["target"]] %>% unique
+        modules <- imm_marker_db[["module"]] %>% unique
+        weights <- matrix(0, nrow = length(targets), ncol = length(modules), dimnames = list(targets, modules))
+        for(module in modules) {
+          for(target in targets) {
+            ij <- ifelse(nrow(imm_marker_db %>% dplyr::filter(module==!!module & target==!!target)) < 1, 
+                         0, 
+                         imm_marker_db %>% dplyr::filter(module==!!module & target==!!target) %>% .[["weight"]] %>% .[1] %>% as.numeric)
+            weights[target,module] <- ij
+          }
+        }
+        weights[is.na(weights)] <- 0
+        
+        # Perform immune deconvolution
+        # solve y_i = S*p_i + epsilon for p_i, where
+        # y_i = vector of marker expression in AOI i
+        # S = weights matrix
+        # p_i = vector of cell-type abundances in AOI i (<- this is what we want)
+        
+        imm_decon_res
+        
+        if(skip_to_next) {
+          warning(glue::glue("An error occurred when trying to run immune deconvolution method {method}. Skipping to the next method"))
+          next
+        }
+        
+      } # End "protein_cell_abundance" method
       
       imm_decon_res_list[[method]] <- imm_decon_res
       
@@ -125,9 +176,14 @@ if(analyte=="protein") {
   } # End for() loop: immune deconvolution methods
   
 } else {
+  
+  ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  #### RNA ----
+  ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
   for(method in imm_decon_methods) {
     if(!(method %in% c("quantiseq", "mcp_counter", "xcell", "epic", "abis", "estimate", "spatialdecon", "mmcp_counter"))) {
-      warning(glue::glue("{method} is not currently supported by this pipeline. Please note that TIMER and ConsensusTME, while included in the immunedeconv package, are currently not available in this pipeline due to extra arguments that must be passed to the function; and CIBERSORT will not be available until we figure out how to make the source code play nicely with the immunedeconv package"))
+      warning(glue::glue("{method} is not currently supported by this pipeline. Please note that TIMER, ConsensusTME, and CIBERSORT are not available for this pipeline due to code incompatabilities"))
       next
     } else {
       # Error catching: https://stackoverflow.com/a/55937737/23532435
