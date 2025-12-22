@@ -29,6 +29,7 @@ dependencies:
   - conda-forge::r-matrix
   - conda-forge::r-msigdbr
   - conda-forge::r-networkd3
+  - conda-forge::r-nnls
   - conda-forge::r-officer
   - conda-forge::r-openxlsx
   - conda-forge::r-reshape2
