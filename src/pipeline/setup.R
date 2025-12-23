@@ -35,6 +35,9 @@ grep <- base::grep
 grepl <- base::grepl
 gsub <- base::gsub
 
+# Load command-line arguments
+cl_args <- commandArgs(TRUE)
+
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## Functions ----
@@ -249,7 +252,6 @@ extractModelComponents <- function(model_formula) {
 
 # Set the parameters passed from the configuration YAML file
 ## Read in the config file
-cl_args <- commandArgs(TRUE)
 library(yaml) # For reading in YAML documents
 config <- yaml::read_yaml(cl_args[1])
 
@@ -272,7 +274,7 @@ library(cowplot) # For plot_grid
 library(emmeans) # Used for post-hoc pairwise comparisons after linear mixed modeling
 library(fgsea) # For GSEA
 library(GeomxTools) # For NanoString GeoMx stuff
-library(ggforce) # I have no idea
+library(ggforce) # `gather_set_data()` function used in study-design QC module
 library(ggplotify) # Convert grobs (such as those created by grid) into ggplot objects, so we can display them in Rmd
 library(ggpubr) # For annotate_figure(), as_ggplot()
 library(ggrepel) # For graphing

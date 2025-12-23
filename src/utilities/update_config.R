@@ -11,6 +11,7 @@
 library(tidyr)
 library(yaml)
 library(stringr)
+source("src/functions/helper_functions.R")
 
 # Read in the variables from the arguments
 cl_args <- commandArgs(TRUE)
