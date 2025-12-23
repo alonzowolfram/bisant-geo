@@ -25,6 +25,15 @@ data("safeTME.matches")
 # Convert any "NA" in `subset_vars_imm_decon` to "Complete data set"
 subset_vars_imm_decon[subset_vars_imm_decon=="NA"] <- "Complete data set"
 
+# Function to perform NNLS for a given y_i = numeric vector of length n, where n = number of protein markers
+# (In other words, y_i corresponds to 1 AOI)
+do_nnls <- function(y_vec, S) {
+  fit <- nnls::nnls(S, y_vec)
+  p <- coef(fit)
+  # Normalize to sum to 1 (for proportions)
+  p / (sum(p) + 1e-6)
+}
+
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
 ## Immune deconvolution ----
@@ -77,10 +86,12 @@ if(analyte=="protein") {
         # If everything is there, make sure it's the correct file format
         # Read in the file and check that it has at least one entry
         message("Checking provided protein marker database")
-        if(base::grepl("\\.csv$", protein_cell_marker_db)) { imm_marker_db <- read.csv(protein_cell_marker_db, header = T)}
-        else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = T, sep = "\t") }
-        else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = T, na = "NA")}
-        else {skip_to_next <- TRUE}
+        {        # https://stackoverflow.com/questions/71082458/why-cant-if-and-else-statements-be-on-separate-lines-in-r
+          if(base::grepl("\\.csv$", protein_cell_marker_db)) { imm_marker_db <- read.csv(protein_cell_marker_db, header = T)}
+          else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = T, sep = "\t") }
+          else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = T, na = "NA")}
+          else {skip_to_next <- TRUE}
+        }
         if(!skip_to_next) if(!(all(c("module", "target") %in% colnames(imm_marker_db)))) skip_to_next <- TRUE
         
         if(skip_to_next) {
@@ -130,10 +141,12 @@ if(analyte=="protein") {
         # If everything is there, make sure it's the correct file format
         # Read in the file and check that it has at least one entry
         message("Checking provided protein marker database")
-        if(base::grepl("\\.csv$", protein_cell_marker_db)) { imm_marker_db <- read.csv(protein_cell_marker_db, header = T)}
-        else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = T, sep = "\t") }
-        else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = T, na = "NA")}
-        else {skip_to_next <- TRUE}
+        {
+          if(base::grepl("\\.csv$", protein_cell_marker_db)) { imm_marker_db <- read.csv(protein_cell_marker_db, header = T)}
+          else if(base::grepl("\\.tsv$", protein_cell_marker_db)) { imm_marker_db <- read.table(protein_cell_marker_db, header = T, sep = "\t") }
+          else if(base::grepl("\\.xls.*$", protein_cell_marker_db)) { imm_marker_db <- read_excel(protein_cell_marker_db, col_names = T, na = "NA")}
+          else {skip_to_next <- TRUE}
+        }
         if(!skip_to_next) if(!(all(c("module", "target", "weight") %in% colnames(imm_marker_db)))) skip_to_next <- TRUE
         
         if(skip_to_next) {
@@ -156,12 +169,19 @@ if(analyte=="protein") {
         weights[is.na(weights)] <- 0
         
         # Perform immune deconvolution
-        # solve y_i = S*p_i + epsilon for p_i, where
-        # y_i = vector of marker expression in AOI i
-        # S = weights matrix
-        # p_i = vector of cell-type abundances in AOI i (<- this is what we want)
-        
-        imm_decon_res
+        # solve `y_i = S*p_i + epsilon` for `p_i`, where
+        # `y_i` = vector of marker expression in AOI `i`
+        # `S` = weights matrix
+        # `p_i` = vector of cell-type abundances in AOI `i` (<- this is what we want)
+        exprs_decon <- exprs_mat %>% t %>% .[, rownames(weights), drop = F]
+        # Let's double-check the dimensions before performing NNLS
+        # where `m` = number of AOIs, `n` = number of protein markers, `p` = number of cell types
+        # exprs_decon: `m` × `n`
+        # weights: `n` × `p`
+        # exprs_decon * weights = `m` × `p` matrix of m AOIs, each AOI with a vector of `p` proportions ✅
+        imm_decon_res <- apply(exprs_decon, 1, do_nnls, S = weights)
+        rownames(imm_decon_res) <- colnames(weights)
+        imm_decon_res <- imm_decon_res %>% as.data.frame %>% tibble::rownames_to_column(var = "cell_type")
         
         if(skip_to_next) {
           warning(glue::glue("An error occurred when trying to run immune deconvolution method {method}. Skipping to the next method"))
