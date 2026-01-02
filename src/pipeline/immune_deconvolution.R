@@ -464,7 +464,7 @@ if(valid_formula_table) {
             cell_data <- immune_long %>%
               dplyr::filter((Sample %in% samples) & (cell_type == cell))
             # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
-            if(!flagVariable(excluded_levels)) cell_data <- cell_data %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
+            if(!flagVariable(excluded_levels) & !is.na(excluded_levels)) cell_data <- cell_data %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
             
             # Fit the user-defined linear mixed model
             model <- tryCatch(
@@ -650,7 +650,7 @@ for(method in names(imm_decon_res_list)) {
         }
         # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
         excluded_levels <- excluded_levels_list[[grouping_var]]
-        if(!flagVariable(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
+        if(!flagVariable(excluded_levels) & !is.na(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
         
         # If the number of unique values of the pData column `grouping_var` > 50, split into multiple groups for graphing
         # https://forum.posit.co/t/diagram-overload-split-data-into-multiple-charts/104355
@@ -776,7 +776,7 @@ for(method in names(imm_decon_res_list)) {
             # using `stat_pvalue_manual()`
             if(add_boxplot_pvals_imm_decon) {
               # Check if the current `grouping_var` is in `da_res_df` (the data frame with all the differential LMM results)
-              if(grouping_var %in% da_res_df$fixed_effect) {
+              if(grouping_var %in% da_res_df$fixed_effect %>% unique) {
                 # Create the p-value data frame
                 # p-value data frame: group1, group2, p, y.position, p.label
                 pvals_df <- da_res_df %>%
@@ -788,6 +788,8 @@ for(method in names(imm_decon_res_list)) {
                   # out of the values, otherwise it will cause weird stuff to happen with the graphing
                   dplyr::mutate(group1 = group1 %>% pipe.gsub("^\\(", "") %>% pipe.gsub("\\)$", ""),
                                 group2 = group2 %>% pipe.gsub("^\\(", "") %>% pipe.gsub("\\)$", ""))
+                # If there are no entries with the combination `grouping_var` x `subset_var` x `subset_var_level`, then skip
+                if(nrow(pvals_df) < 1) {message(glue::glue("No entries for combination {grouping_var}, {subset_var}, {subset_var_level}. Skipping")); next}
                 
                 # Calculate y.position: slightly above the highest point per facet
                 tops <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`
