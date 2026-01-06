@@ -262,7 +262,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
             df_final <- df %>%
               dplyr::filter(Sample %in% samples)
             # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
-            if(!flagVariable(excluded_levels)) df_final <- df_final %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
+            if(!flagVariable(excluded_levels) & !is.na(excluded_levels)) df_final <- df_final %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
             
             # Fit the user-defined linear mixed model
             model <- tryCatch(
@@ -404,7 +404,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               
               # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
               excluded_levels <- excluded_levels_list[[grouping_var]]
-              if(!flagVariable(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
+              if(!flagVariable(excluded_levels) & !is.na(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
               
               # Make sure we have enough colors
               n_colors <- plot_df[[grouping_var]] %>% unique %>% length
@@ -460,6 +460,8 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                     # out of the values, otherwise it will cause weird stuff to happen with the graphing
                     dplyr::mutate(group1 = group1 %>% pipe.gsub("^\\(", "") %>% pipe.gsub("\\)$", ""),
                                   group2 = group2 %>% pipe.gsub("^\\(", "") %>% pipe.gsub("\\)$", ""))
+                  # If there are no entries with the combination `grouping_var` x `subset_var` x `subset_var_level`, then skip
+                  if(nrow(pvals_df) < 1) {message(glue::glue("No entries for combination {grouping_var}, {subset_var}, {subset_var_level}. Skipping")); next}
                   
                   # Calculate y.position: slightly above the highest point per facet
                   tops <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`
@@ -519,6 +521,9 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           p_list <- plot_list[[subset_var]][[subset_var_level]]
           
           if(is.null(p_list)) next 
+          
+          # Remove empty elements from p_list
+          p_list <- p_list %>% .[lengths(.) > 0]
           
           n <- length(p_list)
           nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
