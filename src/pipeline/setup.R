@@ -288,6 +288,7 @@ library(NanoStringNCTools) # For NanoString stuff
 library(networkD3) # For Sankey plots
 library(officer) # For PowerPoint output
 library(openxlsx) # For reading and writing Microsoft Excel files
+library(preprocessCore) # For normalize.quantiles()
 library(pheatmap) # For heatmaps
 library(readxl) # For reading Excel files
 library(reshape2) # For melt()

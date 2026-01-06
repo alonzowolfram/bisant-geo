@@ -254,7 +254,7 @@ if(analyte=="protein") {
     # quantile-specific normalization, in which only a particular quantile (usually a quartile) is forced
     # to be the same across samples. See https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6171491/. 
     # *tied values notwithstanding.
-    quant_normalized <- normalize.quantiles(target_data_object@assayData$exprs)
+    quant_normalized <- preprocessCore::normalize.quantiles(target_data_object@assayData$exprs)
     rownames(quant_normalized) <- rownames(target_data_object@assayData$exprs)
     colnames(quant_normalized) <- colnames(target_data_object@assayData$exprs)
     assayDataElement(object = target_data_object, elt = "quant", validate = FALSE) <- quant_normalized
