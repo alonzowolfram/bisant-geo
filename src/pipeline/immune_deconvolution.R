@@ -27,11 +27,11 @@ subset_vars_imm_decon[subset_vars_imm_decon=="NA"] <- "Complete data set"
 
 # Function to perform NNLS for a given y_i = numeric vector of length n, where n = number of protein markers
 # (In other words, y_i corresponds to 1 AOI)
-do_nnls <- function(y_vec, S) {
+do_nnls <- function(y_vec, S, abs = FALSE) {
   fit <- nnls::nnls(S, y_vec)
   p <- coef(fit)
   # Normalize to sum to 1 (for proportions)
-  p / (sum(p) + 1e-6)
+  if(abs) {p} else {p / (sum(p) + 1e-6)}
 }
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -73,8 +73,8 @@ if(analyte=="protein") {
       # Error catching: https://stackoverflow.com/a/55937737/23532435
       skip_to_next <- FALSE
       
-      # Method: "protein_cell_abundance"
-      if(method=="protein_cell_abundance") {
+      # Method: "raw_protein_scores"
+      if(method=="raw_protein_scores") {
         if(flagVariable(protein_cell_marker_db)) {
           skip_to_next <- TRUE
         } else {
@@ -126,10 +126,10 @@ if(analyte=="protein") {
           next
         }
         
-      } # End "protein_cell_abundance" method
+      } # End "raw_protein_scores" method
       
-      # Method: "protein_cell_proportions"
-      if(method=="protein_cell_proportions") {
+      # Method: "protein_cell_abundance", "protein_cell_proportions"
+      if(method %in% c("protein_cell_abundance", "protein_cell_proportions")) {
         if(flagVariable(protein_cell_marker_db)) {
           skip_to_next <- TRUE
         } else {
@@ -179,7 +179,7 @@ if(analyte=="protein") {
         # exprs_decon: `m` × `n`
         # weights: `n` × `p`
         # exprs_decon * weights = `m` × `p` matrix of m AOIs, each AOI with a vector of `p` proportions ✅
-        imm_decon_res <- apply(exprs_decon, 1, do_nnls, S = weights)
+        if(method=="protein_cell_abundance") {imm_decon_res <- apply(exprs_decon, 1, do_nnls, S = weights, abs = TRUE)} else {imm_decon_res <- apply(exprs_decon, 1, do_nnls, S = weights, abs = FALSE)}
         rownames(imm_decon_res) <- colnames(weights)
         imm_decon_res <- imm_decon_res %>% as.data.frame %>% tibble::rownames_to_column(var = "cell_type")
         
@@ -188,7 +188,7 @@ if(analyte=="protein") {
           next
         }
         
-      } # End "protein_cell_abundance" method
+      } # End "protein_cell_proportions" or "protein_cell_abundance" method
       
       imm_decon_res_list[[method]] <- imm_decon_res
       
@@ -312,7 +312,7 @@ if(analyte=="protein") {
 ##
 ## ................................................
 # By "differential abundance," we mean _between-sample_ comparisons of immune-cell populations,
-# NOT between-cell-type comparisons.
+# NOT between-cell-type comparisons
 # Per https://omnideconv.org/immunedeconv/articles/immunedeconv.html,
 # the following methods allow between-sample comparisons:
 # MCP-counter, xCell, TIMER, ConsensusTME, ESTIMATE, ABIS, mMCP-counter, BASE, EPIC, quanTIseq, CIBERSORT abs., seqImmuCC
@@ -561,7 +561,7 @@ if(valid_formula_table) {
     
   } # End loop level 1 (LMM model)
   
-  da_res_df <- bind_rows(rlang::squash(da_res_list)) # `squash` recursively flattens the list.
+  da_res_df <- bind_rows(rlang::squash(da_res_list)) # `squash` recursively flattens the list
   
 } # End valid formula table check
 
@@ -600,7 +600,7 @@ for(method in names(imm_decon_res_list)) {
     }
     
     # Get the levels of the current `subset_var`
-    subset_var_levels <- pData_tmp[[subset_var]] %>% as.factor %>% levels # as.factor needed because it might be a character vector.
+    subset_var_levels <- pData_tmp[[subset_var]] %>% as.factor %>% levels # as.factor needed because it might be a character vector
     
     # If `subset_var_imm_decon_levels_manual` is set, filter `subset_var_levels` to include only those values
     subset_var_imm_decon_levels_manual_i <- subset_var_imm_decon_levels_manual[[subset_var]]
@@ -879,7 +879,7 @@ for(method in names(imm_decon_res_list)) {
   } # End for() loop: subset variables
   
 } # End for() loop: deconvolution methods
-
+f
 rm(pData_tmp)
 gc()
 
@@ -903,5 +903,5 @@ plot_list %>% saveRDS(paste0(output_dir_rdata, "immune-deconvolution_plots-list.
 # Save environment to .Rdata
 save.image(paste0(output_dir_rdata, "env_immune_deconvolution.RData"))
 
-# Update latest module completed.
+# Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)
