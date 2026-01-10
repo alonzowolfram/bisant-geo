@@ -569,6 +569,7 @@ experiment:
     # (protein only)
     # protein_cell_abundance
     # protein_cell_proportions
+    # raw_protein_scores
     imm_decon_methods: mcp_counter,quantiseq
     
     # [Optional] For methods "protein_cell_abundance" and "protein_cell_proportions" only, path to a CSV, TSV, or Excel (.xlsx) file
