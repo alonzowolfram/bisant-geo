@@ -737,8 +737,8 @@ for(method in names(imm_decon_res_list)) {
           } # End chunking group for() loop
         } # End if method is one of the dot-plot ones
         
-        # For SpatialDecon, MCPCounter, and protein cell abundance, create a box/violin/dot plot to show between-sample (within-cell-type) comparisons
-        if(method %in% c("spatialdecon", "mcp_counter", "protein_cell_abundance")) {
+        # For SpatialDecon, MCPCounter, raw protein score, protein cell abundance, create a box/violin/dot plot to show between-sample (within-cell-type) comparisons
+        if(method %in% c("spatialdecon", "mcp_counter", "raw_protein_scores", "protein_cell_abundance")) {
           for(group in unique(plot_df$ChunkingGroup)) {
             message(glue::glue("Creating boxplot for group {group}, grouping variable {grouping_var}, subset variable {subset_var}, level {subset_var_level}, method {method}"))
             
@@ -879,7 +879,6 @@ for(method in names(imm_decon_res_list)) {
   } # End for() loop: subset variables
   
 } # End for() loop: deconvolution methods
-f
 rm(pData_tmp)
 gc()
 
