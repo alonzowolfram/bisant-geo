@@ -374,7 +374,6 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
           pData_sub <- pData(target_data_object) %>% dplyr::filter(!!as.name(subset_var) == subset_var_level)
           for(grouping_var in grouping_vars_tcr) {
             if(grouping_var==subset_var) next
-            plot_list[[grouping_var]] <- list()
             
             # Create the `plot_df` data frame for graphing from `pData_sub`
             # We will select only the columns we need
