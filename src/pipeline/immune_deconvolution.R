@@ -25,6 +25,9 @@ data("safeTME.matches")
 # Convert any "NA" in `subset_vars_imm_decon` to "Complete data set"
 subset_vars_imm_decon[subset_vars_imm_decon=="NA"] <- "Complete data set"
 
+# If `modules_exprs` is not set, set it to have the value of `main_module`
+if(flagVariable(modules_exprs)) modules_exprs <- main_module
+  
 # Function to perform NNLS for a given y_i = numeric vector of length n, where n = number of protein markers
 # (In other words, y_i corresponds to 1 AOI)
 do_nnls <- function(y_vec, S, abs = FALSE) {
@@ -780,7 +783,7 @@ for(method in names(imm_decon_res_list)) {
                 # Create the p-value data frame
                 # p-value data frame: group1, group2, p, y.position, p.label
                 pvals_df <- da_res_df %>%
-                  dplyr::filter(fixed_effect == grouping_var & subset_var == !!subset_var & subset_var_level == !!subset_var_level) %>%
+                  dplyr::filter(method==!!method & fixed_effect == grouping_var & subset_var == !!subset_var & subset_var_level == !!subset_var_level) %>%
                   dplyr::select(baseline, term, p.value, cell_type) %>%
                   dplyr::rename(group1 = baseline, group2 = term, p = p.value) %>%
                   # Because the LMM or whatever reformats values with special characters
