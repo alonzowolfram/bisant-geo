@@ -520,10 +520,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         for(subset_var_level in names(plot_list[[subset_var]])) {
           p_list <- plot_list[[subset_var]][[subset_var_level]]
           
-          if(is.null(p_list)) next 
+          if(is.null(p_list) | length(p_list) < 1) next 
           
           # Remove empty elements from p_list
           p_list <- p_list %>% .[lengths(.) > 0]
+          if(is.null(p_list) | length(p_list) < 1) next 
           
           n <- length(p_list)
           nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
