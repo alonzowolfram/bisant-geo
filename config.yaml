@@ -241,7 +241,7 @@ experiment:
     # For protein modules only, detection means having a signal:noise ratio of >= 2
     percent_of_segments: 5
 
-    # [REQUIRED] Probes to exclude from the analysis. Separate probes with commas (",")
+    # [Optional] Probes to exclude from the analysis. Separate probes with commas (",")
     # If you want to keep all probes, input "None"
     # These probes will be removed AFTER the normalization step
     probes_exclude: Microbial16S_10
@@ -536,6 +536,13 @@ experiment:
     #   pathway ranking score = -log10(adjusted p-value) * abs(normalized enrichment score)
     # This value is optional, but highly recommended to use the default setting of 15
     n_max_pathways: 15
+    
+    # [Optional] How to select the top pathways to appear on the graph:
+    # can be one of c("balance", "score")
+    # "balance": will display the top n pathways in both directions (upregulated/downregulated) of the differential expression analysis
+    # "score": will display the top n pathways by pathway score (based on significance and absolute NES value), without any regard for direction. In some cases, this may lead to only upregulated or only downregulated pathways being displayed
+    # If not provided, will default to "balance"
+    top_pathways_by: balance
     
     # [Optional] Colors, given as RGB hexadecimal values (do NOT include the pound sign ["#"] or the pipeline will not be able to read them), for the FGSEA bar graphs
     # Separate values with a comma (",")

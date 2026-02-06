@@ -72,6 +72,7 @@ de_genes_cutoffs,FALSE,"0.25,0.58",TRUE
 pathway_table_file,FALSE,,FALSE
 individual_pathways,FALSE,,TRUE
 n_max_pathways,FALSE,15,FALSE
+top_pathways_by,FALSE,balance,FALSE
 fgsea_graph_colors,FALSE,,TRUE
 modules_exprs,FALSE,,FALSE
 imm_decon_methods,FALSE,,TRUE

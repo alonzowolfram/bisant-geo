@@ -145,7 +145,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
                           minSize  = 1, # 15
                           maxSize  = Inf) # 500
         df_sub <- fgseaRes %>% dplyr::filter(is.finite(NES))
-        # Make the pathway names more readable.
+        # Make the pathway names more readable
         message("Cleaning FGSEA results")
         df_sub$PathwayCleaned <- df_sub$pathway %>% 
           stringr::str_split("_") %>% 
@@ -207,17 +207,35 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
                      (ratio > 1 & ratio <= 5) * (slope * ratio + y_int) + 
                      (ratio > 5) * ((sqrt(ratio) - sqrt(5)) + 0.75)
         
-        # Get the data frame into the proper format for graphing using geom_rect.
+        # Get the data frame into the proper format for graphing using `geom_rect`
         df_sub_graphing <- df_sub 
         
-        df_sub_graphing$PathwayCleaned <- df_sub_graphing$PathwayCleaned %>% as.factor %>% factor(levels = df_sub %>% dplyr::arrange(NES) %>% .$PathwayCleaned) # Arrange factor levels of pathway by NES.
+        df_sub_graphing$PathwayCleaned <- df_sub_graphing$PathwayCleaned %>% as.factor %>% factor(levels = df_sub %>% dplyr::arrange(NES) %>% .$PathwayCleaned) # Arrange factor levels of pathway by NES
         df_sub_graphing$ymin <- ifelse(df_sub_graphing$NES >= 0, 0, df_sub_graphing$NES)
         df_sub_graphing$ymax <- ifelse(df_sub_graphing$NES >= 0, df_sub_graphing$NES, 0)
         df_sub_graphing$xmin <- (df_sub_graphing$PathwayCleaned %>% as.numeric) - (bar_width/2)
         df_sub_graphing$xmax <- (df_sub_graphing$PathwayCleaned %>% as.numeric) + (bar_width/2)
         
-        # If the number of pathways > limits for graphing, perform cutoff by PathwayScore.
-        if(!is.null(n_max_pathways) & n_max_pathways != "") if(nrow(df_sub_graphing) > n_max_pathways) df_sub_graphing <- df_sub_graphing %>% dplyr::top_n(n = n_max_pathways, wt = PathwayScore)
+        # Cull pathway list based on `top_pathways_by` (will be either "balance" or "signif")
+        if(top_pathways_by=="signif") {
+          # If the number of pathways > limits for graphing, perform cutoff by PathwayScore
+          if(!flagVariable(n_max_pathways)) if(nrow(df_sub_graphing) > n_max_pathways) df_sub_graphing <- df_sub_graphing %>% dplyr::top_n(n = n_max_pathways, wt = PathwayScore)
+          
+        } else { # Balance upregulated and downregulated pathways
+          # Classify pathway as up- or down-regulated
+          # group_by() up-/down-regulated status
+          # and then select the top n/2 in each one, where n = n_max_pathways
+          
+          n_max_pathways_half <- ceiling(n_max_pathways / 2)
+          if(!flagVariable(n_max_pathways)) if(nrow(df_sub_graphing) > n_max_pathways) { 
+            df_sub_graphing <- df_sub_graphing %>% 
+              dplyr::mutate(regulation = as.factor(ifelse(NES > 0, "Up", "Down"))) %>%
+              dplyr::group_by(regulation) %>%
+              dplyr::top_n(n = n_max_pathways_half, wt = PathwayScore) %>%
+              dplyr::ungroup() %>%
+              dplyr::select(-regulation)
+          }
+        }
         
         # Convert to factor to order pathways
         df_sub_graphing$PathwayCleanedChar <- factor(
@@ -225,14 +243,14 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
           levels = df_sub_graphing %>% arrange(NES) %>% pull(PathwayCleaned)
         )
         
-        # 2025/10/06: For now, removing pathway name truncation because if it causes two pathways to have the same truncated name, it causes trouble if we try to turn `PathwayCleaned` into a factor.
+        # 2025/10/06: For now, removing pathway name truncation because if it causes two pathways to have the same truncated name, it causes trouble if we try to turn `PathwayCleaned` into a factor
         # # Truncate pathway names (doing it here, AFTER conversion to factor, because if truncating makes two pathway names come out the same, we can't have duplicated factors)
         # # Reorder factor levels by NES (so the bars are sorted)
         # df_sub_graphing$PathwayCleanedChar <- df_sub_graphing$PathwayCleaned %>%
         #   as.character() %>%
         #   truncate_strings()
         
-        # Graph.
+        # Graph
         plot <- df_sub_graphing %>% ggplot(aes(y = PathwayCleanedChar, x = NES, size = -log10(padj), color = NES)) + 
           theme_bw() + 
           geom_point() + 
@@ -282,7 +300,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
         # 
         # }
         
-      } # End contrasts for() loop.
+      } # End contrasts for() loop
       
       model_list[[paste0("model_", model_number)]] <- as.character(model)
       model_number <- model_number + 1
@@ -365,7 +383,7 @@ for(sv in names(plot_list_pathway_analysis)) {
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-message("Exporting to disk.")
+message("Exporting to disk")
 
 # Export FGSEA results as table
 pathway_df %>% write.csv(paste0(output_dir_tabular, "pathway-analysis_results.csv"))
