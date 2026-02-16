@@ -231,7 +231,7 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
             df_sub_graphing <- df_sub_graphing %>% 
               dplyr::mutate(regulation = as.factor(ifelse(NES > 0, "Up", "Down"))) %>%
               dplyr::group_by(regulation) %>%
-              dplyr::top_n(n = n_max_pathways_half, wt = PathwayScore) %>%
+              dplyr::slice_max(n = n_max_pathways_half, order_by = PathwayScore, with_ties = F) %>% # dplyr::top_n(n = n_max_pathways_half, wt = PathwayScore) %>%
               dplyr::ungroup() %>%
               dplyr::select(-regulation)
           }
