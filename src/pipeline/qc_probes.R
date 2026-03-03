@@ -68,6 +68,16 @@ if(analyte=="protein") {
       dplyr::filter(log2SignalBgRatio >= min_log2_protein_snr) %>% 
       dplyr::summarise(n_pass = n()) %>% 
       dplyr::mutate(percent_pass = n_pass / !!n_roi_total * 100, MinLog2SignalNoiseRatio = min_log2_protein_snr)
+    # Make the list of failed proteins
+    # Note that if anything dropped out from `df` when filtering by log2SignalBgRatio >= min_log2_protein_snr
+    # then the percent pass would not be 0, there would be no percent pass because they would not even have entries
+    # So we need to go back and add those manually
+    dropped_proteins <- setdiff(unique(df$protein), protein_qc_table$protein) %>% setdiff(union(igg_names))
+    protein_qc_table <- rbind(protein_qc_table, data.frame(protein = dropped_proteins,
+                                                           n_pass = 0,
+                                                           percent_pass = 0,
+                                                           MinLog2SignalNoiseRatio = min_log2_protein_snr))
+    # Now we can compile the complete list of failed proteins
     proteins_fail <- protein_qc_table %>% dplyr::filter(percent_pass < !!percent_of_segments) %>% .[["protein"]] %>% as.character
     proteins_fail <- setdiff(proteins_fail, union(igg_names, hk_names)) %>% setdiff(probes_include) # Also keep any probes specified by `probes_include`
     # View(proteins_fail %>% as.data.frame)
