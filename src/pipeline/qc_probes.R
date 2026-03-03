@@ -72,7 +72,7 @@ if(analyte=="protein") {
     # Note that if anything dropped out from `df` when filtering by log2SignalBgRatio >= min_log2_protein_snr
     # then the percent pass would not be 0, there would be no percent pass because they would not even have entries
     # So we need to go back and add those manually
-    dropped_proteins <- setdiff(unique(df$protein), protein_qc_table$protein) %>% setdiff(union(igg_names))
+    dropped_proteins <- setdiff(unique(df$protein), protein_qc_table$protein)
     protein_qc_table <- rbind(protein_qc_table, data.frame(protein = dropped_proteins,
                                                            n_pass = 0,
                                                            percent_pass = 0,
@@ -466,9 +466,9 @@ saveRDS(plot_list_probe_qc, paste0(output_dir_rdata, "qc-probes_plot_list.rds"))
 # Save the QC table
 saveRDS(qc_df, paste0(output_dir_rdata, "qc-probes_table.rds"))
 # Save the gene-of-interest detection-rate table
-if(exists("goi_df")) saveRDS(goi_df, paste0(output_dir_rdata, "genes-of-interest_detection-rate_table.rds"))
+if(exists("goi_df")) {saveRDS(goi_df, paste0(output_dir_rdata, "genes-of-interest_detection-rate_table.rds")); write.csv(goi_df, paste0(output_dir_tabular, "genes-of-interest_detection-rate_table.csv"), row.names = F)}
 # Save the protein QC table
-if(exists("protein_qc_table")) saveRDS(protein_qc_table, paste0(output_dir_rdata, "protein-QC-table.rds"))
+if(exists("protein_qc_table")) {saveRDS(protein_qc_table, paste0(output_dir_rdata, "protein-QC-table.rds")); write.csv(protein_qc_table, paste0(output_dir_tabular, "protein-QC-table.csv"), row.names = F)}
 
 # Save environment to .Rdata
 save.image(paste0(output_dir_rdata, "env_qc_probes.RData"))
