@@ -292,7 +292,7 @@ if(analyte=="protein") {
           ),
           error = function(e) {skip_to_next <<- TRUE})
         })
-        if(class(res) != "logical") imm_decon_res <- res$beta %>% t %>% as.data.frame %>% rownames_to_column("cell_type")
+        if(class(res) != "logical") {imm_decon_res <- res$beta %>% t %>% as.data.frame %>% rownames_to_column("cell_type"); spatial_decon_res <- pData(res)}
       } else {
         imm_decon_res <- tryCatch(immunedeconv::deconvolute(exprs_mat_effective, method),
                                   error = function(e) {skip_to_next <<- TRUE})
@@ -901,6 +901,8 @@ if(exists("da_res_df")) {
 }
 # Export the raw plots as RDS file
 plot_list %>% saveRDS(paste0(output_dir_rdata, "immune-deconvolution_plots-list.rds"))
+# If spatialdecon was successfully performed, export the complete results
+if(exists("spatial_decon_res")) saveRDS(spatial_decon_res, paste0(output_dir_rdata, "spatialdecon_results.rds"))
 
 # Save environment to .Rdata
 save.image(paste0(output_dir_rdata, "env_immune_deconvolution.RData"))
