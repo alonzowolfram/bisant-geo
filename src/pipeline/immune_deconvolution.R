@@ -687,10 +687,7 @@ for(method in names(imm_decon_res_list)) {
                     panel.grid.major = element_blank()) + 
               scale_x_discrete(limits = rev(levels(imm_decon_res_list[[method]]))) + 
               labs(y = "quantity",
-                title = paste0(method, " deconvolution | subset by ", subset_tag, 
-                                  " | level ", subset_var_level, 
-                                  "\n compartmentalized by ", grouping_var,
-                                  " | group ", group))
+                title = glue::glue("{method} deconvolution | subset by {subset_tag} | level {subset_var_level} \n compartmentalized by {grouping_var} | group {group}"))
             if(length(unique_values) > 10) {
               plot <- plot + coord_flip()
             }
@@ -724,10 +721,7 @@ for(method in names(imm_decon_res_list)) {
               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
                     panel.grid.minor = element_blank(),
                     panel.grid.major = element_blank()) +
-              labs(title = paste0(method, " deconvolution | subset by ", subset_tag, 
-                                  " | level ", subset_var_level, 
-                                  "\n compartmentalized by ", grouping_var,
-                                  " | group ", group))
+              labs(title = glue::glue("{method} deconvolution | subset by {subset_tag} | level {subset_var_level} \n compartmentalized by {grouping_var} | group {group}"))
             # Add to the plot list
             plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]][[group]] <- plot
             # Save plot to disk
@@ -760,7 +754,8 @@ for(method in names(imm_decon_res_list)) {
                            outlier.shape = NA, 
                            staplewidth = 0.3) + 
               geom_jitter(aes(color = !!as.name(grouping_var)), width = 0.15, size = 2, alpha = 0.9) + 
-              labs(x = NULL, y = "Abundance score", fill = grouping_var, color = grouping_var) +
+              labs(x = NULL, y = "Abundance score", title = glue::glue("{method} deconvolution | subset by {subset_tag} | level {subset_var_level} \n compartmentalized by {grouping_var} | group {group}"),
+                   fill = grouping_var, color = grouping_var) +
               facet_wrap(~cell_type, scales = "free_y", ncol = 3) +
               scale_fill_manual(values = c("#FD6563","#3767A9", "#F2C14E", "#6A4C93")) + # , guide = FALSE
               scale_color_manual(values = c("#FD6563","#3767A9", "#F2C14E", "#6A4C93")) + # , guide = FALSE
