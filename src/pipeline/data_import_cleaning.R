@@ -21,7 +21,7 @@ if(workflow_system=="Nextflow") {
   source("src/pipeline/setup.R") # I guess the path it sources from is the current working directory, not the path the R script lives in
 }
 
-# Automatically list files in each directory for use.
+# Automatically list files in each directory for use
 dcc_files <- dir(dcc_dir, pattern = ".dcc$",
                  full.names = TRUE, recursive = TRUE)
 pkc_files <- dir(pkc_dir, pattern = pkc_filename_pattern,
@@ -33,9 +33,9 @@ pkc_files <- dir(pkc_dir, pattern = pkc_filename_pattern,
 #                    full.names = TRUE, recursive = TRUE)
 # }
 
-# Get the sheet name if it's not set.
+# Get the sheet name if it's not set
 if(is.null(phenodata_sheet_name) || phenodata_sheet_name=="") {
-  # Read in the sample annotation file and get the first sheet name off of it. 
+  # Read in the sample annotation file and get the first sheet name off of it
   phenodata_sheet_name <- readxl::excel_sheets(sample_annotation_file)[1] 
 }
 
@@ -89,9 +89,9 @@ if(analyte == "protein") {
   ### Data loading: all modules ----
   ##
   ## ................................................
-  # Create the data object (a NanoString GeoMx set) from the input files.
-  # We have to do this because readNanoStringGeoMxSet() complains when we read in the TCR and BiS modules individually.
-  # We'll split them into their individual modules in the next step.
+  # Create the data object (a NanoString GeoMx set) from the input files
+  # We have to do this because readNanoStringGeoMxSet() complains when we read in the TCR and BiS modules individually
+  # We'll split them into their individual modules in the next step
   data_object_all <- readNanoStringGeoMxSet(dccFiles = dcc_files,
                                             pkcFiles = pkc_files,
                                             phenoDataFile = sample_annotation_file,
@@ -118,15 +118,15 @@ if(analyte == "protein") {
   # For the future: I guess we can split NanoStringGeoMxSet objects by Module pretty easily?
   # subset(target_data_object, Module %in% module_tcr)
   
-  # Split `data_object_all` into individual modules.
+  # Split `data_object_all` into individual modules
   data_object_list <- list()
   for(module in data_object_all@annotation %>% pipe.gsub("\\.\\D+$", "")) {
     message(paste0("Working on PKC file ", module, ".pkc"))
     
-    # Extract the necessary elements.
-    assay_data <- data_object_all@assayData$exprs # Matrix or environment containing the DCCs.
-    pheno_data <- data_object_all@phenoData # AnnotatedDataFrame containing pData. AnnotatedDataFrame() takes 3 arguments: data = data.frame, varMetadata = data.frame, dimLabels. varMetadata and dimLabels can be missing.
-    feature_data <- data_object_all@featureData@data # AnnotatedDataFrame containing fData.
+    # Extract the necessary elements
+    assay_data <- data_object_all@assayData$exprs # Matrix or environment containing the DCCs
+    pheno_data <- data_object_all@phenoData # AnnotatedDataFrame containing pData. AnnotatedDataFrame() takes 3 arguments: data = data.frame, varMetadata = data.frame, dimLabels. varMetadata and dimLabels can be missing
+    feature_data <- data_object_all@featureData@data # AnnotatedDataFrame containing fData
     experiment_data <- data_object_all@experimentData # MIAME (derived from MIAxE; general container for storing experimental metadata; virtual, cannot be instantiated directly)
     annotation <- data_object_all@annotation # Character vector for the PKC file(s)
     dim_labels <- data_object_all@dimLabels # Character vector of length 2: column names to use as labels for the features and samples respectively
@@ -135,12 +135,12 @@ if(analyte == "protein") {
     feature_type <- data_object_all@featureType # Character string indicating if features are "Probe" or "Target" level
     analyte <- data_object_all@analyte # Character string indicating if features are "RNA" or "Protein"
     protocol_data <- data_object_all@protocolData
-    # `assay_data`, `annotation` and `feature_data` need to be subset and `feature_data` repackaged into an AnnotatedDataFrame.
+    # `assay_data`, `annotation` and `feature_data` need to be subset and `feature_data` repackaged into an AnnotatedDataFrame
     annotation <- paste0(module, ".pkc")
     feature_data <- feature_data %>% dplyr::filter(Module == module)
     assay_data <- assay_data %>% .[feature_data$RTS_ID,,drop=F]
     
-    # Create the data object.
+    # Create the data object
     data_object <- NanoStringGeoMxSet(
       assayData = assay_data,
       phenoData = pheno_data,
@@ -156,10 +156,10 @@ if(analyte == "protein") {
       check = FALSE # Needed to bypass checks for "valid" NanoStringGeoMxSet objects
     )
     
-    # Save to the list.
+    # Save to the list
     data_object_list[[module]] <- data_object
     
-    # Clean up.
+    # Clean up
     rm(data_object)
     gc()
   }
@@ -173,10 +173,10 @@ if(analyte == "protein") {
     wta_tcr_pkc_modules <- c(main_module, module_tcr)
     message(paste0("Working on combined WTA+TCR modules ", paste(wta_tcr_pkc_modules, collapse = ", ")))
     
-    # Create the data object (a NanoString GeoMx set) from the input files.
+    # Create the data object (a NanoString GeoMx set) from the input files
     wta_tcr_pkc_files <- paste0(pkc_dir, "/", wta_tcr_pkc_modules, ".pkc")
-    # Check that all of the requisite PKC files exist.
-    if(!all(file.exists(wta_tcr_pkc_files))) { warning("One or more of the WTA and/or TCR PKC files is missing. Combined WTA+TCR object will not be created (but separate objects will still be generated.)") } else {
+    # Check that all of the requisite PKC files exist
+    if(!all(file.exists(wta_tcr_pkc_files))) { warning("One or more of the WTA and/or TCR PKC files is missing. Combined WTA+TCR object will not be created (but separate objects will still be generated)") } else {
       data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
                                             pkcFiles = wta_tcr_pkc_files,
                                             phenoDataFile = sample_annotation_file,
@@ -192,10 +192,10 @@ if(analyte == "protein") {
         dplyr::relocate(Sample_ID, .before = 1)
       rownames(pData(data_object)) <- paste0(pData(data_object)$Sample_ID, ".dcc")
       
-      # Save to the list.
+      # Save to the list
       data_object_list[[combined_module_wta_tcr]] <- data_object
       
-      # Clean up.
+      # Clean up
       rm(data_object)
       gc()
     }
@@ -217,10 +217,10 @@ if(analyte == "protein") {
     
     message(paste0("Working on all modules combined"))
     
-    # Create the data object (a NanoString GeoMx set) from the input files.
+    # Create the data object (a NanoString GeoMx set) from the input files
     all_pkc_files <- paste0(pkc_dir, "/", data_object_all@annotation)
     # Check that all of the requisite PKC files exist.
-    if(!all(file.exists(all_pkc_files))) { warning("One or more of the WTA and/or TCR PKC files is missing. Combined WTA+TCR object will not be created (but separate objects will still be generated.)") } else {
+    if(!all(file.exists(all_pkc_files))) { warning("One or more of the WTA and/or TCR PKC files is missing. Combined WTA+TCR object will not be created (but separate objects will still be generated)") } else {
       data_object <- readNanoStringGeoMxSet(dccFiles = dcc_files,
                                             pkcFiles = all_pkc_files,
                                             phenoDataFile = sample_annotation_file,
@@ -235,10 +235,10 @@ if(analyte == "protein") {
         dplyr::relocate(Sample_ID, .before = 1)
       rownames(pData(data_object)) <- paste0(pData(data_object)$Sample_ID, ".dcc")
       
-      # Save to the list.
+      # Save to the list
       data_object_list[[combined_module_all]] <- data_object
       
-      # Clean up.
+      # Clean up
       rm(data_object)
       gc()
     }
@@ -247,7 +247,7 @@ if(analyte == "protein") {
 
 
 
-# For each separate data object: clean and filter the data, and generate neovariables.
+# For each separate data object: clean and filter the data, and generate neovariables
 for(module in names(data_object_list)) {
   data_object <- data_object_list[[module]]
   
@@ -256,11 +256,11 @@ for(module in names(data_object_list)) {
   ### Data cleaning ----
   ##
   ## ................................................
-  # Shift any expression counts with a value of 0 to 1 to enable in downstream transformations (RNA only).
+  # Shift any expression counts with a value of 0 to 1 to enable in downstream transformations (RNA only)
   if(data_object@analyte=="RNA") data_object <- shiftCountsOne(data_object, useDALogic = TRUE)
   
   # Change the column names in the pData to lowercase
-  # to match the expected inputs in the NanoString Bioconductor package tools (https://rdrr.io/github/Nanostring-Biostats/GeomxTools/src/R/NanoStringGeoMxSet-qc.R).
+  # to match the expected inputs in the NanoString Bioconductor package tools (https://rdrr.io/github/Nanostring-Biostats/GeomxTools/src/R/NanoStringGeoMxSet-qc.R)
   # https://stackoverflow.com/a/51793188/23532435
   # https://stackoverflow.com/questions/69661679/change-multiple-columns-to-lowercase-with-dplyr-difficulty-with-mutate-across-e
   to_lowercase <- c("Slide Name", "Scan Name", "Panel", "Roi", "Segment", "Aoi", "Area", "Tags", "Nuclei")
@@ -276,7 +276,7 @@ for(module in names(data_object_list)) {
   ### Filtering ----
   ##
   ## ................................................
-  # Filter observations by the criteria given in filter_vars, if applicable.
+  # Filter observations by the criteria given in filter_vars, if applicable
   # https://bioconductor.org/packages/release/bioc/vignettes/GeomxTools/inst/doc/Developer_Introduction_to_the_NanoStringGeoMxSet.html
   # filter_vars <- "segment,include,Full ROI,Tumor;Tags,exclude,Stroma"
   
@@ -285,7 +285,7 @@ for(module in names(data_object_list)) {
     for(var in filter_vars) {
       var <- var %>% strsplit(",") %>% unlist
       if(!(var[1] %in% colnames(pData(data_object)))) {
-        warning(paste0("The variable ", var[1], " is not included in the pData for this data set. Skipping this variable."))
+        warning(paste0("The variable ", var[1], " is not included in the pData for this data set. Skipping this variable"))
         next
       }
       
@@ -307,14 +307,14 @@ for(module in names(data_object_list)) {
   ### Neovariable generation ----
   ##
   ## ................................................
-  # Create the specified neovariables (if provided) and add to the pData.
+  # Create the specified neovariables (if provided) and add to the pData
   if(!is.null(neovariables) && (sum(neovariables != "") > 0)) {
     neovariables <- neovariables %>% .[. != ""]
     for(neovariable in neovariables) {
-      # Split into its component parts.
+      # Split into its component parts
       neovariable_comps <- neovariable %>% strsplit("\\+") %>% unlist
       
-      # Create the neovariable.
+      # Create the neovariable
       neovariable_name <- paste0(neovariable_comps, collapse = "_")
       pData(data_object) <- pData(data_object) %>% tidyr::unite(!!as.name(neovariable_name), neovariable_comps, remove = FALSE, na.rm = FALSE)
     }
@@ -325,10 +325,10 @@ for(module in names(data_object_list)) {
   ### Save updated object ----
   ##
   ## ................................................
-  # Save the updated data object back to the list.
+  # Save the updated data object back to the list
   data_object_list[[module]] <- data_object
   
-  # Clean up.
+  # Clean up
   rm(data_object)
   gc()
   
@@ -339,11 +339,11 @@ for(module in names(data_object_list)) {
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# Export the NanoStringGeoMxSet object.
+# Export the NanoStringGeoMxSet object
 saveRDS(data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw.rds"))
 
 # Save environment to .Rdata
 save.image(paste0(output_dir_rdata, "env_data_import_cleaning.RData"))
 
-# Update latest pipeline module completed.
+# Update latest pipeline module completed
 updateLatestModule(output_dir_rdata, current_module)
