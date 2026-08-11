@@ -232,7 +232,8 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
             df_final <- df %>%
               dplyr::filter(Sample %in% samples)
             # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
-            if(!flagVariable(excluded_levels) & !is.na(excluded_levels)) df_final <- df_final %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
+            # Double ampersand (&&) is to protect against throwing an error if `excluded_levels` is length 0
+            if(!flagVariable(excluded_levels) && !is.na(excluded_levels)) df_final <- df_final %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
             
             # Fit the user-defined linear mixed model
             # Loop over the different diversity/distribution metrics
@@ -384,8 +385,9 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                              variable.name = "metric")
             
             # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
+            # Double ampersand (&&) is to protect against throwing an error if `excluded_levels` is length 0
             excluded_levels <- excluded_levels_list[[grouping_var]]
-            if(!flagVariable(excluded_levels) & !is.na(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
+            if(!flagVariable(excluded_levels) && !is.na(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
             
             # Convert the current grouping variable to factor
             plot_df[[grouping_var]] <- as.factor(plot_df[[grouping_var]])

@@ -467,7 +467,8 @@ if(valid_formula_table) {
             cell_data <- immune_long %>%
               dplyr::filter((Sample %in% samples) & (cell_type == cell))
             # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
-            if(!flagVariable(excluded_levels) & !is.na(excluded_levels)) cell_data <- cell_data %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
+            # Double ampersand (&&) is to protect against throwing an error if `excluded_levels` is length 0
+            if(!flagVariable(excluded_levels) && !is.na(excluded_levels)) cell_data <- cell_data %>% dplyr::filter(!(!!as.name(first_fixed_effect) %in% excluded_levels))
             
             # Fit the user-defined linear mixed model
             model <- tryCatch(
@@ -652,8 +653,9 @@ for(method in names(imm_decon_res_list)) {
           plot_df <- plot_df %>% dplyr::filter(!!as.name(grouping_var) != "NA")
         }
         # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
+        # Double ampersand (&&) is to protect against throwing an error if `excluded_levels` is length 0
         excluded_levels <- excluded_levels_list[[grouping_var]]
-        if(!flagVariable(excluded_levels) & !is.na(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
+        if(!flagVariable(excluded_levels) && !is.na(excluded_levels)) plot_df <- plot_df %>% dplyr::filter(!(!!as.name(grouping_var) %in% excluded_levels))
         
         # If the number of unique values of the pData column `grouping_var` > 50, split into multiple groups for graphing
         # https://forum.posit.co/t/diagram-overload-split-data-into-multiple-charts/104355
