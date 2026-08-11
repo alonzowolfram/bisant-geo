@@ -31,7 +31,7 @@ latest_module <- readRDS(rds_path)
 # Make the report -----------------------------------------
 #
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-message(paste0("Rendering HTML report using the template found at ", rmd_template_file, "."))
+message(paste0("Rendering HTML report using the template found at ", rmd_template_file))
 # saveRDS(iris, paste0(output_dir_pubs, "test.rds"))
 # Set the paths.
 # QC - study summary 
