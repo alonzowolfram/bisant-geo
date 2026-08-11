@@ -314,7 +314,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               # "df" is just "df" (although the values are different between the output of `lmer` and `emmeans`)
               # "p.value" is just "p.value" (although, again, the values are different due to multiple testing correction)
               # "subset_var", "subset_var_level", and "formula" need to be added manually
-              if(class(pairwise_results) == "data.frame") { # If tryCatch() for marginal means estimation/post-hoc pairwise test failed, don't build model summary table
+              if("data.frame" %in% class(pairwise_results)) { # If tryCatch() for marginal means estimation/post-hoc pairwise test failed, don't build model summary table
                 model_summary <- pairwise_results %>% 
                   dplyr::mutate(effect = "fixed", fixed_effect = first_fixed_effect) %>% 
                   tidyr::separate(col = "contrast", into = c("baseline", "term"), sep = " - ") %>% 

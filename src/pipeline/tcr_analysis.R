@@ -289,7 +289,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                 # "df" is just "df" (although the values are different between the output of `lmer` and `emmeans`)
                 # "p.value" is just "p.value" (although, again, the values are different due to multiple testing correction)
                 # "subset_var", "subset_var_level", and "formula" need to be added manually
-                if(class(pairwise_results) == "data.frame") { # If tryCatch() for marginal means estimation/post-hoc pairwise test failed, don't build model summary table
+                if("data.frame" %in% class(pairwise_results)) { # If tryCatch() for marginal means estimation/post-hoc pairwise test failed, don't build model summary table
                   model_summary <- pairwise_results %>% 
                     dplyr::mutate(effect = "fixed", fixed_effect = first_fixed_effect) %>% 
                     tidyr::separate(col = "contrast", into = c("baseline", "term"), sep = " - ") %>% 
@@ -474,7 +474,10 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                 
                 # Add `y.position` to `pvals_df`
                 # The space between brackets should be ~ 10% the range of the points
-                ranges <- plot_df %>% group_by(metric) %>% summarise(range = range(value)) %>% summarise(range = diff(range)) %>% as.data.frame
+                ranges <- plot_df %>% 
+                  group_by(metric) %>% 
+                  summarise(range = diff(range(value))) %>% 
+                  as.data.frame
                 bracket_spacing <- 0.15 * ranges[,2]; names(bracket_spacing) <- ranges[,1]
                 highest_bracket <- bracket_spacing * ((pvals_df %>% nrow()) / 4 - 1)
                 # Calculate the y-positions of the brackets

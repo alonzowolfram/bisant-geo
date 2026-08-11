@@ -519,7 +519,7 @@ if(valid_formula_table) {
               # "df" is just "df" (although the values are different between the output of `lmer` and `emmeans`)
               # "p.value" is just "p.value" (although, again, the values are different due to multiple testing correction)
               # "subset_var", "subset_var_level", and "formula" need to be added manually
-              if(class(pairwise_results) == "data.frame") { # If tryCatch() for marginal means estimation/post-hoc pairwise test failed, don't build model summary table
+              if("data.frame" %in% class(pairwise_results)) { # If tryCatch() for marginal means estimation/post-hoc pairwise test failed, don't build model summary table
                 model_summary <- pairwise_results %>% 
                   dplyr::mutate(effect = "fixed", fixed_effect = first_fixed_effect) %>% 
                   tidyr::separate(col = "contrast", into = c("baseline", "term"), sep = " - ") %>% 
@@ -821,8 +821,7 @@ for(method in names(imm_decon_res_list)) {
                 # The space between brackets should be ~ 10% the range of the points
                 ranges <- plot_df %>% # `plot_df` should already have only the samples with the correct `subset_var` and `subset_var_level`
                   group_by(cell_type) %>% 
-                  summarise(range = range(score)) %>% 
-                  summarise(range = diff(range)) %>% 
+                  summarise(range = diff(range(score))) %>%
                   as.data.frame
                 # If any of the ranges are 0, it will throw off things downstream, so replace any 0s with 1
                 ranges$range <- ifelse(ranges$range==0,1,ranges$range)
