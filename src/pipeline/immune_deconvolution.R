@@ -519,17 +519,19 @@ if(valid_formula_table) {
               # "df" is just "df" (although the values are different between the output of `lmer` and `emmeans`)
               # "p.value" is just "p.value" (although, again, the values are different due to multiple testing correction)
               # "subset_var", "subset_var_level", and "formula" need to be added manually
-              model_summary <- pairwise_results %>% 
-                dplyr::mutate(effect = "fixed", fixed_effect = first_fixed_effect) %>% 
-                tidyr::separate(col = "contrast", into = c("baseline", "term"), sep = " - ") %>% 
-                dplyr::mutate(estimate = -1 * estimate, statistic = -1 * t.ratio) %>% 
-                dplyr::rename(std.error = SE) %>% 
-                dplyr::mutate(subset_var = subset_var, 
-                              subset_var_level = subset_var_level, 
-                              formula = formula %>% pipe.gsub("~ ", ""),
-                              cell_type = cell,
-                              method = method)
-              model_summary <- model_summary[,c("method", "cell_type", "effect", "fixed_effect", "baseline", "term", "estimate", "std.error", "statistic", "df", "p.value", "subset_var", "subset_var_level", "formula")]
+              if(class(pairwise_results) == "data.frame") { # If tryCatch() for marginal means estimation/post-hoc pairwise test failed, don't build model summary table
+                model_summary <- pairwise_results %>% 
+                  dplyr::mutate(effect = "fixed", fixed_effect = first_fixed_effect) %>% 
+                  tidyr::separate(col = "contrast", into = c("baseline", "term"), sep = " - ") %>% 
+                  dplyr::mutate(estimate = -1 * estimate, statistic = -1 * t.ratio) %>% 
+                  dplyr::rename(std.error = SE) %>% 
+                  dplyr::mutate(subset_var = subset_var, 
+                                subset_var_level = subset_var_level, 
+                                formula = formula %>% pipe.gsub("~ ", ""),
+                                cell_type = cell,
+                                method = method)
+                model_summary <- model_summary[,c("method", "cell_type", "effect", "fixed_effect", "baseline", "term", "estimate", "std.error", "statistic", "df", "p.value", "subset_var", "subset_var_level", "formula")]
+              }
               
             } else { # Comparisons against a single baseline
               
