@@ -256,10 +256,22 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
               if(all_pairwise) {
                 # Create a dynamic formula for emmeans
                 emm_formula <- as.formula(paste0("~ ", first_fixed_effect))
-                emm <- emmeans::emmeans(model, emm_formula)  # Replace 'Group' with your fixed effect variable
+                emm <- tryCatch(
+                  expr = emmeans::emmeans(model, emm_formula),  # Replace 'Group' with your fixed effect variable
+                  error = function(e) {
+                    warning(glue::glue("Error in estimating marginal means for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
+                    skip_to_next <<- TRUE
+                  }
+                ) # End tryCatch for marginal means estimation
                 # Perform all pairwise comparisons (Tukey-adjusted)
-                pairwise_results <- emmeans::contrast(emm, method = "pairwise", adjust = "tukey") %>%
-                  as.data.frame()
+                pairwise_results <- tryCatch(
+                  expr = emmeans::contrast(emm, method = "pairwise", adjust = "tukey") %>%
+                    as.data.frame(),
+                  error = function(e) {
+                    warning(glue::glue("Error in performing pairwise post-hoc comparisons for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
+                    skip_to_next <<- TRUE
+                  }
+                ) # End tryCatch for pairwise comparisons
                 
                 # Manually create `model_summary` data frame based on `tidy(model)`
                 # Colnames of `model_summary` as created by `tidy(model)`: 
