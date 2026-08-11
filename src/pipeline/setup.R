@@ -278,6 +278,7 @@ library(ggforce) # `gather_set_data()` function used in study-design QC module
 library(ggplotify) # Convert grobs (such as those created by grid) into ggplot objects, so we can display them in Rmd
 library(ggpubr) # For annotate_figure(), as_ggplot()
 library(ggrepel) # For graphing
+library(ggtext) # For wrapping long titles in ggplots
 library(grid) # For textGrob()
 library(gridExtra) # For arrangeGrob / grid.arrange
 library(immunedeconv) # One-stop shop for immune deconvolution
