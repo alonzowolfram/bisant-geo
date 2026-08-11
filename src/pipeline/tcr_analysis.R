@@ -178,7 +178,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
         # If `all_pairwise` is FALSE (i.e., we're doing comparisons against a baseline level)
         # then re-order the factor levels of `first_fixed_effect` in `pData_tmp` so that `baseline_level` is the first
         if(is.logical(all_pairwise)) all_pairwise <- T
-        if(!all_pairwise & (baseline_level %in% levels(pData_tmp[[first_fixed_effect]]))) {
+        if(!all_pairwise & isTRUE(baseline_level %in% levels(pData_tmp[[first_fixed_effect]]))) {
           non_baseline_levels <- levels(pData_tmp[[first_fixed_effect]]) %>% .[. != baseline_level]
           new_order <- c(baseline_level, non_baseline_levels)
           pData_tmp[[first_fixed_effect]] <- factor(pData_tmp[[first_fixed_effect]], levels = new_order)

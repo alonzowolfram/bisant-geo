@@ -77,8 +77,8 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     # Where n is the total number of probes,
     # and x_i is the normalized bg-subtracted value for probe i
     bis_mat <- target_data_object_16s@assayData$neg_norm_bgsub %>% .[!(rownames(.) %in% neg_probes),] # Remove the negative probes.
-    # Samples in cols, probes in rows.
-    # Log transform.
+    # Samples in cols, probes in rows
+    # Log transform
     bis_mat_ln <- log(bis_mat + 1)
     # Sum across probes and divide by the number of probes to get average signal
     n_probes <- nrow(bis_mat)
@@ -100,14 +100,14 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ##
     ## ................................................
     # To determine 16S classification, we'll get the average 16S probe expression
-    # for each sample. 
+    # for each sample
     # Samples will then be categorized as high or low 16S based on (a) user-defined quantile cutoff(s)
     mean_16s_raw <- colMeans(bis_mat)
     if(classification_16s_type=="raw") {exprs_16s <- mean_16s_raw} else {exprs_16s <- score_16s}
     
     percentile_16s_cutoff <- as.numeric(percentile_16s_cutoff)
     for(cutoff in percentile_16s_cutoff) {
-      # Determine the classification.
+      # Determine the classification
       group_16s <- ifelse(exprs_16s >= quantile(exprs_16s, probs = (cutoff/100), na.rm = TRUE), "16S high", "16S low")
       # Add the 16S scores to pData for all modules (including 16S)
       group_var_name <- paste0("Grouping16S_", cutoff)
@@ -192,7 +192,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         
         # Add the `Sample` column (created from rownames) to pData, then
         # convert all selected columns (except Sample) to factors
-        # and subset to include only necessary variables.
+        # and subset to include only necessary variables
         # First identify which columns in pData_subset are data frames (e.g. LOQ)
         df_cols <- sapply(pData(target_data_object_16s), is.data.frame)
         
@@ -207,7 +207,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         # If `all_pairwise` is FALSE (i.e., we're doing comparisons against a baseline level)
         # then re-order the factor levels of `first_fixed_effect` in `pData_tmp` so that `baseline_level` is the first
         if(is.logical(all_pairwise)) all_pairwise <- T
-        if(!all_pairwise & (baseline_level %in% levels(pData_tmp[[first_fixed_effect]]))) {
+        if(!all_pairwise & isTRUE(baseline_level %in% levels(pData_tmp[[first_fixed_effect]]))) {
           non_baseline_levels <- levels(pData_tmp[[first_fixed_effect]]) %>% .[. != baseline_level]
           new_order <- c(baseline_level, non_baseline_levels)
           pData_tmp[[first_fixed_effect]] <- factor(pData_tmp[[first_fixed_effect]], levels = new_order)
