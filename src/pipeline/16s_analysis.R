@@ -439,7 +439,8 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                   axis.ticks.x = element_blank(),
                   legend.position = "right",
                   panel.background = element_rect(fill = "#FFFFFF"),
-                  strip.background = element_rect(fill = "#E4E4E4", color = "#333333")
+                  strip.background = element_rect(fill = "#E4E4E4", color = "#333333"),
+                  plot.title = element_textbox_simple() # Allows wrapping of long ggplot2 titles, https://datavizpyr.com/wrap-title-in-ggplot2/
                 ) +
                 labs(title = plot_title,
                      x = paste0(""),

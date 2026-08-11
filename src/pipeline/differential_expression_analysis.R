@@ -329,7 +329,9 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
             theme_bw(base_size = 16) +
             theme(legend.position = "bottom",
                   panel.grid.minor = element_blank(),
-                  panel.grid.major = element_blank()) # "bottom"
+                  panel.grid.major = element_blank(),
+                  plot.title = element_textbox_simple() # Allows wrapping of long ggplot2 titles, https://datavizpyr.com/wrap-title-in-ggplot2/
+                  ) # "bottom"
           
           # Add to the list
           plot_list_diff_exprs[[subset_var]][[subset_var_level]][[paste0("model_", model_number)]][[normalization_method]][[contrast]] <- plot

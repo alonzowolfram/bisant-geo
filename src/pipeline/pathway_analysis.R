@@ -260,7 +260,8 @@ for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming i
             legend.position = "right",
             panel.grid.minor = element_blank(),
             panel.grid.major = element_blank(),
-            axis.ticks.y = element_blank()
+            axis.ticks.y = element_blank(),
+            plot.title = element_textbox_simple() # Allows wrapping of long ggplot2 titles, https://datavizpyr.com/wrap-title-in-ggplot2/
           ) 
           # ggplot(df_sub_graphing, aes(x = PathwayCleanedChar, y = NES, fill = NES)) +
           # geom_col(width = 0.8) +  # Adjust width as needed

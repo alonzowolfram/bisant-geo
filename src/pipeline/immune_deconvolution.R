@@ -686,7 +686,9 @@ for(method in names(imm_decon_res_list)) {
               scale_color_manual(values = mycolors) + # , guide = FALSE
               theme_bw() + 
               theme(panel.grid.minor = element_blank(),
-                    panel.grid.major = element_blank()) + 
+                    panel.grid.major = element_blank(),
+                    plot.title = element_textbox_simple() # Allows wrapping of long ggplot2 titles, https://datavizpyr.com/wrap-title-in-ggplot2/
+                    ) + 
               scale_x_discrete(limits = rev(levels(imm_decon_res_list[[method]]))) + 
               labs(y = "quantity",
                 title = glue::glue("{method} deconvolution | subset by {subset_tag} | level {subset_var_level} \n compartmentalized by {grouping_var} | group {group}"))
@@ -722,7 +724,9 @@ for(method in names(imm_decon_res_list)) {
               theme_bw() +
               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
                     panel.grid.minor = element_blank(),
-                    panel.grid.major = element_blank()) +
+                    panel.grid.major = element_blank(),
+                    plot.title = element_textbox_simple() # Allows wrapping of long ggplot2 titles, https://datavizpyr.com/wrap-title-in-ggplot2/
+                    ) +
               labs(title = glue::glue("{method} deconvolution | subset by {subset_tag} | level {subset_var_level} \n compartmentalized by {grouping_var} | group {group}"))
             # Add to the plot list
             plot_list[[method]][[subset_var]][[subset_var_level]][[grouping_var]][[group]] <- plot
@@ -765,7 +769,9 @@ for(method in names(imm_decon_res_list)) {
               theme_bw() +
               theme(axis.text.x = element_blank(), # 
                     panel.grid.minor = element_blank(),
-                    panel.grid.major = element_blank()) # +
+                    panel.grid.major = element_blank(),
+                    plot.title = element_textbox_simple() # Allows wrapping of long ggplot2 titles, https://datavizpyr.com/wrap-title-in-ggplot2/
+                    ) # +
               # labs(title = paste0(method, " deconvolution | subset by ", subset_tag, 
               #                     " | level ", subset_var_level, 
               #                     "\n compartmentalized by ", grouping_var,
