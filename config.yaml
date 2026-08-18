@@ -140,7 +140,7 @@ experiment:
     
     # [Optional] Neo-variables, created by pasting together two or more existing variables in the sample annotation
     # Use a plus sign ("+") to combine variables
-    # Separate each neo-variable with a comma (",").
+    # Separate each neo-variable with a comma (",")
     # These neo-variables can then be used in downstream analyses;
     # the names of these neo-variables will be the original names, separated by an underscore ("_")
     neovariables:
@@ -180,7 +180,7 @@ experiment:
     percent_saturation: 50 
     
     # [REQUIRED] Minimum negative control counts (10)
-    # (The authors of this pipeline have found in our own data that 10 tends to be too stringent a cutoff.)
+    # (The authors of this pipeline have found in our own data that 10 tends to be too stringent a cutoff)
     min_negative_count: 1   
           
     # [REQUIRED] Maximum counts observed in NTC well (1000)
@@ -369,7 +369,7 @@ experiment:
     # So, if `subset_var_levels_manual` is not empty, then for each value of `subset_vars`, 
     # the pipeline, _in addition to_ subsets by each level individually, will _also_
     # do a subset consisting of only the `subset_var_levels_manual` values
-    # You can skip a subsetting variable by inputting NA.
+    # You can skip a subsetting variable by inputting NA
     subset_var_16s_levels_manual:
 
     # [Optional] The column in the annotation to use as a primary grouping variable
@@ -436,7 +436,7 @@ experiment:
     # If provided, each point will be labeled with the corresponding values from the columns
     # Also, if values are provided, a separate set of graphs will be created without labels
     # You can provide multiple values, separated by commas, e.g. "variable1,variable2"
-    # A separate graph will be created for each variable thus provided.
+    # A separate graph will be created for each variable thus provided
     label_vars: 
     
     # [Optional] The columns in the annotation to use for annotation in the heatmap
@@ -467,11 +467,11 @@ experiment:
     # So, if `subset_var_levels_manual` is not empty, then for each value of `subset_vars`, 
     # the pipeline, _in addition to_ subsets by each level individually, will _also_
     # do a subset consisting of only the `subset_var_levels_manual` values
-    # You can skip a subsetting variable by inputting NA.
+    # You can skip a subsetting variable by inputting NA
     subset_var_de_levels_manual:
 
     # [Optional] Percentile cutoff, expressed as a decimal, of the coefficient of variance (CV)
-    # to filter genes before running differential expression via linear mixed models.
+    # to filter genes before running differential expression via linear mixed models
     # For example, if you enter 0.25, only genes with a CV >= the 25th percentile
     # of genes by CV will be kept.
     # This speeds up the time it takes to fit the linear mixed models
@@ -526,7 +526,7 @@ experiment:
     # [Optional] Individual pathways to perform FGSEA against
     # If provided, FGSEA will be run against ONLY these pathways
     # These pathways MUST be in the pathway sets listed in the table designated by `pathway_table_file`
-    # (or the default pathways if `pathway_table_file` is left blank). 
+    # (or the default pathways if `pathway_table_file` is left blank)
     # Separate pathways with commas (",")
     # E.g.: BIOCARTA_GPCR_PATHWAY,REACTOME_REGULATION_OF_HMOX1_EXPRESSION_AND_ACTIVITY,HALLMARK_HEDGEHOG_SIGNALING 
     individual_pathways:
@@ -689,7 +689,7 @@ experiment:
     # So, if `subset_var_tcr_levels_manual` is not empty, then for each value of `subset_vars_tcr`, 
     # the pipeline, _in addition to_ subsets by each level individually, will _also_
     # do a subset consisting of only the `subset_var_tcr_levels_manual` values
-    # You can skip a subsetting variable by inputting NA.
+    # You can skip a subsetting variable by inputting NA
     subset_var_tcr_levels_manual:
 
     # [Optional] Names of variables by which to group samples for graphing of 
