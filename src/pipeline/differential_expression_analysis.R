@@ -282,6 +282,17 @@ for(subset_var in unique(results2$`Subset variable`)) { # We're not naming it su
           test_var <- results2 %>% dplyr::filter(`Model`==model) %>% dplyr::select(`Contrast variable`) %>% unlist %>% .[1]
           test_var_lv_1 <- contrast %>% strsplit(" - ") %>% unlist %>% .[1] #pData(target_data_object)[[test_var]] %>% levels %>% .[1]
           test_var_lv_2 <- contrast %>% strsplit(" - ") %>% unlist %>% .[2] #pData(target_data_object)[[test_var]] %>% levels %>% .[2]
+          
+          # If `remove_na_de` is TRUE,
+          # skip this graph if either `test_var_lv_1` or `test_var_lv_2` is NA
+          if(remove_na_de | str_to_lower(remove_na_de)=="true") {
+            if(is.na(test_var_lv_1) | is.na(test_var_lv_2) | test_var_lv_1=="NA" | test_var_lv_2=="NA") {
+              message(glue::glue("Contrast {contrast} for subset variable {subset_var}, level {subset_var_level} will be skipped because at least one level of the contrast variable is NA"))
+              next
+            }
+          }
+          
+          # Subsetting tagline for the title if applicable
           if(subset_var=="NA" || is.na(subset_var) || subset_var=="All observations") {
             subset_by <- ""
           } else {

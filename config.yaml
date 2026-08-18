@@ -474,6 +474,12 @@ experiment:
     # do a subset consisting of only the `subset_var_levels_manual` values
     # You can skip a subsetting variable by inputting NA
     subset_var_de_levels_manual:
+    
+    # [Optional] Whether or not when graphing to remove observations with NA 
+    # as the value for the grouping variable of interest
+    # If set to TRUE, observations with NA as the value for the grouping variable of interest
+    # will be removed. Otherwise (including if left blank), observations with NA will be left in
+    remove_na_de: TRUE
 
     # [Optional] Percentile cutoff, expressed as a decimal, of the coefficient of variance (CV)
     # to filter genes before running differential expression via linear mixed models

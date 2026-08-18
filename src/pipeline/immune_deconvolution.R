@@ -662,7 +662,7 @@ for(method in names(imm_decon_res_list)) {
                            by = "All ROIs")
         # Replace NAs with character strings.
         plot_df[[grouping_var]] <- plot_df[[grouping_var]] %>% tidyr::replace_na('NA') # https://www.statology.org/replace-na-with-string-in-r/
-        # If remove_na_imm_decon is TRUE (or true or True or tRuE or whatever), remove observations with NAs
+        # If `remove_na_imm_decon` is TRUE (or true or True or tRuE or whatever), remove observations with NAs
         if(remove_na_imm_decon | str_to_lower(remove_na_imm_decon)=="true") {
           plot_df <- plot_df %>% dplyr::filter(!!as.name(grouping_var) != "NA")
         }

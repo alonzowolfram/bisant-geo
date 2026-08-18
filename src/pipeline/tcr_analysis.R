@@ -397,7 +397,12 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
               dplyr::select(c(grouping_var, metric_names)) %>%
               reshape2::melt(id.vars = grouping_var,
                              variable.name = "metric")
-            
+            # Replace NAs with character strings.
+            plot_df[[grouping_var]] <- plot_df[[grouping_var]] %>% tidyr::replace_na('NA') # https://www.statology.org/replace-na-with-string-in-r/
+            # If `remove_na_tcr` is TRUE (or true or True or tRuE or whatever), remove observations with NAs
+            if(remove_na_tcr | str_to_lower(remove_na_tcr)=="true") {
+              plot_df <- plot_df %>% dplyr::filter(!!as.name(grouping_var) != "NA")
+            }
             # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
             # Double ampersand (&&) is to protect against throwing an error if `excluded_levels` is length 0
             excluded_levels <- excluded_levels_list[[grouping_var]]

@@ -67,6 +67,7 @@ heatmap_ann_vars,FALSE,,TRUE
 lmm_formulae_de,TRUE,,TRUE
 subset_vars_de,FALSE,,TRUE
 subset_var_de_levels_manual,FALSE,,FALSE
+remove_na_de,FALSE,TRUE,FALSE
 cv_cutoff,FALSE,,FALSE
 n_top_genes,FALSE,15,FALSE
 de_genes_cutoffs,FALSE,"0.25,0.58",TRUE

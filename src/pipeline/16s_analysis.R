@@ -417,6 +417,11 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               )
               colnames(plot_df) <- c("16S expression", grouping_var)
               
+              # If `remove_na_16s` is TRUE,
+              # remove any observations in `plot_df` that have NA
+              # for the value of the grouping variable
+              if(remove_na_16s) plot_df <- plot_df %>% .[complete.cases(.),,drop=F]
+              
               # If `excluded_levels` is set, exclude any specified levels from the first fixed effect
               # Double ampersand (&&) is to protect against throwing an error if `excluded_levels` is length 0
               excluded_levels <- excluded_levels_list[[grouping_var]]
