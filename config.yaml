@@ -144,6 +144,11 @@ experiment:
     # These neo-variables can then be used in downstream analyses;
     # the names of these neo-variables will be the original names, separated by an underscore ("_")
     neovariables:
+    
+    # [Optional] Whether or not for the neo-variables, if one of the component variables is NA for a given observation, the value of the neo-variable for that observation will also be NA, regardless of what the values of the other component variables are
+    # For example, if you are creating a neo-variable from existing variables "A" and "B", if the value of A for the ith observation is "Category1" and the value of B for the ith observation is NA, then the neo-variable for the ith observation will be NA
+    # If left blank, will default to TRUE
+    na_poisons_neovariables: 
 
     # [Optional] Filtering variables.
     # For each variable, follow this pattern:

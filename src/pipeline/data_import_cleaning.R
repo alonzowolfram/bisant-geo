@@ -295,7 +295,7 @@ for(module in names(data_object_list)) {
       } else if((var[2] %>% str_to_lower()) == "exclude") {
         data_object <- data_object %>% .[,!(.[[var[1]]] %in% var_values)]
       } else {
-        warning("Skipping this element of filter_vars. Please enter a value of 'include' or 'exclude' as the second element of filter_vars. And check your spelling!")
+        warning("Skipping this element of `filter_vars`. Please enter a value of 'include' or 'exclude' as the second element of `filter_vars`. And check your spelling!")
         next
       }
       
@@ -316,7 +316,19 @@ for(module in names(data_object_list)) {
       
       # Create the neovariable
       neovariable_name <- paste0(neovariable_comps, collapse = "_")
-      pData(data_object) <- pData(data_object) %>% tidyr::unite(!!as.name(neovariable_name), neovariable_comps, remove = FALSE, na.rm = FALSE)
+      pData(data_object) <- pData(data_object) %>% tidyr::unite(!!as.name(neovariable_name), neovariable_comps, 
+                                                                remove = FALSE, 
+                                                                na.rm = FALSE)
+      
+      # If `na_poisons_neovariables` is TRUE,
+      # convert any values of neovariable `neovariable_name` to NA for observations for which at least one of the component variables is NA
+      if(na_poisons_neovariables) {
+        # Get the observations for which at least one of the components of the neovariable `neovariable` is NA
+        incomplete_cases <- !(complete.cases(pData(data_object)[,neovariable_comps]))
+        # Replace these incomplete cases with NA
+        pData(data_object)[[neovariable_name]] <- ifelse(incomplete_cases, NA, pData(data_object)[[neovariable_name]])
+      }
+      
     }
   }
   
