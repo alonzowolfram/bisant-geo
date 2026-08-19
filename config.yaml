@@ -196,6 +196,17 @@ experiment:
           
     # [REQUIRED] Minimum segment area (5000)
     min_area: 1000
+    
+    # [Optional] Segment IDs for segments to be kept in the data set regardless of whether they pass QC or not
+    # Separate multiple IDs with commas (","), and do NOT include the ".dcc" part
+    #
+    # A segment ID will look something like "DSP-1001660038038-A-A02"
+    # 
+    # Segments included in this option will be kept regardless of whether they pass either segment QC or probe QC
+    #
+    # Segment IDs should match values in the column given by the configuration variable `phenodata_dcc_col_name` above:
+    # e.g., if `phenodata_dcc_col_name` is set to "Sample_ID" and `segments_keep` is "DSP-1001660038038-A-A02,DSP-1001660038038-A-A03", then the `Sample_ID` column should contain the values "DSP-1001660038038-A-A02" and "DSP-1001660038038-A-A03"
+    segments_keep:
 
   # ----------------------------------------------------------------------
   #     Probe QC settings

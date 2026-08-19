@@ -31,6 +31,7 @@ min_negative_count,FALSE,1,FALSE
 max_ntc_count,FALSE,1000,FALSE
 min_nuclei,FALSE,100,FALSE
 min_area,FALSE,1000,FALSE
+segments_keep,FALSE,,TRUE
 min_probe_ratio,FALSE,0.1,FALSE
 percent_fail_grubbs,FALSE,20,FALSE
 loq_sd_cutoff,FALSE,2,FALSE

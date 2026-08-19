@@ -115,14 +115,21 @@ if(!is.null(sData(data_object)$NTC)) {
 qc_summary_kable <- kable(qc_summary, caption = "QC Summary Table for each Segment")
 
 ### Filtering ----
-# Remove flagged segments that do not meet QC cutoffs
-data_object <- data_object[, qc_results$QCStatus == "PASS"]
+# Remove flagged segments that do not meet QC cutoffs,
+# but keep any segments given by `segments_keep`
+if(sum(segments_keep %in% pData(data_object)[[phenodata_dcc_col_name]]) > 0) {
+  data_object_filt <- data_object[, (qc_results$QCStatus == "PASS") | (pData(data_object)[[phenodata_dcc_col_name]] %in% segments_keep)]
+} else {
+  warning("None of the segments given in the `segments_keep` configuration variable were found in the data object. Please check for typos; segments will be filtered normally")
+  data_object_filt <- data_object[, qc_results$QCStatus == "PASS"]
+}
+
 
 # Subsetting our dataset has removed samples which did not pass QC
-dim(data_object)
+dim(data_object_filt)
 # Add the main module data object back to the list
-data_object_list[[main_module]] <- data_object
-rm(data_object)
+data_object_list[[main_module]] <- data_object_filt
+rm(data_object_filt, data_object)
 gc()
 
 # Now remove these segments from the other data objects (PKC modules)
@@ -131,14 +138,20 @@ for(module in names(data_object_list)) {
   
   data_object <- data_object_list[[module]]
   
-  # Remove flagged segments that do not meet QC cutoffs
-  data_object <- data_object[, qc_results$QCStatus == "PASS"]
+  # Remove flagged segments that do not meet QC cutoffs,
+  # but keep any segments given by `segments_keep`
+  if(sum(segments_keep %in% pData(data_object)[[phenodata_dcc_col_name]]) > 0) {
+    data_object_filt <- data_object[, (qc_results$QCStatus == "PASS") | (pData(data_object)[[phenodata_dcc_col_name]] %in% segments_keep)]
+  } else {
+    warning("None of the segments given in the `segments_keep` configuration variable were found in the data object. Please check for typos; segments will be filtered normally")
+    data_object_filt <- data_object[, qc_results$QCStatus == "PASS"]
+  }
   
   # Save the updated data object back to the list
-  data_object_list[[module]] <- data_object
+  data_object_list[[module]] <- data_object_filt
   
   # Clean up
-  rm(data_object)
+  rm(data_object_filt, data_object)
   gc()
 }
 

@@ -387,10 +387,16 @@ if(analyte=="protein") {
   kable(table(pData(target_data_object)$DetectionThreshold,
               pData(target_data_object)$segment))
   
-  # Remove segments with <x% of genes detected
-  segments_keep <- pData(target_data_object)$GeneDetectionRate >= (gene_detection_rate/100) # We will later use this to subset the target data objects for the other modules
+  # Remove segments with <x% of genes detected,
+  # but keep any segments given by the `segments_keep` configuration variable
+  if(sum(segments_keep %in% pData(data_object)[[phenodata_dcc_col_name]]) > 0) {
+    segments_keep_final <- (pData(target_data_object)$GeneDetectionRate >= (gene_detection_rate/100)) | (pData(target_data_object)[[phenodata_dcc_col_name]] %in% segments_keep) # We will later use this to subset the target data objects for the other modules
+  } else {
+    warning("None of the segments given in the `segments_keep` configuration variable were found in the data object. Please check for typos; segments will be filtered normally")
+    segments_keep_final <- pData(target_data_object)$GeneDetectionRate >= (gene_detection_rate/100) # We will later use this to subset the target data objects for the other modules
+  }
   target_data_object <-
-    target_data_object[, segments_keep] # gene_detection_rate is given as a percentage, not a decimal, so we need to divide by 100 first
+    target_data_object[, segments_keep_final] # gene_detection_rate is given as a percentage, not a decimal, so we need to divide by 100 first
   dim(target_data_object)
   
   ## ................................................
@@ -446,7 +452,7 @@ if(analyte=="protein") {
   # Now subset the segments for the rest of the modules
   for(module_i in names(target_data_object_list)) {
     if(module_i == module) next
-    target_data_object_list[[module_i]] <- target_data_object_list[[module_i]][, segments_keep]
+    target_data_object_list[[module_i]] <- target_data_object_list[[module_i]][, segments_keep_final]
   }
 }
 
