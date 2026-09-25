@@ -98,20 +98,26 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
     # We will do this by having a gamma score and a delta score and then multiplying 
     # the two together
     
+    # Include only the constant regions
+    # which are in the WTA module, not TCR
+    target_data_object_wta <- target_data_object_list[[main_module]]
+    
     # Check for gamma/delta TCR probes
-    gd_tcr_probes <- base::grepl("TR[D/G][C]", tcr_probes)
-    if(length(gd_tcr_probes) < 1) { # No TCR probes
+    gd_tcr_probes <- fData(target_data_object_wta)$TargetName[base::grepl("^TR[D/G][C]", fData(target_data_object_wta)$TargetName) | base::grepl("^TARP$", fData(target_data_object_wta)$TargetName)]
+    if(length(gd_tcr_probes) < 1) { # No TCR (constant region) probes
       
-      gd_score <- rep(NA, nrow(pData(target_data_object)))
+      gd_score <- rep(NA, nrow(pData(target_data_object_wta)))
       
     } else {
       # Extract the TCR probe expression matrix
-      exprs_tcr <- target_data_object@assayData$bg_sub_p90
+      exprs_tcr <- target_data_object_wta@assayData[[normalization_methods[1]]]
       
       # Create the gamma score 
-      gamma_score <- exprs_tcr[base::grepl("TR[G][C]", rownames(exprs_tcr)),,drop=F] %>% colSums()
+      gamma_score <- exprs_tcr[base::grepl("^TR[G][C]", rownames(exprs_tcr)) | base::grepl("^TARP$", rownames(exprs_tcr)),,drop=F] %>% colSums()
+      gamma_score <- ifelse(is.finite(gamma_score), gamma_score, 0)
       # Create the delta score
-      delta_score <- exprs_tcr[base::grepl("TR[D][C]", rownames(exprs_tcr)),,drop=F] %>% colSums()
+      delta_score <- exprs_tcr[base::grepl("^TR[D][C]", rownames(exprs_tcr)),,drop=F] %>% colSums()
+      delta_score <- ifelse(is.finite(delta_score), delta_score, 0)
       
       # Create the gamma-delta score
       gd_score <- log2((gamma_score * delta_score) + 1)
@@ -530,7 +536,7 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                   summarise(range = diff(range(value))) %>% 
                   as.data.frame
                 bracket_spacing <- 0.15 * ranges[,2]; names(bracket_spacing) <- ranges[,1]
-                highest_bracket <- bracket_spacing * ((pvals_df %>% nrow()) / 5 - 1) # Change 5 to the number of metrics
+                highest_bracket <- bracket_spacing * ((pvals_df %>% nrow()) / length(metric_names) - 1)
                 # Calculate the y-positions of the brackets
                 y.position <- c()
                 for(metric_name in metric_names) {
@@ -571,7 +577,18 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
             plot
             file_name <- glue::glue("TCR_diversity_plot_{subset_var}_{subset_var_level}_{grouping_var}")
             for(file_type in output_plot_file_types) {
-              ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 8, height = 6, units = "in")
+              skip_to_next <- FALSE
+              save_plot <- tryCatch(
+                expr = ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 8, height = 6, units = "in"),
+                error = function(e) {
+                  warning(glue::glue("Error in saving plot {file_name}.{file_type}: {e$message}"))
+                  skip_to_next <<- TRUE
+                }
+              )
+              
+              if (skip_to_next) next
+              message("Plot {file_name}.{file_type} rendered")
+
             }
             
           } # End grouping variables `for()` loop
