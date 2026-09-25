@@ -338,6 +338,13 @@ if(analyte=="protein") {
     })
     names(individual_module_list) <- modules
     
+    # 2026/09/24: BUG FIX: FILTER newly separated modules
+    for(module in names(individual_module_list)) {
+      # Subset `individual_module_list[[module]]` to include only the targets in `target_data_object_list[[module]]`
+      # since the objects in `target_data_object_list` should be QC'ed
+      individual_module_list[[module]] <- subset(individual_module_list[[module]], TargetName %in% fData(target_data_object_list[[module]])$TargetName)
+    }
+    
     # Combine with `target_data_object_list`
     target_data_object_list <- c(individual_module_list, target_data_object_list[!(names(target_data_object_list) %in% c(combined_module_wta_tcr, modules))])
     # Removes the combined module and ensures that for the individual modules, only the normalized objects are saved
