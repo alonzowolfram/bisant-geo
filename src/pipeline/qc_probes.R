@@ -125,20 +125,20 @@ if(analyte=="protein") {
   ## Probe QC ----
   ##
   ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  # Create a list to hold the target data objects.
+  # Create a list to hold the target data objects
   target_data_object_list <- list()
-  # Create a list to hold the probe QC table.
+  # Create a list to hold the probe QC table
   qc_df_list <- list()
   
-  # Loop over each module and calculate probe QC metrics.
+  # Loop over each module and calculate probe QC metrics
   if(flagVariable(modules_filter_probes)) modules_filter_probes <- c("")
   
   for(module in names(data_object_list)) {
     data_object <- data_object_list[[module]]
     
-    # Set probe QC flags.
+    # Set probe QC flags
     # Generally keep the qcCutoffs parameters unchanged. Set removeLocalOutliers to 
-    # FALSE if you do not want to remove local outliers.
+    # FALSE if you do not want to remove local outliers
     data_object <- setBioProbeQCFlags(data_object, 
                                       qcCutoffs = list(minProbeRatio = min_probe_ratio,
                                                        percentFailGrubbs = percent_fail_grubbs), 
@@ -155,7 +155,7 @@ if(analyte=="protein") {
                                     & !probe_qc_results$GlobalGrubbsOutlier))
     qc_df_list[[module]] <- qc_df
     
-    # If module is in modules_filter_probes, 
+    # If module is in `modules_filter_probes`, 
     # subset object to exclude all that did not pass Ratio & Global testing
     # But keep all the ones we specifically want to include, including TCR and negative probes
     if(module %in% modules_filter_probes) {
