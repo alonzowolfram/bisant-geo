@@ -5,6 +5,7 @@ params:
   pkc_summary_file: ''
   ntc_summary_file: ''
   qc_segments_summary_file: ''
+  subject_summary_tables_file: ''
   plot_list_qc_segments_file: ''
   plot_list_qc_probes_file: ''
   qc_probes_summary_file: ''
@@ -53,6 +54,13 @@ if(file.exists(params$pkc_summary_file)) {
   knitr::kable(pkc_summary_df)
 }
 
+if(file.exists(params$subject_summary_tables_file)) {
+  summary_tables <- readRDS(params$subject_summary_tables_file)
+  for(item in names(summary_tables)) {
+    print(glue::glue("{item}"))
+    knitr::kable(summary_tables[[item]])
+  }
+}
 ```
 
 # QC - segments
@@ -177,7 +185,7 @@ if(file.exists(params$plot_list_diff_exprs_grid_file)) {
 ```
 
 # Pathway analysis
-```{r fig.width=12, fig.height=12}
+```{r fig.width=25, fig.height=20}
 if(file.exists(params$plot_list_pathway_analysis_grid_file)) {
   plot_list_pathway_analysis_grids <- readRDS(params$plot_list_pathway_analysis_grid_file)
   for(item in plot_list_pathway_analysis_grids) {
@@ -187,7 +195,7 @@ if(file.exists(params$plot_list_pathway_analysis_grid_file)) {
 ```
 
 # Immune deconvolution
-```{r fig.width=12, fig.height=12}
+```{r fig.width=20, fig.height=20}
 if(file.exists(params$plot_list_imm_decon_file)) {
   plot_list_imm_decon <- readRDS(params$plot_list_imm_decon_file)
   for(item in plot_list_imm_decon) {

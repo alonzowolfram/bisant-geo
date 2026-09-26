@@ -19,10 +19,10 @@ if(workflow_system=="Nextflow") {
   source(file.path(bin_path, "pipeline/setup.R"))
 } else {
   bin_path <- ""
-  source("src/pipeline/setup.R") # I guess the path it sources from is the current working directory, not the path the R script lives in.
+  source("src/pipeline/setup.R") # I guess the path it sources from is the current working directory, not the path the R script lives in
 }
 
-# Load the RDS objects with the necessary data (which is just the latest module completed). 
+# Load the RDS objects with the necessary data (which is just the latest module completed)
 rds_path <- cl_args[5]
 latest_module <- readRDS(rds_path)
 
@@ -38,6 +38,7 @@ message(paste0("Rendering HTML report using the template found at ", rmd_templat
 pkc_summary_file <- paste0(output_dir_rdata, "pkc_summary_table.rds")
 qc_segments_summary_file <- paste0(output_dir_rdata, "qc-segments_summary_table.rds")
 ntc_summary_file <- paste0(output_dir_rdata, "ntc_summary_table.rds")
+subject_summary_tables_file <- paste0(output_dir_rdata, "subject_summary_tables.rds")
 # QC - segments
 plot_list_qc_segments_file <- paste0(output_dir_rdata, "qc-segments_plot_list.rds")
 # QC - probes

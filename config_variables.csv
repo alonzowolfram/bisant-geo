@@ -22,6 +22,8 @@ nuclei_col_name,FALSE,nuclei,FALSE
 neovariables,FALSE,,TRUE
 na_poisons_neovariables,FALSE,TRUE,FALSE
 filter_vars,FALSE,,FALSE
+subject_ids,FALSE,,TRUE
+subject_categories,FALSE,,FALSE
 min_segment_reads,FALSE,1000,FALSE
 percent_trimmed,FALSE,80,FALSE
 percent_stitched,FALSE,80,FALSE

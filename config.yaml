@@ -159,6 +159,30 @@ experiment:
     # Separate multiple variables with semicolons, e.g.
     # var2,include,value1,value2,...;var2,exclude,value1,value2,...
     filter_vars:
+    
+  # ----------------------------------------------------------------------
+  #     Study-design QC settings
+  # ----------------------------------------------------------------------
+  study_design_qc:
+  
+    # Settings for study-design QC. Defaults are given in parentheses
+    
+    # [Optional] The name of the column containing a unique identifier for each
+    # individual subject, which can be on the organismal level (e.g. patient, research animal)
+    # or on the sample level (e.g. tissue sample when there are multiple samples per patient)
+    # You can specify multiple identifiers; in this case, each one will be used separately
+    # Separate multiple identifiers by commas (",")
+    subject_ids: 
+    
+    # [Optional] The names of columns containing categorical variables (labels)
+    # for the subjects specified in `subject_id` above
+    # and by which to group and count these subjects
+    # Separate multiple variable names by commas (",")
+    # and separate groups of variable by subject identifier by semicolons (";")
+    # Note that if you want a variable to be used in two different groups by subject identifier, it will need to be specified
+    # once in each group
+    # Use slashes ("/") between two variable names to create a confusion matrix for those two variables
+    subject_categories: 
 
   # ----------------------------------------------------------------------
   #     Segment QC settings

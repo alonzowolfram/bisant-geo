@@ -15,9 +15,16 @@ data_object_list <- readRDS(cl_args[5])
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+# PKC summary
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 # Access the PKC files, to ensure that expected PKCs have been loaded for this study
 modules <- names(data_object_list)
 pkcs <- paste0(modules, ".pkc")
+# Create summary table
 pkc_summary <- data.frame(PKCs = pkcs, modules = modules)
 
 # Set `main_module` if not set already
@@ -25,31 +32,57 @@ if(flagVariable(main_module)) main_module <- modules[1]
 # Set the data object
 data_object <- data_object_list[[main_module]]
 
-# # Visually summarize the experimental design for the dataset to look at the different types of samples and ROI/AOI segments; present in Sankey diagram
-# # Select the annotations we want to show, use `` to surround column names with
-# # spaces or special symbols
-# count_mat <- dplyr::count(pData(data_object), `slide name`, segment)
-# # Gather the data and plot in order: class, slide name, region, segment
-# test_gr <- ggforce::gather_set_data(count_mat, 1:4)
-# test_gr$x <- factor(test_gr$x,
-#                     levels = c("class", "slide name", "region", "segment"))
-# # Plot Sankey
-# ggplot(test_gr, aes(x, id = id, split = y, value = n)) +
-#     geom_parallel_sets(aes(fill = region), alpha = 0.5, axis.width = 0.1) +
-#     geom_parallel_sets_axes(axis.width = 0.2) +
-#     geom_parallel_sets_labels(color = "white", size = 5) +
-#     theme_classic(base_size = 17) +
-#     theme(legend.position = "bottom",
-#           axis.ticks.y = element_blank(),
-#           axis.line = element_blank(),
-#           axis.text.y = element_blank()) +
-#     scale_y_continuous(expand = expansion(0)) +
-#     scale_x_discrete(expand = expansion(0)) +
-#     labs(x = "", y = "") +
-#     annotate(geom = "segment", x = 4.25, xend = 4.25,
-#              y = 20, yend = 120, lwd = 2) +
-#     annotate(geom = "text", x = 4.19, y = 70, angle = 90, size = 5,
-#              hjust = 0.5, label = "100 segments")
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+# Subject-level summary
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# Create summary table at the individual subject level by specified (categorical) characteristics
+subject_summary_tables <- list()
+
+# If `subject_categories` is set, split it into its components by semicolons
+if(!flagVariable(subject_categories)) {
+  # Split `subject_categories` by semicolons
+  # This will give groups of subject categories, each group corresponding to one entry in `subject_ids`
+  subject_categories <- subject_categories %>% str_split(";") %>% unlist
+}
+# If `subject_ids` and `subject_categories` are set, create table for each individual subject category, for each subject identifier
+if(!flagVariable(subject_ids) & !flagVariable(subject_categories)) {
+  # Extract the pData data frame
+  pdata <- pData(data_object)
+  
+  # Create a table of subject identifiers - subject categories
+  # Recycle entries if one is longer than the other
+  tables_df <- cbind(subject_ids, subject_categories)
+  
+  for(i in 1:nrow(tables_df)) {
+    subject_id <- tables_df[i,1]
+    subject_category <- tables_df[i,2] %>% unlist
+    
+    # For each entry in `subject_categories`, add to a _list_
+    # splitting the entry into separate entries by commas (",") first and then slashes ("/")
+    subject_categories_list <- subject_category %>% str_split(",") %>% .[[1]] %>%
+                                  lapply(FUN = function(x) {
+                                        x %>% str_split("/") %>% .[[1]]
+                                      })
+    
+    for(entry in subject_categories_list) {
+      # Create the identifier for this entry
+      entry_cleaned <- paste(entry, collapse = "_")
+      name <- glue::glue("{subject_id} by {entry_cleaned}")
+      
+      # Use the `pdata` data frame to create confusion matrix for each individual subject category
+      subject_summary_tables[[name]] <- pdata %>% 
+        dplyr::select(!!as.name(subject_id), entry) %>% 
+        dplyr::distinct() %>% 
+        dplyr::select(entry) %>% 
+        table
+    }
+    
+  }
+  
+}
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
@@ -63,6 +96,8 @@ data_object <- data_object_list[[main_module]]
 saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw_main-module.rds"))
 # Save the PKC summary table
 saveRDS(pkc_summary, paste0(output_dir_rdata, "pkc_summary_table.rds"))
+# Save the subject characteristics summary tables
+saveRDS(subject_summary_tables, paste0(output_dir_rdata, "subject_summary_tables.rds"))
 
 # Save environment to .Rdata
 save.image(paste0(output_dir_rdata, "env_qc_study-design.RData"))
