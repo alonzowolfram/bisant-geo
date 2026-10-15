@@ -115,7 +115,12 @@ for (lmm_formula in lmm_formulae_de) {
         
         mean_exprs_cutoff_genes <- rowMeans(target_data_object@assayData[[paste0("log_", norm_method)]]) > 1
         genes_pass_cutoffs <- intersect(top_cv_genes, names(mean_exprs_cutoff_genes[mean_exprs_cutoff_genes]))
-        
+        # 2026/10/15: add checkpoint for whether or not there are any genes that pass the cutoff
+        if(length(genes_pass_cutoffs) < 1) {
+          message(glue::glue("Warning: no genes pass cutoff. Skipping"))
+          next
+        }
+          
         tdo_sub <- subset(target_data_object, TargetName %in% genes_pass_cutoffs, ind)
         
         # Fit the model.
