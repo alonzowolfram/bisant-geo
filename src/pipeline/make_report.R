@@ -47,6 +47,7 @@ qc_probes_summary_file <- paste0(output_dir_rdata, "qc-probes_table.rds")
 goi_detection_rate_table_file <- paste0(output_dir_rdata, "genes-of-interest_detection-rate_table.rds")
 # Normalization
 plot_list_normalization_file <- paste0(output_dir_rdata, "normalization_plot_list.rds")
+subject_summary_tables_post_qc_file <- paste0(output_dir_rdata, "subject_summary_tables_post-qc.rds")
 # 16S analysis
 plot_list_16s_file <- paste0(output_dir_rdata, "16S-analysis_raw-plots-list.rds")
 # Unsupervised analysis
@@ -69,11 +70,13 @@ rmarkdown::render(rmd_template_file,
                   params=list(qc_segments_summary_file = qc_segments_summary_file,
                               ntc_summary_file = ntc_summary_file,
                               pkc_summary_file = pkc_summary_file,
+                              subject_summary_tables_file = subject_summary_tables_file,
                               plot_list_qc_segments_file = plot_list_qc_segments_file,
                               plot_list_qc_probes_file = plot_list_qc_probes_file,
                               qc_probes_summary_file = qc_probes_summary_file,
                               goi_detection_rate_table_file = goi_detection_rate_table_file,
                               plot_list_normalization_file = plot_list_normalization_file,
+                              subject_summary_tables_post_qc_file = subject_summary_tables_post_qc_file,
                               plot_list_16s_file = plot_list_16s_file,
                               plot_list_unsupervised_clustering_grid_file = plot_list_unsupervised_clustering_grid_file,
                               plot_list_cv_heatmap_file = plot_list_cv_heatmap_file,

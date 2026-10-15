@@ -11,6 +11,7 @@ params:
   qc_probes_summary_file: ''
   goi_detection_rate_table_file: ''
   plot_list_normalization_file: ''
+  subject_summary_tables_post_qc_file: ''
   plot_list_16s_file: ''
   plot_list_unsupervised_clustering_grid_file: ''
   plot_list_16s_score_file: ''
@@ -53,12 +54,14 @@ if(file.exists(params$pkc_summary_file)) {
   pkc_summary_df <- readRDS(params$pkc_summary_file)
   knitr::kable(pkc_summary_df)
 }
+```
 
+```{r, results='asis'}
 if(file.exists(params$subject_summary_tables_file)) {
   summary_tables <- readRDS(params$subject_summary_tables_file)
   for(item in names(summary_tables)) {
-    print(glue::glue("{item}"))
-    knitr::kable(summary_tables[[item]])
+    print(knitr::kable(summary_tables[[item]], caption = glue::glue("Pre-QC: {item}")))
+    cat('\n\n<!-- -->\n\n')
   }
 }
 ```
@@ -116,6 +119,17 @@ if(file.exists(params$plot_list_normalization_file)) {
   plot_list_normalization <- readRDS(params$plot_list_normalization_file)
   for(item in plot_list_normalization) {
     suppressMessages(capture.output(print(item)))
+  }
+}
+```
+
+```{r, results='asis'}
+if(file.exists(params$subject_summary_tables_post_qc_file)) {
+  summary_tables_post_qc <- readRDS(params$subject_summary_tables_post_qc_file)
+  for(item in names(summary_tables_post_qc)) {
+    # https://stackoverflow.com/questions/39650166/r-why-kable-doesnt-print-inside-a-for-loop 
+    print(knitr::kable(summary_tables_post_qc[[item]], caption = glue::glue("Post-QC: {item}")))
+    cat('\n\n<!-- -->\n\n')
   }
 }
 ```

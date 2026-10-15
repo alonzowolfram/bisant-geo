@@ -443,7 +443,7 @@ if(analyte=="protein") {
   
   ## ................................................
   ##
-  ### Finalization ----
+  ### Final data objects ----
   ##
   ## ................................................
   # Add the main module data object back to the list
@@ -454,6 +454,7 @@ if(analyte=="protein") {
     if(module_i == module) next
     target_data_object_list[[module_i]] <- target_data_object_list[[module_i]][, segments_keep_final]
   }
+  
 }
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

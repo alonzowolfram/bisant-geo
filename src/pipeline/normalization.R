@@ -354,6 +354,57 @@ if(analyte=="protein") {
 
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ##                                                                
+## Update subject-level characteristics table ----
+##
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Create summary table at the individual subject level by specified (categorical) characteristics
+subject_summary_tables <- list()
+
+# If `subject_categories` is set, split it into its components by semicolons
+if(!flagVariable(subject_categories)) {
+  # Split `subject_categories` by semicolons
+  # This will give groups of subject categories, each group corresponding to one entry in `subject_ids`
+  subject_categories <- subject_categories %>% str_split(";") %>% unlist
+}
+# If `subject_ids` and `subject_categories` are set, create table for each individual subject category, for each subject identifier
+if(!flagVariable(subject_ids) & !flagVariable(subject_categories)) {
+  # Extract the pData data frame
+  pdata <- pData(target_data_object_list[[main_module]])
+  
+  # Create a table of subject identifiers - subject categories
+  # Recycle entries if one is longer than the other
+  tables_df <- cbind(subject_ids, subject_categories)
+  
+  for(i in 1:nrow(tables_df)) {
+    subject_id <- tables_df[i,1]
+    subject_category <- tables_df[i,2] %>% unlist
+    
+    # For each entry in `subject_categories`, add to a _list_
+    # splitting the entry into separate entries by commas (",") first and then slashes ("/")
+    subject_categories_list <- subject_category %>% str_split(",") %>% .[[1]] %>%
+      lapply(FUN = function(x) {
+        x %>% str_split("/") %>% .[[1]]
+      })
+    
+    for(entry in subject_categories_list) {
+      # Create the identifier for this entry
+      entry_cleaned <- paste(entry, collapse = "_")
+      name <- glue::glue("{subject_id} by {entry_cleaned}")
+      
+      # Use the `pdata` data frame to create confusion matrix for each individual subject category
+      subject_summary_tables[[name]] <- pdata %>% 
+        dplyr::select(!!as.name(subject_id), entry) %>% 
+        dplyr::distinct() %>% 
+        dplyr::select(entry) %>% 
+        table
+    }
+    
+  }
+  
+}
+
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+##                                                                
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -361,6 +412,8 @@ if(analyte=="protein") {
 saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_normalized.rds"))
 # Save the graphs
 saveRDS(plot_list_normalization, paste0(output_dir_rdata, "normalization_plot_list.rds"))
+# Save the subject characteristics summary tables
+saveRDS(subject_summary_tables, paste0(output_dir_rdata, "subject_summary_tables_post-qc.rds"))
 
 # Save environment to .Rdata
 save.image(paste0(output_dir_rdata, "env_normalization.RData"))
