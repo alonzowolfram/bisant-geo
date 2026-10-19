@@ -536,7 +536,24 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                   summarise(range = diff(range(value))) %>% 
                   as.data.frame
                 bracket_spacing <- 0.15 * ranges[,2]; names(bracket_spacing) <- ranges[,1]
-                highest_bracket <- bracket_spacing * ((pvals_df %>% nrow()) / length(metric_names) - 1)
+                # 2026/10/19: If length(metric_names) != nrow(pvals_df) (because, e.g., if all the gamma-delta scores are
+                # 0 so differential analysis doesn't work), the original code for `highest_bracket` will get thrown off
+                # Original code: bracket_spacing * ((pvals_df %>% nrow()) / length(metric_names) - 1)
+                # pvals_df %>% nrow() will give us the total number of brackets across all metrics
+                # so we need to divide by length(metric_names) to get the number of brackets per metric
+                # and then subtract 1 because the first bracket will have additional spacing of 0
+                # So first we need to make sure that (pvals_df %>% nrow()) / length(metric_names) is an integer
+                # Ok, further edit! instead of `length(metric_names)`,
+                # we should use `length(unique(pvals_df$metric))`
+                # because using `length(metric_names)` will under-calculate the amount of brackets per metric we need
+                # if not all metrics in `metric_names` are used
+                brackets_per_metric <- (pvals_df %>% nrow()) / length(unique(pvals_df$metric))
+                modulo <- (pvals_df %>% nrow()) %% length(metric_names)
+                if(modulo != 0) { # Something is off with `brackets_per_metric`; we need to set it correct
+                  brackets_per_metric <- ceiling(brackets_per_metric)
+                }
+                highest_bracket <- bracket_spacing * (brackets_per_metric - 1)
+                
                 # Calculate the y-positions of the brackets
                 y.position <- c()
                 for(metric_name in metric_names) {
@@ -544,7 +561,26 @@ if(!flagVariable(module_tcr) && module_tcr %in% names(target_data_object_list)) 
                   print(glue::glue("{length(y.position_metric_i)}"))
                   y.position <- c(y.position, y.position_metric_i)
                 }
+                # 2026/10/19:
+                # Remove from `y.position` any metrics not present in `pvals_df`
+                # While we're at it, we should probably left_join it instead of just blindly cbinding it
+                # Actually, forget about that last one: 
+                # when we have > 1 bracket per facet (metric), we can't join on metric name
+                # because we'll have > 1 entry in `y.position` with a given name
+                # First, double-check that filtering any metrics from `y.position` does not change the order of `y.position`
+                # Because order is SUPER important - we'll be adding it to `pvals_df` as is
+                # > test = c("Test1", "Test2", "Test3", "Test4")
+                # > names(test) = c("C", "B", "A", "X")
+                # > test
+                # > test %>% .[names(.) %in% c("A", "B", "C", "D")]
+                
+                # Next, we can't filter by `.[names(.) %in% pvals_df$metric]`, since when we have
+                # > 1 bracket per metric, the entries in `y.position` are not named
+                # So we'll have to go about it in a roundabout way
+                excluded_metrics <- setdiff(metric_names, unique(pvals_df$metric))
+                y.position <- y.position %>% .[!(names(.) %in% excluded_metrics)]  # Original: y.position <- y.position %>% .[names(.) %in% pvals_df$metric] 
                 pvals_df[["y.position"]] <- y.position
+                
                 # Add `label` column 
                 # pvals_df[["p.label"]] <- sprintf("p = %.2f", pvals_df$p) # %.2f = 2 decimal places; %.2g = 2 significant figures
                 pvals_df <- pvals_df %>% 
