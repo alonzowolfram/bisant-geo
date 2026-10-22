@@ -76,12 +76,12 @@ if(nrow(results2) < 1) {
   ##
   ## ................................................
   # Subset results2 table (data frame of differentially expressed genes)
-  message(paste0("Subsetting results to include only those from the normalization method ", normalization_method, "."))
+  message(paste0("Subsetting results to include only those from the normalization method ", normalization_method))
   results2_sub <- results2 %>% dplyr::filter(`Normalization method`==normalization_method)
   
   # Load the gene sets (from MSigDB)
   # https://rpubs.com/LiYumei/806213
-  message("Loading gene sets.")
+  message("Loading gene sets")
   gene_sets <- data.frame()
   for(i in 1:length(msigdb_list[["subcats"]])) {
     subcat <- msigdb_list[["subcats"]][i]
@@ -100,11 +100,11 @@ if(nrow(results2) < 1) {
   }
   
   # Subset to include only the pathways of interest if individual_pathways is provided
-  message("Subsetting gene sets.")
+  message("Subsetting gene sets")
   if(sum(!is.null(individual_pathways)) > 0 & sum(individual_pathways != "") > 0) gene_sets <- gene_sets %>% dplyr::filter(gs_name %in% individual_pathways)
   
   # Create an MSigDB pathway list
-  message("Creating MSigDB gene set list.")
+  message("Creating MSigDB gene set list")
   msigdbr_pathway_list <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
   
   ## ................................................
@@ -121,7 +121,7 @@ if(nrow(results2) < 1) {
   model_list <- list() # Hold all the model formulae so we can access them when arranging the plots into grids
   
   message("Performing FGSEA")
-  for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name. ... 
+  for(subset_var in unique(results2_sub$`Subset variable`)) { # We're not naming it subset_vars because we already have a variable by that name ... 
     
     subset_var_levels <- results2_sub %>% dplyr::filter(`Subset variable`==subset_var) %>% .$`Subset level` %>% unique
     for(subset_var_level in subset_var_levels) {
