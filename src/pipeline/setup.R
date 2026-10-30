@@ -348,7 +348,7 @@ rdata_folder <- ifelse(workflow_system=="Nextflow", "", "Rdata/")
 # If any of the required parameters are missing, 
 # print a message for each one, then stop the pipeline
 if(length(error_msg_list) > 0) {
-  message("Error: you are missing one or more required parameters. Please see the error messages below.")
+  message("Error: you are missing one or more required parameters. Please see the error messages below")
   
   for(msg in error_msg_list) {
     message(msg)
@@ -358,9 +358,10 @@ if(length(error_msg_list) > 0) {
 }
 
 # There are a couple of parameters we have to handle manually:
-# `output_plot_file_types`, `analyte`, `subset_var_16s_levels_manual`, `subset_var_de_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, `subset_var_imm_decon_levels_manual`, and `subset_var_tcr_levels_manual`
+# `output_plot_file_types`, `analyte`, `modules_filter_probes`, `subset_var_16s_levels_manual`, `subset_var_de_levels_manual`, `de_genes_cutoffs`, `imm_decon_methods`, `subset_var_imm_decon_levels_manual`, and `subset_var_tcr_levels_manual`
 if(flagVariable(output_plot_file_types)) {output_plot_file_types <- c("eps", "pdf")} else {output_plot_file_types <- output_plot_file_types %>% str_split(",") %>% unlist %>% str_to_lower}
 if(flagVariable(analyte) || !(analyte %in% c("RNA", "protein"))) analyte <- "RNA"
+if(!flagVariable(modules_filter_probes)) modules_filter_probes <- modules_filter_probes %>% strsplit(";") %>% unlist
 if(flagVariable(subset_var_de_levels_manual)) {
   subset_var_de_levels_manual <- rep(list(NA), length(subset_vars_de))
   names(subset_var_de_levels_manual) <- subset_vars_de

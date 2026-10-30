@@ -43,8 +43,9 @@ gene_detection_rate,FALSE,5,FALSE
 percent_of_segments,FALSE,5,FALSE
 probes_exclude,FALSE,,TRUE
 probes_include,FALSE,,TRUE
+genes_include,FALSE,,TRUE
 genes_of_interest,FALSE,,TRUE
-modules_filter_probes,FALSE,,TRUE
+modules_filter_probes,FALSE,,FALSE
 normalization_methods,FALSE,,TRUE
 ann_of_interest,TRUE,,FALSE
 protein_norm_qc_plot_factors,FALSE,,TRUE

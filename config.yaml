@@ -293,12 +293,19 @@ experiment:
     # If segments that fail QC are the only segments that contain these probes, the probes will be excluded by default
     probes_include: None
     
+    # [Optional] Genes to specifically include the analysis. regardless of if they pass QC (detection in >=x% of samples) or not
+    # Separate genes with commas (",")
+    # If there are no genes you specifically want to include, input "None"
+    # Note that this will not prevent removal of segments with these probes in RNA analysis
+    # If segments that fail QC are the only segments that contain these probes, the probes will be excluded by default
+    genes_include: None
+
     # [Optional] Probes/genes of interest to create a table of detection rates for
     # Separate with commas (",")
     genes_of_interest: Microbial16S_01,Microbial16S_02,Microbial16S_03,Microbial16S_04,Microbial16S_05,Microbial16S_06,Microbial16S_07,Microbial16S_08
     
     # [Optional] Modules for which to filter probes
-    # Separate modules with commas (",")
+    # Separate modules with semi-colons (";"), NOT COMMAS, because commas are used as delimiters within combined modules
     # If not provided, will not perform filtering
     modules_filter_probes: Hs_R_NGS_WTA_v1.0
 

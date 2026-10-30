@@ -159,6 +159,9 @@ if(analyte=="protein") {
     # subset object to exclude all that did not pass Ratio & Global testing
     # But keep all the ones we specifically want to include, including TCR and negative probes
     if(module %in% modules_filter_probes) {
+      message(glue::glue("{module} data object dimensions before probe QC:"))
+      message(glue::glue("Probes: {dim(data_object)[1]}, samples: {dim(data_object)[2]}"))
+      
       negativeProbefData <- subset(fData(data_object), CodeClass == "Negative")
       neg_probes <- unique(negativeProbefData$TargetName)
       probe_qc_passed <- 
@@ -167,7 +170,8 @@ if(analyte=="protein") {
                  fData(data_object)$TargetName %in% c(probes_include, neg_probes) | # Include specified probes and negative probes
                  base::grepl("TR[A/B/D/G][C/J/V]", fData(data_object)$TargetName) # Include TCR probes
         )
-      dim(probe_qc_passed)
+      message(glue::glue("{module} data object dimensions after probe QC:"))
+      message(glue::glue("Probes: {dim(probe_qc_passed)[1]}, samples: {dim(probe_qc_passed)[2]}"))
       data_object <- probe_qc_passed
     }
     
@@ -195,7 +199,7 @@ if(analyte=="protein") {
     # Save the updated data object back to the list
     target_data_object_list[[module]] <- target_data_object
     
-    # Clean up
+    # Clean up to preserve RAM
     rm(data_object, target_data_object)
     gc()
   }
@@ -208,6 +212,9 @@ if(analyte=="protein") {
   ##
   ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
   
+  # Now that we've done probe QC and have collapsed probes into targets
+  # we need to do QC on the targets
+  
   # Limit of quantification
   # The LOQ is calculated based on the distribution of negative control probes and is intended to approximate the quantifiable limit of gene expression per segment
   # Please note that this process is more stable in larger segments
@@ -219,12 +226,16 @@ if(analyte=="protein") {
   # Calculate LOQ per module tested
   # However, for the combined module(s), if it exists, we will just use the WTA (main) module's LOQ
   for(module in modules) {
-    if(base::grepl("combined_module", module)) next
+    if(base::grepl(",", module)) next
+    message(glue::glue("Calculating LOQ for module {module}"))
     
+    # Extract the target data object
     target_data_object <- target_data_object_list[[module]]
     
+    # Initialize the LOQ data frame
     loq <- data.frame(row.names = colnames(target_data_object))
     
+    # Calculate LOQ
     vars <- expand.grid(V1 = c("NegGeoMean", "NegGeoSD"),
                         V2 = (module %>% str_split(",") %>% unlist)) %>% dplyr::mutate(vars = paste(V1, V2, sep = "_")) %>% .$vars
     if(all(vars[1:2] %in% colnames(pData(target_data_object)))) {
@@ -234,6 +245,7 @@ if(analyte=="protein") {
                pData(target_data_object)[, vars[2]] ^ cutoff)
     }
     
+    # Add LOQ data to pData
     pData(target_data_object)$LOQ <- loq
     
     # Add back to the list
@@ -244,7 +256,7 @@ if(analyte=="protein") {
     gc()
   }
   # If any combined modules exist, use the LOQ from the WTA module
-  combined_modules <- names(target_data_object_list) %>% pipe.grep("combined_module", value = TRUE)
+  combined_modules <- names(target_data_object_list) %>% pipe.grep(",", value = TRUE)
   if(length(combined_modules) > 0) {
     for(combined_module in combined_modules) {
       target_data_object <- target_data_object_list[[combined_module]]
@@ -265,7 +277,7 @@ if(analyte=="protein") {
   goi_df_list <- list()
   for(module in modules) {
     # Again, for the combined module, we will just use the WTA QC metrics
-    if(base::grepl("combined_module", module)) next
+    if(base::grepl(",", module)) next
     
     target_data_object <- target_data_object_list[[module]]
     loq <- pData(target_data_object)$LOQ
@@ -293,7 +305,7 @@ if(analyte=="protein") {
     pData(target_data_object)$DetectionThreshold <- 
       cut(pData(target_data_object)$GeneDetectionRate,
           breaks = c(0, 0.01, 0.05, 0.1, 0.15, 1),
-          labels = c("<1%", "1-5%", "5-10%", "10-15%", ">15%"))
+          labels = c("< 1%", "1 - 5%", "5 - 10%", "10 - 15%", "> 15%"))
     
     # Gene detection rate
     # Calculate detection rate:
@@ -392,7 +404,7 @@ if(analyte=="protein") {
   if(sum(segments_keep %in% pData(target_data_object)[[phenodata_dcc_col_name]]) > 0) {
     segments_keep_final <- (pData(target_data_object)$GeneDetectionRate >= (gene_detection_rate/100)) | (pData(target_data_object)[[phenodata_dcc_col_name]] %in% segments_keep) # We will later use this to subset the target data objects for the other modules
   } else {
-    warning("None of the segments given in the `segments_keep` configuration variable were found in the data object. Please check for typos; segments will be filtered normally")
+    warning("None of the segments given in the `segments_keep` configuration variable were found in the data object. If you were expecting at least one segment to be applicable, please check for typos; segments will be filtered normally")
     segments_keep_final <- pData(target_data_object)$GeneDetectionRate >= (gene_detection_rate/100) # We will later use this to subset the target data objects for the other modules
   }
   target_data_object <-
@@ -434,7 +446,7 @@ if(analyte=="protein") {
   non_main_mod_probes <- subset(fData(target_data_object), Module != main_module) %>% .$TargetName
   target_data_object <- 
     target_data_object[fData(target_data_object)$DetectionRate >= (percent_of_segments/100) | # percent_of_segments is given as a percentage, not a decimal, so we need to divide by 100 first
-                         fData(target_data_object)$TargetName %in% union(neg_probes, non_main_mod_probes)
+                         fData(target_data_object)$TargetName %in% union(union(neg_probes, non_main_mod_probes), genes_include)
                        , ]
   dim(target_data_object)
   
