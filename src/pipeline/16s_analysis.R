@@ -33,7 +33,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
   
   # Stop if there are no 16S probes
   if(!(all(dim(target_data_object_16s) > 0))) {
-    warning(glue::glue("There are no probes matching those given in {module_16s}. 16S analysis will not be performed"))
+    message(glue::glue("There are no probes matching those given in {module_16s}. 16S analysis will not be performed"))
   } else {
     # Get the names of the negative probes
     neg_probes <- fData(target_data_object_16s) %>% dplyr::filter(Negative==TRUE) %>% dplyr::select(TargetName) %>% unlist()
@@ -90,7 +90,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       if(identical(sampleNames(target_data_object_list[[module]]), names(score_16s)))  {
         pData(target_data_object_list[[module]])$Score16S <- score_16s
       } else {
-        warning(glue::glue("The sampleNames for module {module} do not match the names of the 16S score vector. 16S scores will not be added to the pData for this module"))
+        message(glue::glue("The sampleNames for module {module} do not match the names of the 16S score vector. 16S scores will not be added to the pData for this module"))
       }
     }
     
@@ -134,7 +134,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     valid_formula_table <- TRUE
     if(!flagVariable(formula_table_file_16s)) {
       if(!file.exists(formula_table_file_16s)) {
-        warning("The path to the formula table provided does not exist. Differential analysis will not be performed")
+        message("The path to the formula table provided does not exist. Differential analysis will not be performed")
         valid_formula_table <- FALSE
       } else {
         # Read in the file and check that it has at least one entry
@@ -143,16 +143,16 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
         else if(base::grepl("\\.tsv$", formula_table_file_16s)) { formula_table_16s <- read.table(formula_table_file_16s, header = F, sep = "\t") }
         else if(base::grepl("\\.xls.*$", formula_table_file_16s)) { formula_table_16s <- read_excel(formula_table_file_16s, col_names = F, na = "NA")}
         else {
-          warning("The path to the formula table provided does not exist. Differential analysis will not be performed")
+          message("The path to the formula table provided does not exist. Differential analysis will not be performed")
           valid_formula_table <- FALSE
         }
       }
     } else {
-      warning("No formula table file was provided. Differential analysis will not be performed")
+      message("No formula table file was provided. Differential analysis will not be performed")
       valid_formula_table <- FALSE
     }
     # Check that the formula table as read in is valid
-    if(exists("formula_table_16s")) if(is.null(formula_table_16s)) {warning("The path provided does not contain a valid formula table. Differential analysis will not be performed"); valid_formula_table <- FALSE}
+    if(exists("formula_table_16s")) if(is.null(formula_table_16s)) {message("The path provided does not contain a valid formula table. Differential analysis will not be performed"); valid_formula_table <- FALSE}
     
     # If everything is in place to do differential analysis, run it
     if(valid_formula_table) {
@@ -238,7 +238,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           subset_var_16s_levels_manual_i <- subset_var_16s_levels_manual[[subset_var]]
           if(sum(is.na(subset_var_16s_levels_manual_i)) < length(subset_var_16s_levels_manual_i)) { # At least one `subset_var_level_manual_i` is not NA
             if(sum(subset_var_16s_levels_manual_i %in% subset_var_levels) < 1) {
-              warning(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of subset variable {subset_var} will be used"))
+              message(glue::glue("None of the manually provided levels for subset variable {subset_var} are present in that variable. All available levels of subset variable {subset_var} will be used"))
             } else { # At least one `subset_var_level_manual_i` is an actual level of the current subset variable
               subset_var_levels <- subset_var_levels %>% .[. %in% subset_var_16s_levels_manual_i]
             }
@@ -269,7 +269,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
             model <- tryCatch(
               lmerTest::lmer(as.formula(formula_af), data = df_final),
               error = function(e) {
-                warning(glue::glue("Error in fitting linear mixed model for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
+                message(glue::glue("Error in fitting linear mixed model for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
                 skip_to_next <<- TRUE
               }
             )
@@ -284,7 +284,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               emm <- tryCatch(
                 expr = emmeans::emmeans(model, emm_formula),  # Replace 'Group' with your fixed effect variable
                 error = function(e) {
-                  warning(glue::glue("Error in estimating marginal means for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
+                  message(glue::glue("Error in estimating marginal means for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
                   skip_to_next <<- TRUE
                 }
               ) # End tryCatch for marginal means estimation
@@ -293,7 +293,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                 expr = emmeans::contrast(emm, method = "pairwise", adjust = "tukey") %>%
                   as.data.frame(),
                 error = function(e) {
-                  warning(glue::glue("Error in performing pairwise post-hoc comparisons for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
+                  message(glue::glue("Error in performing pairwise post-hoc comparisons for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
                   skip_to_next <<- TRUE
                 }
               ) # End tryCatch for pairwise comparisons
@@ -339,7 +339,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
                   dplyr::mutate(term = base::gsub(paste0("^", fixed_effect), "", term)) %>% # Clean up the fixed effect name
                   relocate(fixed_effect, .before = term) %>% relocate(baseline, .before = term), # baseline, 
                 error = function(e) {
-                  warning(glue::glue("Error in extracting fixed effect results for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
+                  message(glue::glue("Error in extracting fixed effect results for model {formula} - {subset_var} - {subset_var_level}: {e$message}"))
                   skip_to_next <<- TRUE
                 }
               )
@@ -369,6 +369,8 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
     ### Visualization ----
     ##
     ## ................................................
+    message("Creating graphs")
+    
     if(!is.null(grouping_vars_16s) & (sum(grouping_vars_16s == "") < length(grouping_vars_16s))) {
       
       # Set `subset_vars_16s` to whatever it was in the config YAML file
@@ -429,7 +431,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               
               # Make sure we have enough colors
               n_colors <- plot_df[[grouping_var]] %>% unique %>% length
-              mycolors <- colorRampPalette(pal_brewer(palette = "Paired")(12))(n_colors) # show_col(pal_brewer()())
+              mycolors <- colorRampPalette(scales::pal_brewer(palette = "Paired")(12))(n_colors) # show_col(pal_brewer()())
               
               # Plot
               plot_title <- ifelse(subset_var == "Complete data set", "", glue::glue("Subset variable: {subset_var} | level: {subset_var_level}"))
@@ -526,11 +528,16 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
               plot
               file_name <- glue::glue("16S_exprs_plot_{subset_var}_{subset_var_level}_{grouping_var}")
               for(file_type in output_plot_file_types) {
-                ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 8, height = 6, units = "in")
+                message(glue::glue("Attempting to save plot {file_name}.{file_type}"))
+                saveplot <- tryCatch({ggsave(glue::glue("{file_name}.{file_type}"), path = output_dir_imgs, width = 8, height = 6, units = "in")},
+                                     error = function(msg) {return(NA)}
+                                     )
+                graphics.off() # 2026/11/05. Seeing if this fixes a bug in plotting that's affecting the whole pipeline
+                if(is.na(saveplot)) { message(glue::glue("Failed to save plot {file_name}.{file_type}")); next }
               }
               
             } else {
-              warning("The names in the 16S expression matrix do not match those in the pData. Skipping plots of 16S expression levels by group")
+              message("The names in the 16S expression matrix do not match those in the pData. Skipping plots of 16S expression levels by group")
             }
             
           } # End grouping variables `for()` loop
@@ -538,6 +545,8 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
       } # End subset variables `for()` loop
       
       # Arrange the plots into a grid
+      message("Arranging single plots into grids")
+      
       for(subset_var in names(plot_list)) {
         for(subset_var_level in names(plot_list[[subset_var]])) {
           p_list <- plot_list[[subset_var]][[subset_var_level]]
@@ -549,8 +558,19 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
           if(is.null(p_list) | length(p_list) < 1) next 
           
           n <- length(p_list)
-          nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
-          plot_grid <- do.call("grid.arrange", c(p_list, ncol=nCol))
+          nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1
+          message("Calling grid.arrange()")
+          plot_grid <- tryCatch(
+            expr = do.call("grid.arrange", c(p_list, ncol=nCol)),
+            error = function(e) {
+              message(glue::glue("Error in creating plot grid for - {subset_var} - {subset_var_level}: {e$message}"))
+              return(NA)
+              }
+            ) # End `tryCatch()`
+          if(!("ggplot" %in% class(plot_grid))) next
+          
+          # If creating the plot grid succeeded, annotate
+          message("Annotating figure")
           plot_grid <- plot_grid %>% ggpubr::annotate_figure(left = grid::textGrob("16S expression", hjust = 0, rot = 90, vjust = 1, gp = grid::gpar(cex = 1.3)),
                                                              bottom = grid::textGrob("Grouping variable", gp = grid::gpar(cex = 1.3)),
                                                              top = grid::textGrob(paste0("")))
@@ -566,6 +586,7 @@ if(!flagVariable(module_16s) && module_16s %in% names(target_data_object_list)) 
 # Check if there's an additional column added if there are no subset variables
 # If there is, remove it
 # (Otherwise, this will mess things up downstream)
+message("Resetting metadata for the next module")
 for(module in names(target_data_object_list)) {
   if("Complete data set" %in% colnames(pData(target_data_object_list[[module]]))) pData(target_data_object_list[[module]]) <- pData(target_data_object_list[[module]]) %>% dplyr::select(-`Complete data set`)
 }
@@ -575,6 +596,8 @@ for(module in names(target_data_object_list)) {
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+message("Exporting RDS files")
 # Export NanoStringGeoMxSet as RDS file
 saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_16S-analysis.rds"))
 # Export graphs
@@ -582,8 +605,12 @@ if(exists("plot_list")) saveRDS(plot_list, paste0(output_dir_rdata, "16S-analysi
 # Export the LMM results
 if(exists("da_res_df")) da_res_df %>% saveRDS(paste0(output_dir_rdata, "16S-analysis_LMM-results.rds"))
 
+message("Saving environment to .Rdata")
 # Save environment to .Rdata
 save.image(paste0(output_dir_rdata, "env_16s_analysis.RData"))
 
+message("Updating latest module")
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)
+
+message("Successfully completed module 16S analysis")

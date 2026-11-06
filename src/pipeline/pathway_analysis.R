@@ -36,7 +36,7 @@ if(nrow(results2) < 1) {
       msigdb_list <- set.default.pathways()
     } else {
       # Read in the file and check that it has at least one entry
-      message("Checking provided pathway file.")
+      message("Checking provided pathway file")
       if(base::grepl("\\.csv$", pathway_table_file)) { pathway_table <- read.csv(pathway_table_file, header = F)}
       else if(base::grepl("\\.tsv$", pathway_table_file)) { pathway_table <- read.table(pathway_table_file, header = F, sep = "\t") }
       else if(base::grepl("\\.xls.*$", pathway_table_file)) { pathway_table <- read_excel(pathway_table_file, col_names = F, na = "NA")} 
@@ -201,12 +201,12 @@ if(nrow(results2) < 1) {
           contrast_element_1 <- contrast %>% strsplit(" - ") %>% unlist %>% .[1]
           contrast_element_2 <- contrast %>% strsplit(" - ") %>% unlist %>% .[2]
           
-          # Graphing parameters.
+          # Graphing parameters
           # Bar width needs to _increase_ with the # of rows in df_sub. 0.75 is a good width for 15 rows, and 0.25 is a good width for <= 3 rows, so ... 
           # sqrt function? Or sigmoidal?
-          # We'll go with a piecewise function.
+          # We'll go with a piecewise function
           # Code base stolen from https://stackoverflow.com/a/8788595/23532435
-          # Second piece of the function will be linear (y = mx + b).
+          # Second piece of the function will be linear (y = mx + b)
           # Slope for second piece of the function: rise / run = (0.75 - 0.25) / (5 - 1) = 0.042
           # y-intercept: b = y - mx
           slope <- (0.75 - 0.25) / (5 - 1)
@@ -349,7 +349,7 @@ if(nrow(results2) < 1) {
           gc()
           next
         }
-        nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1.
+        nCol <- ifelse(n %in% 2:3, 2, floor(sqrt(n))) # If n = 1, floor(sqrt(n)) goes to 1
         
         # Set the scaling factors for label and legend size
         sqrt_n_col <- sqrt(nCol)
@@ -381,7 +381,7 @@ if(nrow(results2) < 1) {
                                                                                        "\nTest (contrast) variable: ", test_var,
                                                                                        "\nNormalization method: ", normalization_method)))
         
-        # Save to list.
+        # Save to list
         plot_list_pathway_analysis_grid[[sv]][[svl]][[model_num]] <- plot_grid#2 %>% ggpubr::as_ggplot()
         
       }
@@ -407,5 +407,5 @@ plot_list_pathway_analysis_grid %>% saveRDS(paste0(output_dir_rdata, "pathway-an
 # Save environment to .Rdata
 save.image(paste0(output_dir_rdata, "env_pathway_analysis.RData"))
 
-# Update latest module completed.
+# Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)

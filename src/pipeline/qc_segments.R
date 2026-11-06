@@ -36,11 +36,13 @@ qc_params <-
        maxNTCCount = max_ntc_count,     # Maximum counts observed in NTC well (1000)
        minNuclei = min_nuclei,         # Minimum # of nuclei estimated (100)
        minArea = min_area)         # Minimum segment area (5000)
+message("Setting segment QC flags")
 data_object <-
   setSegmentQCFlags(data_object, 
                     qcCutoffs = qc_params)        
 
 ### QC result collation ----
+message("Collating segment QC results")
 qc_results <- protocolData(data_object)[["QCFlags"]] %>% as.data.frame()
 flag_columns <- colnames(qc_results)
 qc_summary <- data.frame(Pass = colSums(!qc_results[, flag_columns]),
@@ -57,6 +59,7 @@ col_by <- "segment"
 
 # Graphical summaries of QC statistics plot function
 # Generate the QC histograms
+message("Visualizing segment QC histograms")
 plot_list_segment_qc <- list()
 # Trimmed %
 plot_list_segment_qc[["trimmed"]] <- QCHistogram(sData(data_object), "Trimmed (%)", col_by, percent_trimmed)
@@ -74,6 +77,7 @@ plot_list_segment_qc[["area"]] <- QCHistogram(sData(data_object), "area", col_by
 plot_list_segment_qc[["nuclei"]] <- QCHistogram(sData(data_object), "nuclei", col_by, min_nuclei)
 
 # Negative geometric means
+message("Calculating negative geometric means")
 plot_list_segment_qc[["neg_geo_means"]] <- list()
 # Calculate the negative geometric means for each module
 neg_geo_means_list <- list()
@@ -91,9 +95,11 @@ for(module_name in names(data_object_list)) {
 neg_geo_means <- do.call(cbind, neg_geo_means_list)
 protocolData(data_object)[["NegGeoMean"]] <- neg_geo_means
 # Explicitly copy the Negative geoMeans from sData to pData
+message("Copying negative geomeans from sData to pData")
 negCols <- paste0("NegGeoMean_", modules)
 pData(data_object)[, negCols] <- sData(data_object)[["NegGeoMean"]]
 for(ann in negCols) {
+  graphics.off() # 2026/11/05. Seeing if this fixes a bug in plotting that's affecting the whole pipeline
   plt <- eval(bquote(QCHistogram(pData(data_object), ann, col_by, min_negative_count, scale_trans = "log10")))
   print(plt) # Force evaluation of the plot since it seems to be lazily evaluated
   plot_list_segment_qc[["neg_geo_means"]][[ann]] <- plt 
@@ -103,6 +109,7 @@ for(ann in negCols) {
 # If there are NTCs in the experiment (sData(data_object)$NTC does not return NULL), add NTC stats
 # # No template control (NTC)
 # # Detatch neg_geomean columns ahead of aggregateCounts call
+message("NTC stats")
 if(!is.null(sData(data_object)$NTC)) {
   pData(data_object) <- pData(data_object)[, !colnames(pData(data_object)) %in% negCols]
   
@@ -111,10 +118,12 @@ if(!is.null(sData(data_object)$NTC)) {
                              col.names = c("NTC Count", "# of Segments"))
 }
 ### Summary table ----
+message("Summarizing segment QC information in table form")
 # Summarize all QC information in a table
 qc_summary_kable <- kable(qc_summary, caption = "QC Summary Table for each Segment")
 
 ### Filtering ----
+message("Filtering segments")
 # Remove flagged segments that do not meet QC cutoffs,
 # but keep any segments given by `segments_keep`
 if(sum(segments_keep %in% pData(data_object)[[phenodata_dcc_col_name]]) > 0) {
@@ -124,7 +133,6 @@ if(sum(segments_keep %in% pData(data_object)[[phenodata_dcc_col_name]]) > 0) {
   data_object_filt <- data_object[, qc_results$QCStatus == "PASS"]
 }
 
-
 # Subsetting our dataset has removed samples which did not pass QC
 dim(data_object_filt)
 # Add the main module data object back to the list
@@ -133,6 +141,7 @@ rm(data_object_filt, data_object)
 gc()
 
 # Now remove these segments from the other data objects (PKC modules)
+message("Filtering segments from other data objects")
 for(module in names(data_object_list)) {
   if(module == main_module) next
   
@@ -160,6 +169,8 @@ for(module in names(data_object_list)) {
 ## Export to disk ----
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+message("Exporting results to disk")
 
 # Save the QC-ed NanoStringGeoMxSet object
 saveRDS(data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-segments.rds"))
