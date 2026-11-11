@@ -76,6 +76,7 @@ cv_cutoff,FALSE,,FALSE
 n_top_genes,FALSE,15,FALSE
 de_genes_cutoffs,FALSE,"0.25,0.58",TRUE
 pathway_table_file,FALSE,,FALSE
+pathway_list,FALSE,,FALSE
 individual_pathways,FALSE,,TRUE
 n_max_pathways,FALSE,15,FALSE
 top_pathways_by,FALSE,balance,FALSE

@@ -561,7 +561,7 @@ experiment:
     # of the canonical pathways [CP] within the C2 sets, or "GO:CC" for the Cellular Component 
     # subset of the Gene Ontology [GO] gene sets within the C5 sets)
     # If a main category does not include subcategories (e.g. the hallmark gene sets), fill in
-    # "NA" (no quotation marks) as the value at the appropriate index in the second column.
+    # "NA" (no quotation marks) as the value at the appropriate index in the second column
     # DO NOT INCLUDE COLUMN HEADERS
     # Here is an example using tab separators:
     #
@@ -575,6 +575,13 @@ experiment:
     # following pathway sets:
     # H (hallmark pathways), C2:CP:BIOCARTA (BioCarta pathways), C2:CP:REACTOME (Reactome) pathways
     pathway_table_file:
+    
+    # [Optional] Absolute path to an RDS file containing a list object, the elements of which are 
+    # vectors containing the genes from mSigDB pathways, and the names are the names of the pathways,
+    # one pathway per element of the list object
+    # This is used when the pipeline is run without an internet connection and cannot use `msigdbr()`
+    # to access data from mSigDB. If internet access is unavailable and this option is not set, pathway analysis will be skipped
+    pathway_list: 
 
     # [Optional] Individual pathways to perform FGSEA against
     # If provided, FGSEA will be run against ONLY these pathways

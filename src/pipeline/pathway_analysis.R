@@ -79,33 +79,54 @@ if(nrow(results2) < 1) {
   message(paste0("Subsetting results to include only those from the normalization method ", normalization_method))
   results2_sub <- results2 %>% dplyr::filter(`Normalization method`==normalization_method)
   
-  # Load the gene sets (from MSigDB)
-  # https://rpubs.com/LiYumei/806213
-  message("Loading gene sets")
-  gene_sets <- data.frame()
-  for(i in 1:length(msigdb_list[["subcats"]])) {
-    subcat <- msigdb_list[["subcats"]][i]
-    cat <- msigdb_list[["cats"]][i]
-    if(is.na(subcat)) {
-      subcat <- NULL
+  # 2026/11/10:
+  # Add backup plan for when there's no internet connection
+  # Test connection
+  test_connection <- tryCatch(expr = msigdbr(species = "Homo sapiens", category = "H"), 
+                              error = function(e) {return(FALSE)})
+  if(isFALSE(test_connection)) {
+    # No internet connection
+    # Check if there's a pathway_list object
+    if(flagVariable(pathway_list)) {
+      stop("No network connection and no pathway_list object provided. Pathway analysis will not be performed")
     } else {
-      subcat <- subcat
+      if(!file.exists(pathway_list)) {
+        stop("No network connection and the path to the pathway_list object is invalid. Please check the path to the pathway_list object. Pathway analysis will not be performed")
+      } else {
+        msigdbr_pathway_list <- readRDS(pathway_list)
+      }
     }
     
-    gene_sets <- rbind(gene_sets, 
-                       msigdbr(species = species, category = cat, subcategory = subcat) %>% 
-                         dplyr::distinct(gs_name, gene_symbol) %>% 
-                         as.data.frame()
-    )
+  } else {
+    # Yes, there's an internet connection
+    # Load gene sets from mSigDB normally
+    # https://rpubs.com/LiYumei/806213
+    message("Loading gene sets")
+    gene_sets <- data.frame()
+    for(i in 1:length(msigdb_list[["subcats"]])) {
+      subcat <- msigdb_list[["subcats"]][i]
+      cat <- msigdb_list[["cats"]][i]
+      if(is.na(subcat)) {
+        subcat <- NULL
+      } else {
+        subcat <- subcat
+      }
+      
+      gene_sets <- rbind(gene_sets, 
+                         msigdbr(species = species, category = cat, subcategory = subcat) %>% 
+                           dplyr::distinct(gs_name, gene_symbol) %>% 
+                           as.data.frame()
+      )
+    }
+    
+    # Subset to include only the pathways of interest if individual_pathways is provided
+    message("Subsetting gene sets")
+    if(sum(!is.null(individual_pathways)) > 0 & sum(individual_pathways != "") > 0) gene_sets <- gene_sets %>% dplyr::filter(gs_name %in% individual_pathways)
+    
+    # Create an MSigDB pathway list
+    message("Creating MSigDB gene set list")
+    msigdbr_pathway_list <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
   }
-  
-  # Subset to include only the pathways of interest if individual_pathways is provided
-  message("Subsetting gene sets")
-  if(sum(!is.null(individual_pathways)) > 0 & sum(individual_pathways != "") > 0) gene_sets <- gene_sets %>% dplyr::filter(gs_name %in% individual_pathways)
-  
-  # Create an MSigDB pathway list
-  message("Creating MSigDB gene set list")
-  msigdbr_pathway_list <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
   
   ## ................................................
   ##
