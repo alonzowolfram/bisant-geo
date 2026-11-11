@@ -476,21 +476,21 @@ if(analyte=="protein") {
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Save the QC-ed NanoStringGeoMxSet object
-saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-probes.rds"))
+saveRDS(target_data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_QC-probes.rds"))
 # Save the raw probe QC data (fData(data_object))
 # We can't write to a table because we have a data-frame-within-a-data-frame
-saveRDS(data_object_fData, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-probes-raw.rds"))
+saveRDS(data_object_fData, paste0(output_dir_rdata, "NanoStringGeoMxSet_QC-probes-raw.rds"))
 # Save the plots
-saveRDS(plot_list_probe_qc, paste0(output_dir_rdata, "qc-probes_plot_list.rds"))
+saveRDS(plot_list_probe_qc, paste0(output_dir_rdata, "QC-probes_plot_list.rds"))
 # Save the QC table
-saveRDS(qc_df, paste0(output_dir_rdata, "qc-probes_table.rds"))
+saveRDS(qc_df, paste0(output_dir_rdata, "QC-probes_table.rds"))
 # Save the gene-of-interest detection-rate table
 if(exists("goi_df")) {saveRDS(goi_df, paste0(output_dir_rdata, "genes-of-interest_detection-rate_table.rds")); write.csv(goi_df, paste0(output_dir_tabular, "genes-of-interest_detection-rate_table.csv"), row.names = F)}
 # Save the protein QC table
-if(exists("protein_qc_table")) {saveRDS(protein_qc_table, paste0(output_dir_rdata, "protein-QC-table.rds")); write.csv(protein_qc_table, paste0(output_dir_tabular, "protein-QC-table.csv"), row.names = F)}
+if(exists("protein_qc_table")) {saveRDS(protein_qc_table, paste0(output_dir_rdata, "protein-QC_table.rds")); write.csv(protein_qc_table, paste0(output_dir_tabular, "protein-QC_table.csv"), row.names = F)}
 
 # Save environment to .Rdata
-save.image(paste0(output_dir_rdata, "env_qc_probes.RData"))
+save.image(paste0(output_dir_rdata, "env_QC-probes.RData"))
 
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)

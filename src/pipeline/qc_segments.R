@@ -173,19 +173,19 @@ for(module in names(data_object_list)) {
 message("Exporting results to disk")
 
 # Save the QC-ed NanoStringGeoMxSet object
-saveRDS(data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-segments.rds"))
+saveRDS(data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_QC-segments.rds"))
 # Export the main module as a single object (not list) so we can use the Shiny app on it
 data_object <- data_object_list[[main_module]]
-saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-segments_main-module.rds"))
+saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_QC-segments_main-module.rds"))
 # Export the QC summary table
-saveRDS(qc_summary, paste0(output_dir_rdata, "qc-segments_summary_table.rds"))
+saveRDS(qc_summary, paste0(output_dir_rdata, "QC-segments_summary_table.rds"))
 # Export the NTC summary table if it exists
-if(exists("ntc_table")) saveRDS(ntc_table, paste0(output_dir_rdata, "ntc_summary_table.rds"))
+if(exists("ntc_table")) saveRDS(ntc_table, paste0(output_dir_rdata, "NTC_summary_table.rds"))
 # Export the list of graphs
-saveRDS(plot_list_segment_qc, paste0(output_dir_rdata, "qc-segments_plot_list.rds"))
+saveRDS(plot_list_segment_qc, paste0(output_dir_rdata, "QC-segments_plot_list.rds"))
 
 # Save environment to .Rdata
-save.image(paste0(output_dir_rdata, "env_qc_segments.RData"))
+save.image(paste0(output_dir_rdata, "env_QC-segments.RData"))
 
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)

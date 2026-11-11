@@ -90,17 +90,17 @@ if(!flagVariable(subject_ids) & !flagVariable(subject_categories)) {
 ##
 ## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # Save the NanoStringGeoMxSet object
-saveRDS(data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_qc-study-design.rds"))
+saveRDS(data_object_list, paste0(output_dir_rdata, "NanoStringGeoMxSet_QC-study-design.rds"))
 # Export the main module as a single object (not list) so we can use the Shiny app on it
 data_object <- data_object_list[[main_module]]
 saveRDS(data_object, paste0(output_dir_rdata, "NanoStringGeoMxSet_raw_main-module.rds"))
 # Save the PKC summary table
-saveRDS(pkc_summary, paste0(output_dir_rdata, "pkc_summary_table.rds"))
+saveRDS(pkc_summary, paste0(output_dir_rdata, "PKC_summary_table.rds"))
 # Save the subject characteristics summary tables
 saveRDS(subject_summary_tables, paste0(output_dir_rdata, "subject_summary_tables.rds"))
 
 # Save environment to .Rdata
-save.image(paste0(output_dir_rdata, "env_qc_study-design.RData"))
+save.image(paste0(output_dir_rdata, "env_QC-study-design.RData"))
 
 # Update latest module completed
 updateLatestModule(output_dir_rdata, current_module)
