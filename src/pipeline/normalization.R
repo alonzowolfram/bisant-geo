@@ -254,7 +254,22 @@ if(analyte=="protein") {
     # quantile-specific normalization, in which only a particular quantile (usually a quartile) is forced
     # to be the same across samples. See https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6171491/
     # *tied values notwithstanding
-    quant_normalized <- preprocessCore::normalize.quantiles(target_data_object@assayData$exprs)
+    # UPDATE 2026/11/10: `preprocessCore::normalize.quantiles()` does not work on Seadragon and returns the error 
+    # "ERROR; return code from pthread_create() is 22"
+    # We will therefore switch to using base R to do quantile normalization
+    # https://davetang.github.io/muse/qn.html
+    # quant_normalized <- preprocessCore::normalize.quantiles(target_data_object@assayData$exprs)
+    # Step 1: Determine gene ranks per samples
+    # lowest-epxressed gene = smallest number; highest-expressed gene = largest number
+    exprs_mat <- target_data_object@assayData$exprs
+    rank <- apply(exprs_mat, 2, rank, ties.method = "min") # 2026/11/10: Now that the method for dealing with ties is "min" (not sure what it was when using `normalize.quantiles()`), results may be a little different
+    # Step 2: Sort genes by expression per sample. Lowest-expressed gene on top and highest-expressed gene on bottom
+    sorted <- data.frame(apply(exprs_mat, 2, sort))
+    # Step 3: Use sorted gene expression matrix (`sorted`) to calculate row means
+    means <- rowMeans(sorted)
+    # Step 4: Use the row means as the normalized values for each gene
+    quant_normalized <- apply(rank, 2, function(x) means[x])
+    # Add the dimension names back in
     rownames(quant_normalized) <- rownames(target_data_object@assayData$exprs)
     colnames(quant_normalized) <- colnames(target_data_object@assayData$exprs)
     assayDataElement(object = target_data_object, elt = "quant", validate = FALSE) <- quant_normalized
